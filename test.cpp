@@ -330,6 +330,33 @@ bool test8_factorial() {
     return true;
 }
 
+bool test9_bigmul() {
+    BigIntHex ha;
+    BigIntDec hb;
+    int times = 20;
+
+    time_point t_beg, t_end;
+
+    t_beg = get_time();
+    ha.set(2);
+    for (int i = 1; i <= times; ++i) {
+        ha *= ha;
+    }
+    t_end = get_time();
+    cout << "calc 2^2^" << times << endl;
+    cout << "    by hex:" << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+
+    t_beg = get_time();
+    hb.set(2);
+    for (int i = 1; i <= times; ++i) {
+        hb *= hb;
+    }
+    t_end = get_time();
+    cout << "calc 2^2^" << times << endl;
+    cout << "    by dec:" << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    return true;
+}
+
 int main() {
     cout << "test1_parse: " << (test1_parse() ? "pass" : "FAIL") << endl;
     cout << "test2_add  : " << (test2_add() ? "pass" : "FAIL") << endl;
@@ -339,5 +366,6 @@ int main() {
     cout << "test6_mod  : " << (test6_mod() ? "pass" : "FAIL") << endl;
     cout << "test7_sqrt : " << (test7_sqrt() ? "pass" : "FAIL") << endl;
     test8_factorial();
+    test9_bigmul();
     return 0;
 }

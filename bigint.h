@@ -448,6 +448,10 @@ struct BigIntHex {
         return r;
     }
     BigIntHex &operator+=(const BigIntHex &b) {
+        if (this == &b) {
+            BigIntHex c = b;
+            return *this += c;
+        }
         BigIntHex &r = *this;
         if (sign * b.sign > 0) {
             r.raw_add(b);
@@ -467,6 +471,10 @@ struct BigIntHex {
         return r;
     }
     BigIntHex &operator-=(const BigIntHex &b) {
+        if (this == &b) {
+            BigIntHex c = b;
+            return *this -= c;
+        }
         BigIntHex &r = *this;
         if (sign * b.sign < 0) {
             r.raw_add(b);
@@ -502,10 +510,17 @@ struct BigIntHex {
             sign *= b.sign;
             return *this;
         } else {
-            BigIntHex r = *this;
-            raw_fastmul(r, b);
-            sign = r.sign * b.sign;
-            return *this;
+            if (this == &b) {
+                BigIntHex r = *this, c = b;
+                raw_fastmul(r, c);
+                sign = r.sign * c.sign;
+                return *this;
+            } else {
+                BigIntHex r = *this;
+                raw_fastmul(r, b);
+                sign = r.sign * b.sign;
+                return *this;
+            }
         }
     }
 
@@ -537,6 +552,10 @@ struct BigIntHex {
     }
 
     BigIntHex &operator/=(const BigIntHex &b) {
+        if (this == &b) {
+            BigIntHex c = b;
+            return *this /= c;
+        }
         BigIntHex r = *this;
         raw_div(r, b);
         sign = r.sign * b.sign;
@@ -550,6 +569,10 @@ struct BigIntHex {
     }
 
     BigIntHex &operator%=(const BigIntHex &b) {
+        if (this == &b) {
+            BigIntHex c = b;
+            return *this %= c;
+        }
         BigIntHex r = *this;
         raw_mod(r, b);
         return *this;

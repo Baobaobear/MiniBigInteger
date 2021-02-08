@@ -387,6 +387,10 @@ struct BigIntDec {
         return r;
     }
     BigIntDec &operator+=(const BigIntDec &b) {
+        if (this == &b) {
+            BigIntDec c = b;
+            return *this += c;
+        }
         BigIntDec &r = *this;
         if (sign * b.sign > 0) {
             r.raw_add(b);
@@ -406,6 +410,10 @@ struct BigIntDec {
         return r;
     }
     BigIntDec &operator-=(const BigIntDec &b) {
+        if (this == &b) {
+            BigIntDec c = b;
+            return *this -= c;
+        }
         BigIntDec &r = *this;
         if (sign * b.sign < 0) {
             r.raw_add(b);
@@ -441,10 +449,17 @@ struct BigIntDec {
             sign *= b.sign;
             return *this;
         } else {
-            BigIntDec r = *this;
-            raw_fastmul(r, b);
-            sign = r.sign * b.sign;
-            return *this;
+            if (this == &b) {
+                BigIntDec r = *this, c = b;
+                raw_fastmul(r, c);
+                sign = r.sign * c.sign;
+                return *this;
+            } else {
+                BigIntDec r = *this;
+                raw_fastmul(r, b);
+                sign = r.sign * b.sign;
+                return *this;
+            }
         }
     }
 
@@ -476,6 +491,10 @@ struct BigIntDec {
     }
 
     BigIntDec &operator/=(const BigIntDec &b) {
+        if (this == &b) {
+            BigIntDec c = b;
+            return *this /= c;
+        }
         BigIntDec r = *this;
         raw_div(r, b);
         sign = r.sign * b.sign;
@@ -489,6 +508,10 @@ struct BigIntDec {
     }
 
     BigIntDec &operator%=(const BigIntDec &b) {
+        if (this == &b) {
+            BigIntDec c = b;
+            return *this %= c;
+        }
         BigIntDec r = *this;
         raw_mod(r, b);
         return *this;
