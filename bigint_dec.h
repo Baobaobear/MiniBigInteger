@@ -2,72 +2,11 @@
 
 const int COMPRESS_DECMOD = 10000;
 
-struct BigIntDec {
+class BigIntDec {
+protected:
     int sign;
     std::vector<int32_t> v;
 
-    BigIntDec() {
-        set(0);
-    }
-    BigIntDec &set(intmax_t n) {
-        v.resize(1);
-        v[0] = 0;
-        uintmax_t s;
-        if (n < 0) {
-            sign = -1;
-            s = -n;
-        } else {
-            sign = 1;
-            s = n;
-        }
-        for (int i = 0; s; i++) {
-            v.resize(i + 1);
-            v[i] = s % COMPRESS_DECMOD;
-            s /= COMPRESS_DECMOD;
-        }
-        return *this;
-    }
-    BigIntDec &from_str(const char *s, int base = 10) {
-        BigIntDec m;
-        m.set(1);
-        set(0);
-        const char *p = s;
-        int sign = 1;
-        while (*p)
-            ++p;
-        while (*s == '-') {
-            sign *= -1;
-            ++s;
-        }
-        while (*s == '0') {
-            ++s;
-        }
-        for (p--; p >= s; p--) {
-            int digit = -1;
-            if (*p >= '0' && *p <= '9')
-                digit = *p - '0';
-            else if (base > 10) {
-                if (*p >= 'A' && *p <= 'Z')
-                    digit = *p - 'A' + 10;
-                else if (*p >= 'a' && *p <= 'z')
-                    digit = *p - 'A' + 10;
-            }
-            *this += m * digit;
-            if (p > s) {
-                m *= base;
-            }
-        }
-        this->sign = sign;
-        return *this;
-    }
-    size_t size() const {
-        return v.size();
-    }
-    bool is_zero() const {
-        if (v.size() == 1 && v[0] == 0)
-            return true;
-        return false;
-    }
     bool raw_less(const BigIntDec &b) const {
         if (v.size() != b.size()) {
             return v.size() < b.size();
@@ -340,6 +279,69 @@ struct BigIntDec {
         return *this;
     }
 
+public:
+    BigIntDec() {
+        set(0);
+    }
+    BigIntDec &set(intmax_t n) {
+        v.resize(1);
+        v[0] = 0;
+        uintmax_t s;
+        if (n < 0) {
+            sign = -1;
+            s = -n;
+        } else {
+            sign = 1;
+            s = n;
+        }
+        for (int i = 0; s; i++) {
+            v.resize(i + 1);
+            v[i] = s % COMPRESS_DECMOD;
+            s /= COMPRESS_DECMOD;
+        }
+        return *this;
+    }
+    BigIntDec &from_str(const char *s, int base = 10) {
+        BigIntDec m;
+        m.set(1);
+        set(0);
+        const char *p = s;
+        int sign = 1;
+        while (*p)
+            ++p;
+        while (*s == '-') {
+            sign *= -1;
+            ++s;
+        }
+        while (*s == '0') {
+            ++s;
+        }
+        for (p--; p >= s; p--) {
+            int digit = -1;
+            if (*p >= '0' && *p <= '9')
+                digit = *p - '0';
+            else if (base > 10) {
+                if (*p >= 'A' && *p <= 'Z')
+                    digit = *p - 'A' + 10;
+                else if (*p >= 'a' && *p <= 'z')
+                    digit = *p - 'A' + 10;
+            }
+            *this += m * digit;
+            if (p > s) {
+                m *= base;
+            }
+        }
+        this->sign = sign;
+        return *this;
+    }
+    size_t size() const {
+        return v.size();
+    }
+    bool is_zero() const {
+        if (v.size() == 1 && v[0] == 0)
+            return true;
+        return false;
+    }
     bool operator<(const BigIntDec &b) const {
         if (sign * b.sign > 0) {
             if (sign > 0)
