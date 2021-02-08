@@ -16,6 +16,7 @@ typedef unsigned int uint32_t;
 typedef int int32_t;
 typedef unsigned short uint16_t;
 typedef short int16_t;
+typedef uintmax_t size_t;
 #endif
 
 const int COMPRESS_BIT = 15;
