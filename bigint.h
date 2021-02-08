@@ -1,7 +1,22 @@
 #pragma once
 
-#include <cstdint>
 #include <vector>
+
+#if __cplusplus >= 201103L || _MSC_VER >= 1600
+#include <cstdint>
+#else
+#ifdef _MSC_VER
+typedef unsigned __int64 uintmax_t;
+typedef __int64 intmax_t;
+#else
+typedef unsigned long uintmax_t;
+typedef long intmax_t;
+#endif
+typedef unsigned int uint32_t;
+typedef int int32_t;
+typedef unsigned short uint16_t;
+typedef short int16_t;
+#endif
 
 const int COMPRESS_BIT = 15;
 const int COMPRESS_MOD = 1 << COMPRESS_BIT;
@@ -22,9 +37,9 @@ struct BigIntBase {
         --digits;
         set(0);
     }
-    BigIntBase &set(int64_t n) {
+    BigIntBase &set(intmax_t n) {
         v.resize(1);
-        uint64_t s;
+        uintmax_t s;
         if (n < 0) {
             s = -n;
         } else {
@@ -78,10 +93,10 @@ struct BigIntDec {
     BigIntDec() {
         set(0);
     }
-    BigIntDec &set(int64_t n) {
+    BigIntDec &set(intmax_t n) {
         v.resize(1);
         v[0] = 0;
-        uint64_t s;
+        uintmax_t s;
         if (n < 0) {
             sign = -1;
             s = -n;
@@ -359,7 +374,7 @@ struct BigIntDec {
         return !(*this == b);
     }
 
-    BigIntDec &operator=(int64_t n) {
+    BigIntDec &operator=(intmax_t n) {
         set(n);
         return *this;
     }
@@ -586,10 +601,10 @@ struct BigIntHex {
     BigIntHex() {
         set(0);
     }
-    BigIntHex &set(int64_t n) {
+    BigIntHex &set(intmax_t n) {
         v.resize(1);
         v[0] = 0;
-        uint64_t s;
+        uintmax_t s;
         if (n < 0) {
             sign = -1;
             s = -n;
@@ -862,7 +877,7 @@ struct BigIntHex {
         return !(*this == b);
     }
 
-    BigIntHex &operator=(int64_t n) {
+    BigIntHex &operator=(intmax_t n) {
         set(n);
         return *this;
     }
