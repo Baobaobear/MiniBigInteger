@@ -9,6 +9,7 @@ const int COMPRESS_MOD = 1 << COMPRESS_BIT;
 const int COMPRESS_MASK = COMPRESS_MOD - 1;
 
 const int COMPRESS_DECMOD = 10000;
+const int BIGINT_MUL_THRESHOLD = 64;
 
 struct BigIntBase {
     int base;
@@ -133,6 +134,11 @@ struct BigIntDec {
     size_t size() const {
         return v.size();
     }
+    bool is_zero() const {
+        if (v.size() == 1 && v[0] == 0)
+            return true;
+        return false;
+    }
     bool raw_less(const BigIntDec &b) const {
         if (v.size() != b.size()) {
             return v.size() < b.size();
@@ -165,6 +171,11 @@ struct BigIntDec {
             add = v[i] / COMPRESS_DECMOD;
             v[i] %= COMPRESS_DECMOD;
         }
+        for (size_t i = b.v.size(); add && i < v.size(); i++) {
+            v[i] += add;
+            add = v[i] / COMPRESS_DECMOD;
+            v[i] %= COMPRESS_DECMOD;
+        }
         if (add) {
             v.push_back(add);
         } else {
@@ -185,6 +196,13 @@ struct BigIntDec {
             if (v[i] < 0)
                 v[i] += COMPRESS_DECMOD, add -= 1;
         }
+        for (size_t i = b.v.size(); add && i < v.size(); i++) {
+            v[i] += add;
+            add = v[i] / COMPRESS_DECMOD;
+            v[i] %= COMPRESS_DECMOD;
+            if (v[i] < 0)
+                v[i] += COMPRESS_DECMOD, add -= 1;
+        }
         if (add) {
             sign = -sign;
             v[0] = COMPRESS_DECMOD - v[0];
@@ -198,6 +216,10 @@ struct BigIntDec {
         return *this;
     }
     BigIntDec &raw_mul_int(uint32_t m) {
+        if (m == 0) {
+            set(0);
+            return *this;
+        }
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = add + v[i] * m;
@@ -224,6 +246,68 @@ struct BigIntDec {
             if (add) {
                 v[i + b.size()] += add;
             }
+        }
+        while (v.back() == 0 && v.size() > 1) {
+            v.pop_back();
+        }
+        return *this;
+    }
+    // Karatsuba algorithm
+    BigIntDec &raw_fastmul(const BigIntDec &a, const BigIntDec &b) {
+        if (a.size() <= 1 || b.size() <= 1) {
+            if (a.size() >= b.size()) {
+                *this = a;
+                return raw_mul_int(b.v[0]);
+            } else {
+                *this = b;
+                return raw_mul_int(a.v[0]);
+            }
+        }
+        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
+            return raw_mul(a, b);
+        }
+        BigIntDec ah, al, bh, bl, h, m;
+        size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
+        al.v.resize(split);
+        std::copy_n(a.v.begin(), al.v.size(), al.v.begin());
+        ah.v.resize(a.size() - split);
+        std::copy_n(a.v.begin() + split, ah.v.size(), ah.v.begin());
+        bl.v.resize(split);
+        std::copy_n(b.v.begin(), bl.v.size(), bl.v.begin());
+        bh.v.resize(b.size() - split);
+        std::copy_n(b.v.begin() + split, bh.v.size(), bh.v.begin());
+
+        raw_fastmul(al, bl);
+        h.raw_fastmul(ah, bh);
+        m.raw_fastmul(al + ah, bl + bh);
+        m.raw_sub(*this);
+        m.raw_sub(h);
+        v.resize(a.size() + b.size());
+
+        int32_t add = 0;
+        for (size_t i = 0; i < m.size(); ++i) {
+            v[i + split] += add + m.v[i];
+            add = v[i + split] / COMPRESS_DECMOD;
+            v[i + split] %= COMPRESS_DECMOD;
+        }
+        for (size_t i = m.size(); add; ++i) {
+            v[i + split] += add;
+            add = v[i + split] / COMPRESS_DECMOD;
+            v[i + split] %= COMPRESS_DECMOD;
+        }
+        if (add) {
+            v[m.size() + split] += add;
+        }
+        add = 0;
+        for (size_t i = 0; i < h.size(); ++i) {
+            v[i + split2] += add + h.v[i];
+            add = v[i + split2] / COMPRESS_DECMOD;
+            v[i + split2] %= COMPRESS_DECMOD;
+        }
+        for (size_t i = h.size(); add; ++i) {
+            v[i + split2] += add;
+            add = v[i + split2] / COMPRESS_DECMOD;
+            v[i + split2] %= COMPRESS_DECMOD;
         }
         while (v.back() == 0 && v.size() > 1) {
             v.pop_back();
@@ -416,7 +500,7 @@ struct BigIntDec {
             return r;
         } else {
             BigIntDec r;
-            r.raw_mul(*this, b);
+            r.raw_fastmul(*this, b);
             r.sign = sign * b.sign;
             return r;
         }
@@ -429,7 +513,7 @@ struct BigIntDec {
             return *this;
         } else {
             BigIntDec r = *this;
-            raw_mul(r, b);
+            raw_fastmul(r, b);
             sign = r.sign * b.sign;
             return *this;
         }
@@ -500,7 +584,7 @@ struct BigIntDec {
         if (pack == 0)
             while (out.size() > 1 && out.back() == '0')
                 out.pop_back();
-        if (sign < 0 && *this != BigIntDec().set(0))
+        if (sign < 0 && !this->is_zero())
             out.push_back('-');
         std::reverse(out.begin(), out.end());
         return out;
@@ -545,7 +629,7 @@ struct BigIntDec {
         if (pack == 0)
             while (out.size() > 1 && out.back() == '0')
                 out.pop_back();
-        if (sign < 0 && *this != BigIntDec().set(0))
+        if (sign < 0 && !this->is_zero())
             out.push_back('-');
         std::reverse(out.begin(), out.end());
         return out;
@@ -641,6 +725,11 @@ struct BigIntHex {
     size_t size() const {
         return v.size();
     }
+    bool is_zero() const {
+        if (v.size() == 1 && v[0] == 0)
+            return true;
+        return false;
+    }
     bool raw_less(const BigIntHex &b) const {
         if (v.size() != b.size()) {
             return v.size() < b.size();
@@ -674,6 +763,11 @@ struct BigIntHex {
             add = v[i] >> COMPRESS_BIT;
             v[i] &= COMPRESS_MASK;
         }
+        for (size_t i = b.v.size(); add && i < v.size(); i++) {
+            v[i] += add;
+            add = v[i] >> COMPRESS_BIT;
+            v[i] &= COMPRESS_MASK;
+        }
         if (add) {
             v.push_back(add);
         } else {
@@ -692,6 +786,11 @@ struct BigIntHex {
             add = (v[i] >> COMPRESS_BIT);
             v[i] &= COMPRESS_MASK;
         }
+        for (size_t i = b.v.size(); add && i < v.size(); i++) {
+            v[i] += add;
+            add = (v[i] >> COMPRESS_BIT);
+            v[i] &= COMPRESS_MASK;
+        }
         if (add) {
             sign = -sign;
             v[0] = COMPRESS_MOD - v[0];
@@ -705,6 +804,10 @@ struct BigIntHex {
         return *this;
     }
     BigIntHex &raw_mul_int(uint32_t m) {
+        if (m == 0) {
+            set(0);
+            return *this;
+        }
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = add + v[i] * m;
@@ -731,6 +834,66 @@ struct BigIntHex {
             if (add) {
                 v[i + b.size()] += add;
             }
+        }
+        while (v.back() == 0 && v.size() > 1) {
+            v.pop_back();
+        }
+        return *this;
+    }
+    // Karatsuba algorithm
+    BigIntHex &raw_fastmul(const BigIntHex &a, const BigIntHex &b) {
+        if (a.size() <= 1 || b.size() <= 1) {
+            //return raw_mul(a, b);
+            if (a.size() >= b.size()) {
+                *this = a;
+                return raw_mul_int(b.v[0]);
+            } else {
+                *this = b;
+                return raw_mul_int(a.v[0]);
+            }
+        }
+        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
+            return raw_mul(a, b);
+        }
+        BigIntHex ah, al, bh, bl, h, m;
+        size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
+        al.v.resize(split);
+        std::copy_n(a.v.begin(), al.v.size(), al.v.begin());
+        ah.v.resize(a.size() - split);
+        std::copy_n(a.v.begin() + split, ah.v.size(), ah.v.begin());
+        bl.v.resize(split);
+        std::copy_n(b.v.begin(), bl.v.size(), bl.v.begin());
+        bh.v.resize(b.size() - split);
+        std::copy_n(b.v.begin() + split, bh.v.size(), bh.v.begin());
+
+        raw_fastmul(al, bl);
+        h.raw_fastmul(ah, bh);
+        m.raw_fastmul(al + ah, bl + bh);
+        m.raw_sub(*this);
+        m.raw_sub(h);
+        v.resize(a.size() + b.size());
+
+        int32_t add = 0;
+        for (size_t i = 0; i < m.size(); ++i) {
+            v[i + split] += add + m.v[i];
+            add = v[i + split] >> COMPRESS_BIT;
+            v[i + split] &= COMPRESS_MASK;
+        }
+        for (size_t i = m.size(); add; ++i) {
+            v[i + split] += add;
+            add = v[i + split] >> COMPRESS_BIT;
+            v[i + split] &= COMPRESS_MASK;
+        }
+        add = 0;
+        for (size_t i = 0; i < h.size(); ++i) {
+            v[i + split2] += add + h.v[i];
+            add = v[i + split2] >> COMPRESS_BIT;
+            v[i + split2] &= COMPRESS_MASK;
+        }
+        for (size_t i = h.size(); add; ++i) {
+            v[i + split2] += add;
+            add = v[i + split2] >> COMPRESS_BIT;
+            v[i + split2] &= COMPRESS_MASK;
         }
         while (v.back() == 0 && v.size() > 1) {
             v.pop_back();
@@ -919,7 +1082,7 @@ struct BigIntHex {
             return r;
         } else {
             BigIntHex r;
-            r.raw_mul(*this, b);
+            r.raw_fastmul(*this, b);
             r.sign = sign * b.sign;
             return r;
         }
@@ -932,7 +1095,7 @@ struct BigIntHex {
             return *this;
         } else {
             BigIntHex r = *this;
-            raw_mul(r, b);
+            raw_fastmul(r, b);
             sign = r.sign * b.sign;
             return *this;
         }
@@ -1003,7 +1166,7 @@ struct BigIntHex {
         }
         while (out.size() > 1 && out.back() == '0')
             out.pop_back();
-        if (sign < 0 && *this != BigIntHex().set(0))
+        if (sign < 0 && !this->is_zero())
             out.push_back('-');
         std::reverse(out.begin(), out.end());
         return out;
@@ -1048,7 +1211,7 @@ struct BigIntHex {
         if (pack == 0)
             while (out.size() > 1 && out.back() == '0')
                 out.pop_back();
-        if (sign < 0 && *this != BigIntHex().set(0))
+        if (sign < 0 && !this->is_zero())
             out.push_back('-');
         std::reverse(out.begin(), out.end());
         return out;
