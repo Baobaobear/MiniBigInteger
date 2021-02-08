@@ -2,6 +2,29 @@
 
 #include <iostream>
 
+
+typedef double time_point;
+
+#ifdef _WIN32
+#include <time.h>
+#else
+#include <sys/time.h>
+#endif
+
+time_point get_time() {
+#ifdef _WIN32
+    return clock() * 1000;
+#else
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000000 + tv.tv_usec;
+#endif
+}
+
+double get_time_diff(time_point from, time_point to) {
+    return (double)(to - from);
+}
+
 bool test1_parse() {
     BigIntHex ha;
     BigIntDec hb;
@@ -268,6 +291,41 @@ bool test7_sqrt() {
     return true;
 }
 
+bool test8_factorial() {
+    using namespace std;
+    BigIntHex ha;
+    BigIntDec hb;
+    int fac = 10000;
+
+    time_point t_beg, t_end, t_out;
+
+    t_beg = get_time();
+    ha.set(1);
+    for (int i = 2; i <= fac; ++i)
+    {
+        ha *= i;
+    }
+    t_end = get_time();
+    ha.to_str();
+    t_out = get_time();
+    cout << "calc " << fac << "!" << endl;
+    cout << "    by hex:" << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    trans to dec:" << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+
+    t_beg = get_time();
+    hb.set(1);
+    for (int i = 2; i <= fac; ++i) {
+        hb *= i;
+    }
+    t_end = get_time();
+    hb.to_str(16);
+    t_out = get_time();
+    cout << "calc " << fac << "!" << endl;
+    cout << "    by dec:" << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    trans to hex:" << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    return true;
+}
+
 int main() {
     using namespace std;
     cout << "test1_parse: " << (test1_parse() ? "pass" : "FAIL") << endl;
@@ -277,5 +335,6 @@ int main() {
     cout << "test5_div  : " << (test5_div() ? "pass" : "FAIL") << endl;
     cout << "test6_mod  : " << (test6_mod() ? "pass" : "FAIL") << endl;
     cout << "test7_sqrt : " << (test7_sqrt() ? "pass" : "FAIL") << endl;
+    test8_factorial();
     return 0;
 }

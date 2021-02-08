@@ -480,26 +480,6 @@ struct BigIntDec {
         return *this;
     }
 
-    BigIntDec &factorial(int32_t fac) {
-        v.clear();
-        v.push_back(1);
-        sign = 1;
-        for (int32_t n = 2; n <= fac; ++n) {
-            int32_t add = 0;
-            for (size_t i = 0; i < v.size(); i++) {
-                v[i] = v[i] * n + add;
-                add = v[i] / COMPRESS_DECMOD;
-                v[i] %= COMPRESS_DECMOD;
-            }
-            while (add) {
-                v.push_back(add);
-                add = v.back() / COMPRESS_DECMOD;
-                v.back() %= COMPRESS_DECMOD;
-            }
-        }
-        return *this;
-    }
-
     std::string out_dec(int32_t pack = 0) const {
         std::string out;
         int32_t d = 0;
@@ -1000,26 +980,6 @@ struct BigIntHex {
     BigIntHex &operator%=(const BigIntHex &b) {
         BigIntHex r = *this;
         raw_mod(r, b);
-        return *this;
-    }
-
-    BigIntHex &factorial(int32_t fac) {
-        v.clear();
-        v.push_back(1);
-        sign = 1;
-        for (int32_t n = 2; n <= fac; ++n) {
-            int32_t add = 0;
-            for (size_t i = 0; i < v.size(); i++) {
-                v[i] = v[i] * n + add;
-                add = v[i] >> COMPRESS_BIT;
-                v[i] &= COMPRESS_MASK;
-            }
-            while (add) {
-                v.push_back(add);
-                add = v.back() >> COMPRESS_BIT;
-                v.back() &= COMPRESS_MASK;
-            }
-        }
         return *this;
     }
 
