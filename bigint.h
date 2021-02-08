@@ -3,23 +3,6 @@
 #include <string>
 #include <vector>
 
-#if __cplusplus >= 201103L || _MSC_VER >= 1600
-#include <cstdint>
-#else
-#ifdef _MSC_VER
-typedef unsigned __int64 uintmax_t;
-typedef __int64 intmax_t;
-#else
-typedef unsigned long uintmax_t;
-typedef long intmax_t;
-#endif
-typedef unsigned int uint32_t;
-typedef int int32_t;
-typedef unsigned short uint16_t;
-typedef short int16_t;
-typedef uintmax_t size_t;
-#endif
-
 const int COMPRESS_BIT = 15;
 const int COMPRESS_MOD = 1 << COMPRESS_BIT;
 const int COMPRESS_MASK = COMPRESS_MOD - 1;
@@ -253,7 +236,7 @@ struct BigIntDec {
         }
         v.resize(a.size() - b.size() + 1);
         BigIntDec r = a;
-        int32_t remain = 0, offset = (int32_t)b.size();
+        int32_t offset = (int32_t)b.size();
         double db = b.v.back();
         if (b.size() > 1) {
             db += (b.v[b.size() - 2] + 1) / (double)COMPRESS_DECMOD;
@@ -305,7 +288,7 @@ struct BigIntDec {
         }
         v.resize(a.size() - b.size() + 1);
         BigIntDec r = a;
-        int32_t remain = 0, offset = (int32_t)b.size();
+        int32_t offset = (int32_t)b.size();
         double db = b.v.back();
         if (b.size() > 1) {
             db += (b.v[b.size() - 2] + 1) / (double)COMPRESS_DECMOD;
@@ -760,7 +743,7 @@ struct BigIntHex {
         }
         v.resize(a.size() - b.size() + 1);
         BigIntHex r = a;
-        int32_t remain = 0, offset = (int32_t)b.size();
+        int32_t offset = (int32_t)b.size();
         double db = b.v.back();
         if (b.size() > 1) {
             db += (b.v[b.size() - 2] + 1) / (double)COMPRESS_MOD;
@@ -810,7 +793,7 @@ struct BigIntHex {
         }
         v.resize(a.size() - b.size() + 1);
         BigIntHex r = a;
-        int32_t remain = 0, offset = (int32_t)b.size();
+        int32_t offset = (int32_t)b.size();
         double db = b.v.back();
         if (b.size() > 1) {
             db += (b.v[b.size() - 2] + 1) / (double)COMPRESS_MOD;
