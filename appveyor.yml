@@ -1,0 +1,16 @@
+version: 1.0.{build}
+environment:
+  matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      solution_name: MiniBigInteger\MiniBigInteger.sln
+      configuration: Release
+      platform: x86
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      solution_name: MiniBigInteger\MiniBigInteger.sln
+      configuration: Release
+      platform: x64
+
+matrix:
+  fast_finish: false
+build_script:
+  - msbuild %solution_name%

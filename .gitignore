@@ -1,8 +1,13 @@
+# Dir
+Debug
+Release
+
 # Prerequisites
 *.d
 
 # Compiled Object files
 *.slo
+*.suo
 *.lo
 *.o
 *.obj
@@ -30,3 +35,8 @@
 *.exe
 *.out
 *.app
+
+# VS files
+*.filters
+*.db
+*.opendb
