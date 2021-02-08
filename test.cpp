@@ -1,4 +1,5 @@
 #include "bigint.h"
+#include "bigint_dec.h"
 
 #include <iostream>
 

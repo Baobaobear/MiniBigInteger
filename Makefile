@@ -13,5 +13,5 @@ test: test0
 clean:
 	rm -f test0
 
-test0: test.cpp bigint.h
+test0: test.cpp bigint.h bigint_dec.h
 	$(CXX) $(CFLAGS11) $(BENCHMARKFILE) -o test0

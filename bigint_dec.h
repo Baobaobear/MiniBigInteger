@@ -1,85 +1,15 @@
 #pragma once
 
-#include <algorithm>
-#include <string>
-#include <vector>
+const int COMPRESS_DECMOD = 10000;
 
-const int COMPRESS_BIT = 15;
-const int COMPRESS_MOD = 1 << COMPRESS_BIT;
-const int COMPRESS_MASK = COMPRESS_MOD - 1;
-
-const int BIGINT_MUL_THRESHOLD = 64;
-
-struct BigIntBase {
-    int base;
-    int digits;
-    std::vector<int32_t> v;
-
-    BigIntBase(int b) { // b > 1
-        base = b;
-        for (digits = 1; base <= 32768; base *= b, ++digits)
-            ;
-        base /= b;
-        --digits;
-        set(0);
-    }
-    BigIntBase &set(intmax_t n) {
-        v.resize(1);
-        uintmax_t s;
-        if (n < 0) {
-            s = -n;
-        } else {
-            s = n;
-        }
-        for (int i = 0; s; i++) {
-            v.resize(i + 1);
-            v[i] = s % base;
-            s /= base;
-        }
-        return *this;
-    }
-    size_t size() const {
-        return v.size();
-    }
-    BigIntBase &raw_add(const BigIntBase &b) {
-        if (v.size() < b.size()) {
-            v.resize(b.size());
-        }
-        int32_t add = 0;
-        for (size_t i = 0; i < v.size(); i++) {
-            v[i] += add + b.v[i];
-            add = v[i] / base;
-            v[i] %= base;
-        }
-        if (add) {
-            v.push_back(add);
-        }
-        return *this;
-    }
-    BigIntBase &raw_mul_int(uint32_t m) {
-        int32_t add = 0;
-        for (size_t i = 0; i < v.size(); i++) {
-            v[i] = add + v[i] * m;
-            add = v[i] / base;
-            v[i] %= base;
-        }
-        while (add) {
-            v.push_back(add);
-            add = v.back() / base;
-            v.back() %= base;
-        }
-        return *this;
-    }
-};
-
-struct BigIntHex {
+struct BigIntDec {
     int sign;
     std::vector<int32_t> v;
 
-    BigIntHex() {
+    BigIntDec() {
         set(0);
     }
-    BigIntHex &set(intmax_t n) {
+    BigIntDec &set(intmax_t n) {
         v.resize(1);
         v[0] = 0;
         uintmax_t s;
@@ -92,13 +22,13 @@ struct BigIntHex {
         }
         for (int i = 0; s; i++) {
             v.resize(i + 1);
-            v[i] = s & COMPRESS_MASK;
-            s >>= COMPRESS_BIT;
+            v[i] = s % COMPRESS_DECMOD;
+            s /= COMPRESS_DECMOD;
         }
         return *this;
     }
-    BigIntHex &from_str(const char *s, int base = 10) {
-        BigIntHex m;
+    BigIntDec &from_str(const char *s, int base = 10) {
+        BigIntDec m;
         m.set(1);
         set(0);
         const char *p = s;
@@ -138,7 +68,7 @@ struct BigIntHex {
             return true;
         return false;
     }
-    bool raw_less(const BigIntHex &b) const {
+    bool raw_less(const BigIntDec &b) const {
         if (v.size() != b.size()) {
             return v.size() < b.size();
         }
@@ -149,7 +79,7 @@ struct BigIntHex {
         }
         return false; //eq
     }
-    bool raw_eq(const BigIntHex &b) const {
+    bool raw_eq(const BigIntDec &b) const {
         if (v.size() != b.size()) {
             return false;
         }
@@ -160,21 +90,20 @@ struct BigIntHex {
         }
         return true;
     }
-
-    BigIntHex &raw_add(const BigIntHex &b) {
+    BigIntDec &raw_add(const BigIntDec &b) {
         if (v.size() < b.size()) {
             v.resize(b.size());
         }
         int32_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++) {
             v[i] += add + b.v[i];
-            add = v[i] >> COMPRESS_BIT;
-            v[i] &= COMPRESS_MASK;
+            add = v[i] / COMPRESS_DECMOD;
+            v[i] %= COMPRESS_DECMOD;
         }
         for (size_t i = b.v.size(); add && i < v.size(); i++) {
             v[i] += add;
-            add = v[i] >> COMPRESS_BIT;
-            v[i] &= COMPRESS_MASK;
+            add = v[i] / COMPRESS_DECMOD;
+            v[i] %= COMPRESS_DECMOD;
         }
         if (add) {
             v.push_back(add);
@@ -184,26 +113,30 @@ struct BigIntHex {
         }
         return *this;
     }
-    BigIntHex &raw_sub(const BigIntHex &b) {
+    BigIntDec &raw_sub(const BigIntDec &b) {
         if (v.size() < b.v.size()) {
             v.resize(b.v.size());
         }
         int32_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++) {
             v[i] += add - b.v[i];
-            add = (v[i] >> COMPRESS_BIT);
-            v[i] &= COMPRESS_MASK;
+            add = v[i] / COMPRESS_DECMOD;
+            v[i] %= COMPRESS_DECMOD;
+            if (v[i] < 0)
+                v[i] += COMPRESS_DECMOD, add -= 1;
         }
         for (size_t i = b.v.size(); add && i < v.size(); i++) {
             v[i] += add;
-            add = (v[i] >> COMPRESS_BIT);
-            v[i] &= COMPRESS_MASK;
+            add = v[i] / COMPRESS_DECMOD;
+            v[i] %= COMPRESS_DECMOD;
+            if (v[i] < 0)
+                v[i] += COMPRESS_DECMOD, add -= 1;
         }
         if (add) {
             sign = -sign;
-            v[0] = COMPRESS_MOD - v[0];
+            v[0] = COMPRESS_DECMOD - v[0];
             for (size_t i = 1; i < v.size(); i++) {
-                v[i] = v[i] ^ COMPRESS_MASK;
+                v[i] = COMPRESS_DECMOD - v[i] - 1;
             }
         }
         while (v.back() == 0 && v.size() > 1) {
@@ -211,7 +144,7 @@ struct BigIntHex {
         }
         return *this;
     }
-    BigIntHex &raw_mul_int(uint32_t m) {
+    BigIntDec &raw_mul_int(uint32_t m) {
         if (m == 0) {
             set(0);
             return *this;
@@ -219,25 +152,25 @@ struct BigIntHex {
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = add + v[i] * m;
-            add = v[i] >> COMPRESS_BIT;
-            v[i] &= COMPRESS_MASK;
+            add = v[i] / COMPRESS_DECMOD;
+            v[i] %= COMPRESS_DECMOD;
         }
         while (add) {
             v.push_back(add);
-            add = v.back() >> COMPRESS_BIT;
-            v.back() &= COMPRESS_MASK;
+            add = v.back() / COMPRESS_DECMOD;
+            v.back() %= COMPRESS_DECMOD;
         }
         return *this;
     }
-    BigIntHex &raw_mul(const BigIntHex &a, const BigIntHex &b) {
+    BigIntDec &raw_mul(const BigIntDec &a, const BigIntDec &b) {
         v.clear();
         v.resize(a.size() + b.size());
         for (size_t i = 0; i < a.size(); i++) {
             int32_t add = 0;
             for (size_t j = 0; j < b.size(); j++) {
                 v[i + j] += add + a.v[i] * b.v[j];
-                add = v[i + j] >> COMPRESS_BIT;
-                v[i + j] &= COMPRESS_MASK;
+                add = v[i + j] / COMPRESS_DECMOD;
+                v[i + j] %= COMPRESS_DECMOD;
             }
             if (add) {
                 v[i + b.size()] += add;
@@ -249,9 +182,8 @@ struct BigIntHex {
         return *this;
     }
     // Karatsuba algorithm
-    BigIntHex &raw_fastmul(const BigIntHex &a, const BigIntHex &b) {
+    BigIntDec &raw_fastmul(const BigIntDec &a, const BigIntDec &b) {
         if (a.size() <= 1 || b.size() <= 1) {
-            //return raw_mul(a, b);
             if (a.size() >= b.size()) {
                 *this = a;
                 return raw_mul_int(b.v[0]);
@@ -263,7 +195,7 @@ struct BigIntHex {
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        BigIntHex ah, al, bh, bl, h, m;
+        BigIntDec ah, al, bh, bl, h, m;
         size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
         al.v.resize(split);
         std::copy_n(a.v.begin(), al.v.size(), al.v.begin());
@@ -284,50 +216,55 @@ struct BigIntHex {
         int32_t add = 0;
         for (size_t i = 0; i < m.size(); ++i) {
             v[i + split] += add + m.v[i];
-            add = v[i + split] >> COMPRESS_BIT;
-            v[i + split] &= COMPRESS_MASK;
+            add = v[i + split] / COMPRESS_DECMOD;
+            v[i + split] %= COMPRESS_DECMOD;
         }
         for (size_t i = m.size(); add; ++i) {
             v[i + split] += add;
-            add = v[i + split] >> COMPRESS_BIT;
-            v[i + split] &= COMPRESS_MASK;
+            add = v[i + split] / COMPRESS_DECMOD;
+            v[i + split] %= COMPRESS_DECMOD;
+        }
+        if (add) {
+            v[m.size() + split] += add;
         }
         add = 0;
         for (size_t i = 0; i < h.size(); ++i) {
             v[i + split2] += add + h.v[i];
-            add = v[i + split2] >> COMPRESS_BIT;
-            v[i + split2] &= COMPRESS_MASK;
+            add = v[i + split2] / COMPRESS_DECMOD;
+            v[i + split2] %= COMPRESS_DECMOD;
         }
         for (size_t i = h.size(); add; ++i) {
             v[i + split2] += add;
-            add = v[i + split2] >> COMPRESS_BIT;
-            v[i + split2] &= COMPRESS_MASK;
+            add = v[i + split2] / COMPRESS_DECMOD;
+            v[i + split2] %= COMPRESS_DECMOD;
         }
         while (v.back() == 0 && v.size() > 1) {
             v.pop_back();
         }
         return *this;
     }
-    BigIntHex &raw_div(const BigIntHex &a, const BigIntHex &b) {
+    BigIntDec &raw_div(const BigIntDec &a, const BigIntDec &b) {
         if (a.size() < b.size()) {
             set(0);
             return *this;
         }
         v.resize(a.size() - b.size() + 1);
-        BigIntHex r = a;
+        BigIntDec r = a;
         int32_t offset = (int32_t)b.size();
         double db = b.v.back();
         if (b.size() > 1) {
-            db += (b.v[b.size() - 2] + 1) / (double)COMPRESS_MOD;
+            db += (b.v[b.size() - 2] + 1) / (double)COMPRESS_DECMOD;
         }
         for (size_t i = r.size() - offset; i <= a.size(); i--) {
-            int32_t rm = ((i + offset < r.size() ? r.v[i + offset] : 0) << COMPRESS_BIT) | r.v[i + offset - 1], m;
+            int32_t rm = ((i + offset < r.size() ? r.v[i + offset] : 0) * COMPRESS_DECMOD) + r.v[i + offset - 1], m;
             v[i] = m = (int32_t)(rm / db);
             int32_t add = 0;
             for (size_t j = 0; j < b.size(); j++) {
                 r.v[i + j] += add - b.v[j] * m;
-                add = r.v[i + j] >> COMPRESS_BIT;
-                r.v[i + j] &= COMPRESS_MASK;
+                add = r.v[i + j] / COMPRESS_DECMOD;
+                r.v[i + j] %= COMPRESS_DECMOD;
+                if (r.v[i + j] < 0)
+                    r.v[i + j] += COMPRESS_DECMOD, --add;
             }
             if (add) {
                 r.v[i + b.size()] += add;
@@ -336,7 +273,7 @@ struct BigIntHex {
         while (r.v.back() == 0 && r.v.size() > 1) {
             r.v.pop_back();
         }
-        for (int32_t mul = COMPRESS_MOD >> 1; mul > 1; mul >>= 1) {
+        for (int32_t mul = COMPRESS_DECMOD >> 1; mul > 1; mul >>= 1) {
             while (!r.raw_less(b * mul)) {
                 r.raw_sub(b * mul);
                 v[0] += mul;
@@ -350,34 +287,36 @@ struct BigIntHex {
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
             v[i] += add;
-            add = v[i] >> COMPRESS_BIT;
-            v[i] &= COMPRESS_MASK;
+            add = v[i] / COMPRESS_DECMOD;
+            v[i] %= COMPRESS_DECMOD;
         }
         while (v.back() == 0 && v.size() > 1) {
             v.pop_back();
         }
         return *this;
     }
-    BigIntHex &raw_mod(const BigIntHex &a, const BigIntHex &b) {
+    BigIntDec &raw_mod(const BigIntDec &a, const BigIntDec &b) {
         if (a.size() < b.size()) {
             *this = a;
             return *this;
         }
         v.resize(a.size() - b.size() + 1);
-        BigIntHex r = a;
+        BigIntDec r = a;
         int32_t offset = (int32_t)b.size();
         double db = b.v.back();
         if (b.size() > 1) {
-            db += (b.v[b.size() - 2] + 1) / (double)COMPRESS_MOD;
+            db += (b.v[b.size() - 2] + 1) / (double)COMPRESS_DECMOD;
         }
         for (size_t i = r.size() - offset; i <= a.size(); i--) {
-            int32_t rm = ((i + offset < r.size() ? r.v[i + offset] : 0) << COMPRESS_BIT) | r.v[i + offset - 1], m;
+            int32_t rm = ((i + offset < r.size() ? r.v[i + offset] : 0) * COMPRESS_DECMOD) + r.v[i + offset - 1], m;
             v[i] = m = (int32_t)(rm / db);
             int32_t add = 0;
             for (size_t j = 0; j < b.size(); j++) {
                 r.v[i + j] += add - b.v[j] * m;
-                add = r.v[i + j] >> COMPRESS_BIT;
-                r.v[i + j] &= COMPRESS_MASK;
+                add = r.v[i + j] / COMPRESS_DECMOD;
+                r.v[i + j] %= COMPRESS_DECMOD;
+                if (r.v[i + j] < 0)
+                    r.v[i + j] += COMPRESS_DECMOD, --add;
             }
             if (add) {
                 r.v[i + b.size()] += add;
@@ -386,7 +325,7 @@ struct BigIntHex {
                 r.v.pop_back();
             }
         }
-        for (int32_t mul = COMPRESS_MOD >> 1; mul > 1; mul >>= 1) {
+        for (int32_t mul = COMPRESS_DECMOD >> 1; mul > 1; mul >>= 1) {
             while (!r.raw_less(b * mul)) {
                 r.raw_sub(b * mul);
                 v[0] += mul;
@@ -401,7 +340,7 @@ struct BigIntHex {
         return *this;
     }
 
-    bool operator<(const BigIntHex &b) const {
+    bool operator<(const BigIntDec &b) const {
         if (sign * b.sign > 0) {
             if (sign > 0)
                 return raw_less(b);
@@ -414,32 +353,32 @@ struct BigIntHex {
                 return true;
         }
     }
-    bool operator>(const BigIntHex &b) const {
+    bool operator>(const BigIntDec &b) const {
         return b < *this;
     }
-    bool operator<=(const BigIntHex &b) const {
+    bool operator<=(const BigIntDec &b) const {
         return !(*this > b);
     }
-    bool operator>=(const BigIntHex &b) const {
+    bool operator>=(const BigIntDec &b) const {
         return !(*this < b);
     }
-    bool operator==(const BigIntHex &b) const {
+    bool operator==(const BigIntDec &b) const {
         if (size() == 1 && b.size() == 1 && v[0] == 0 && b.v[0] == 0)
             return true;
         if (sign != b.sign)
             return false;
         return raw_eq(b);
     }
-    bool operator!=(const BigIntHex &b) const {
+    bool operator!=(const BigIntDec &b) const {
         return !(*this == b);
     }
 
-    BigIntHex &operator=(intmax_t n) {
+    BigIntDec &operator=(intmax_t n) {
         set(n);
         return *this;
     }
-    BigIntHex operator+(const BigIntHex &b) const {
-        BigIntHex r = *this;
+    BigIntDec operator+(const BigIntDec &b) const {
+        BigIntDec r = *this;
         if (sign * b.sign > 0) {
             r.raw_add(b);
         } else {
@@ -447,8 +386,8 @@ struct BigIntHex {
         }
         return r;
     }
-    BigIntHex &operator+=(const BigIntHex &b) {
-        BigIntHex &r = *this;
+    BigIntDec &operator+=(const BigIntDec &b) {
+        BigIntDec &r = *this;
         if (sign * b.sign > 0) {
             r.raw_add(b);
         } else {
@@ -457,8 +396,8 @@ struct BigIntHex {
         return r;
     }
 
-    BigIntHex operator-(const BigIntHex &b) const {
-        BigIntHex r = *this;
+    BigIntDec operator-(const BigIntDec &b) const {
+        BigIntDec r = *this;
         if (sign * b.sign < 0) {
             r.raw_add(b);
         } else {
@@ -466,8 +405,8 @@ struct BigIntHex {
         }
         return r;
     }
-    BigIntHex &operator-=(const BigIntHex &b) {
-        BigIntHex &r = *this;
+    BigIntDec &operator-=(const BigIntDec &b) {
+        BigIntDec &r = *this;
         if (sign * b.sign < 0) {
             r.raw_add(b);
         } else {
@@ -476,44 +415,44 @@ struct BigIntHex {
         return r;
     }
 
-    BigIntHex operator-() const {
-        BigIntHex r = *this;
+    BigIntDec operator-() const {
+        BigIntDec r = *this;
         r.sign *= -1;
         return r;
     }
 
-    BigIntHex operator*(const BigIntHex &b) const {
+    BigIntDec operator*(const BigIntDec &b) const {
         if (b.size() == 1) {
-            BigIntHex r = *this;
+            BigIntDec r = *this;
             r.raw_mul_int((uint32_t)b.v[0]);
             r.sign *= b.sign;
             return r;
         } else {
-            BigIntHex r;
+            BigIntDec r;
             r.raw_fastmul(*this, b);
             r.sign = sign * b.sign;
             return r;
         }
     }
 
-    BigIntHex &operator*=(const BigIntHex &b) {
+    BigIntDec &operator*=(const BigIntDec &b) {
         if (b.size() == 1) {
             raw_mul_int((uint32_t)b.v[0]);
             sign *= b.sign;
             return *this;
         } else {
-            BigIntHex r = *this;
+            BigIntDec r = *this;
             raw_fastmul(r, b);
             sign = r.sign * b.sign;
             return *this;
         }
     }
 
-    BigIntHex operator*(int32_t b) const {
-        return *this * BigIntHex().set(b);
+    BigIntDec operator*(int32_t b) const {
+        return *this * BigIntDec().set(b);
     }
 
-    BigIntHex &operator*=(int16_t b) {
+    BigIntDec &operator*=(int16_t b) {
         if (b >= 0)
             raw_mul_int((uint32_t)b);
         else {
@@ -523,57 +462,57 @@ struct BigIntHex {
         return *this;
     }
 
-    BigIntHex &operator*=(int32_t b) {
+    BigIntDec &operator*=(int32_t b) {
         if (b < 0x7fff && -0x7fff < b)
             return *this *= (int16_t)b;
-        return *this *= BigIntHex().set(b);
+        return *this *= BigIntDec().set(b);
     }
 
-    BigIntHex operator/(const BigIntHex &b) const {
-        BigIntHex r;
+    BigIntDec operator/(const BigIntDec &b) const {
+        BigIntDec r;
         r.raw_div(*this, b);
         r.sign = sign * b.sign;
         return r;
     }
 
-    BigIntHex &operator/=(const BigIntHex &b) {
-        BigIntHex r = *this;
+    BigIntDec &operator/=(const BigIntDec &b) {
+        BigIntDec r = *this;
         raw_div(r, b);
         sign = r.sign * b.sign;
         return *this;
     }
 
-    BigIntHex operator%(const BigIntHex &b) const {
-        BigIntHex r;
+    BigIntDec operator%(const BigIntDec &b) const {
+        BigIntDec r;
         r.raw_mod(*this, b);
         return r;
     }
 
-    BigIntHex &operator%=(const BigIntHex &b) {
-        BigIntHex r = *this;
+    BigIntDec &operator%=(const BigIntDec &b) {
+        BigIntDec r = *this;
         raw_mod(r, b);
         return *this;
     }
 
-    std::string out_hex() const {
-        const char *digits = "0123456789ABCDEF";
+    std::string out_dec(int32_t pack = 0) const {
         std::string out;
         int32_t d = 0;
         for (size_t i = 0, j = 0;;) {
-            if (j < 4) {
-                if (i < v.size())
-                    d += v[i] << j;
+            if (j < 1) {
+                if (i < size())
+                    d += v[i];
                 else if (d == 0)
                     break;
-                j += COMPRESS_BIT;
+                j += 4;
                 ++i;
             }
-            out.push_back(digits[d & 0xf]);
-            d >>= 4;
-            j -= 4;
+            out.push_back((d % 10) + '0');
+            d /= 10;
+            j -= 1;
         }
-        while (out.size() > 1 && out.back() == '0')
-            out.pop_back();
+        if (pack == 0)
+            while (out.size() > 1 && out.back() == '0')
+                out.pop_back();
         if (sign < 0 && !this->is_zero())
             out.push_back('-');
         std::reverse(out.begin(), out.end());
@@ -591,7 +530,7 @@ struct BigIntHex {
             sum.raw_add(mul);
         }
         for (size_t i = 1; i < v.size(); i++) {
-            base.raw_mul_int(COMPRESS_MOD);
+            base.raw_mul_int(COMPRESS_DECMOD);
             BigIntBase mul(out_base);
             mul = base;
             mul.raw_mul_int(v[i]);
@@ -626,18 +565,18 @@ struct BigIntHex {
     }
 
     std::string to_str(int32_t out_base = 10, int32_t pack = 0) const {
-        if (out_base == 16) {
-            return out_hex();
+        if (out_base == 10) {
+            return out_dec();
         }
         if (v.size() < 64) {
             return out_mul(out_base, pack);
         }
         if (sign < 0) {
-            BigIntHex a = *this;
+            BigIntDec a = *this;
             a.sign = 1;
             return "-" + a.to_str(out_base);
         }
-        BigIntHex b;
+        BigIntDec b;
         b.set(out_base);
         int32_t len = 1;
         for (; b * b < *this; len *= 2, b = b * b)
