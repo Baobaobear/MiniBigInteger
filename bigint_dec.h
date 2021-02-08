@@ -316,6 +316,14 @@ public:
         while (*s == '0') {
             ++s;
         }
+        int digits = 1;
+        int hbase = base;
+        for (digits = 1; hbase <= BIGINT_MAXBASE; hbase *= base, ++digits)
+            ;
+        hbase /= base;
+        --digits;
+
+        int d = digits, hdigit = 0, hdigit_mul = 1;
         for (p--; p >= s; p--) {
             int digit = -1;
             if (*p >= '0' && *p <= '9')
@@ -326,10 +334,20 @@ public:
                 else if (*p >= 'a' && *p <= 'z')
                     digit = *p - 'A' + 10;
             }
-            *this += m * digit;
-            if (p > s) {
-                m *= base;
+            hdigit += digit * hdigit_mul;
+            hdigit_mul *= base;
+            if (--d == 0) {
+                *this += m * hdigit;
+                if (p > s) {
+                    m *= hbase;
+                }
+                d = digits;
+                hdigit = 0;
+                hdigit_mul = 1;
             }
+        }
+        if (hdigit) {
+            *this += m * hdigit;
         }
         this->sign = sign;
         return *this;
