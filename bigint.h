@@ -179,9 +179,7 @@ protected:
                 add = v[i + j] >> COMPRESS_BIT;
                 v[i + j] &= COMPRESS_MASK;
             }
-            if (add) {
-                v[i + b.size()] += add;
-            }
+            v[i + b.size()] += add;
         }
         trim();
         return *this;
@@ -267,8 +265,10 @@ protected:
                 add = r.v[i + j] >> COMPRESS_BIT;
                 r.v[i + j] &= COMPRESS_MASK;
             }
-            if (add) {
-                r.v[i + b.size()] += add;
+            for (size_t j = i + b.size(); add && j < r.size(); ++j) {
+                r.v[j] += add;
+                add = r.v[j] >> COMPRESS_BIT;
+                r.v[j] &= COMPRESS_MASK;
             }
         }
         while (r.v.back() == 0 && r.v.size() > 1) {
@@ -309,12 +309,14 @@ protected:
                 add = r.v[i + j] >> COMPRESS_BIT;
                 r.v[i + j] &= COMPRESS_MASK;
             }
-            if (add) {
-                r.v[i + b.size()] += add;
+            for (size_t j = i + b.size(); add && j < r.size(); ++j) {
+                r.v[j] += add;
+                add = r.v[j] >> COMPRESS_BIT;
+                r.v[j] &= COMPRESS_MASK;
             }
-            while (r.v.back() == 0 && r.v.size() > 1) {
-                r.v.pop_back();
-            }
+        }
+        while (r.v.back() == 0 && r.v.size() > 1) {
+            r.v.pop_back();
         }
         while (!r.raw_less(b)) {
             r.raw_sub(b);

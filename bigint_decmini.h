@@ -116,9 +116,7 @@ protected:
                 add = v[i + j] / COMPRESS_DECMOD;
                 v[i + j] %= COMPRESS_DECMOD;
             }
-            if (add) {
-                v[i + b.size()] += add;
-            }
+            v[i + b.size()] += add;
         }
         trim();
         return *this;
@@ -146,8 +144,12 @@ protected:
                 if (r.v[i + j] < 0)
                     r.v[i + j] += COMPRESS_DECMOD, --add;
             }
-            if (add) {
-                r.v[i + b.size()] += add;
+            for (size_t j = i + b.size(); add && j < r.size(); ++j) {
+                r.v[j] += add;
+                add = r.v[j] / COMPRESS_DECMOD;
+                r.v[j] %= COMPRESS_DECMOD;
+                if (r.v[j] < 0)
+                    r.v[j] += COMPRESS_DECMOD, --add;
             }
         }
         while (r.v.back() == 0 && r.v.size() > 1) {
