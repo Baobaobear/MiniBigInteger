@@ -122,6 +122,7 @@ protected:
         }
         if (add)
             v.push_back(add);
+        trim();
         return *this;
     }
     BigIntHex &raw_sub(const BigIntHex &b) {
@@ -642,7 +643,7 @@ public:
             while (out.size() > 1 && out.back() == '0')
                 out.pop_back();
         else
-            while (out.size() > pack && out.back() == '0')
+            while ((int32_t)out.size() > pack && out.back() == '0')
                 out.pop_back();
         if (sign < 0 && !this->is_zero())
             out.push_back('-');

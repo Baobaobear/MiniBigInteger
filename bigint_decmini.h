@@ -53,6 +53,7 @@ protected:
         }
         if (add)
             v.push_back(add);
+        trim();
         return *this;
     }
     BigIntDecMini &raw_sub(const BigIntDecMini &b) {
