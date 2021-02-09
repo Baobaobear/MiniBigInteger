@@ -33,7 +33,7 @@ bool test1_parse() {
     BigIntDec hb;
     BigIntM hc;
     struct {
-        const char* p;
+        const char *p;
         int base;
     } in[] = {
         {"0", 10},
@@ -42,8 +42,7 @@ bool test1_parse() {
         {"-12345678901234567890", 10},
         {"123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 36},
         {"-123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 36},
-        {"",0}
-    };
+        {"", 0}};
     for (int i = 0; in[i].base; ++i) {
         ha.from_str(in[i].p, in[i].base);
         if (ha.to_str(in[i].base) != in[i].p) {
@@ -72,9 +71,9 @@ bool test2_add() {
     BigIntDec hb1, hb2;
     BigIntM hc1, hc2;
     struct {
-        const char* p1;
-        const char* p2;
-        const char* pa;
+        const char *p1;
+        const char *p2;
+        const char *pa;
         int base;
     } in[] = {
         {"0", "0", "0", 2},
@@ -89,8 +88,7 @@ bool test2_add() {
         {"-9999999999999999", "1111111111111111", "-8888888888888888", 10},
         {"-9999999999999999", "-1111111111111111", "-11111111111111110", 10},
         {"-9999999999999999", "-1111111111111111", "-AAAAAAAAAAAAAAAA", 16},
-        {"", "", "", 0}
-    };
+        {"", "", "", 0}};
     for (int i = 0; in[i].base; ++i) {
         ha1.from_str(in[i].p1, in[i].base);
         ha2.from_str(in[i].p2, in[i].base);
@@ -125,9 +123,9 @@ bool test3_sub() {
     BigIntDec hb1, hb2;
     BigIntM hc1, hc2;
     struct {
-        const char* p1;
-        const char* p2;
-        const char* pa;
+        const char *p1;
+        const char *p2;
+        const char *pa;
         int base;
     } in[] = {
         {"0", "0", "0", 2},
@@ -142,8 +140,7 @@ bool test3_sub() {
         {"9999999999999999", "-1111111111111111", "11111111111111110", 10},
         {"-9999999999999999", "1111111111111111", "-11111111111111110", 10},
         {"-9999999999999999", "-1111111111111111", "-8888888888888888", 10},
-        {"", "", "", 0}
-    };
+        {"", "", "", 0}};
     for (int i = 0; in[i].base; ++i) {
         ha1.from_str(in[i].p1, in[i].base);
         ha2.from_str(in[i].p2, in[i].base);
@@ -178,9 +175,9 @@ bool test4_mul() {
     BigIntDec hb1, hb2;
     BigIntM hc1, hc2;
     struct {
-        const char* p1;
-        const char* p2;
-        const char* pa;
+        const char *p1;
+        const char *p2;
+        const char *pa;
         int base;
     } in[] = {
         {"0", "0", "0", 2},
@@ -191,8 +188,7 @@ bool test4_mul() {
         {"100001", "123456789123456789", "12345802369134802356789", 10},
         {"1616161616161161616", "7897879879879797897897979879", "12764250310913255140835516279358765904435124464", 10},
         {"1427247692705959881058285969449495136382746624", "1427247692705959881058285969449495136382746624", "2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397376", 10},
-        {"", "", "", 0}
-    };
+        {"", "", "", 0}};
     for (int i = 0; in[i].base; ++i) {
         ha1.from_str(in[i].p1, in[i].base);
         ha2.from_str(in[i].p2, in[i].base);
@@ -227,9 +223,9 @@ bool test5_div() {
     BigIntDec hb1, hb2;
     BigIntM hc1, hc2;
     struct {
-        const char* p1;
-        const char* p2;
-        const char* pa;
+        const char *p1;
+        const char *p2;
+        const char *pa;
         int base;
     } in[] = {
         {"10101", "1011", "1", 2},
@@ -238,8 +234,7 @@ bool test5_div() {
         {"12764250310913255140835516279358765904435124464", "7897879879879797897897979879", "1616161616161161616", 10},
         {"2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397376", "1427247692705959881058285969449495136382746624", "1427247692705959881058285969449495136382746624", 10},
         {"2037035976334486086268445688409378161051468393665936250636140449354381299763336706182397376", "1427247692705959881058285969449495136382746624", "1427247692705959881058285969449495136382746623", 10},
-        {"", "", "", 0}
-    };
+        {"", "", "", 0}};
     for (int i = 0; in[i].base; ++i) {
         ha1.from_str(in[i].p1, in[i].base);
         ha2.from_str(in[i].p2, in[i].base);
@@ -274,9 +269,9 @@ bool test6_mod() {
     BigIntDec hb1, hb2;
     BigIntM hc1, hc2;
     struct {
-        const char* p1;
-        const char* p2;
-        const char* pa;
+        const char *p1;
+        const char *p2;
+        const char *pa;
         int base;
     } in[] = {
         {"10101", "1011", "1010", 2},
@@ -285,8 +280,7 @@ bool test6_mod() {
         {"12764250310913255140835516279358765904435124464", "7897879879879797897897979879", "0", 10},
         {"2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397376", "1427247692705959881058285969449495136382746624", "0", 10},
         {"2037035976334486086268445688409378161051468393665936250636140449354381299763336706182397376", "1427247692705959881058285969449495136382746624", "1427247692705959881058285969449495136381746624", 10},
-        {"", "", "", 0}
-    };
+        {"", "", "", 0}};
     for (int i = 0; in[i].base; ++i) {
         ha1.from_str(in[i].p1, in[i].base);
         ha2.from_str(in[i].p2, in[i].base);
@@ -320,17 +314,17 @@ bool test7_sqrt() {
     BigIntHex ha, hal, har, ham;
     BigIntDec hb, hbl, hbr, hbm;
     struct {
-        const char* p1;
-        const char* pa;
+        const char *p1;
+        const char *pa;
         int base;
     } in[] = {
         {"1111001", "1011", 2},
         {"2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397376", "1427247692705959881058285969449495136382746624", 10},
-        {"", "", 0}
-    };
+        {"", "", 0}};
     for (int i = 0; in[i].base; ++i) {
         ha.from_str(in[i].p1, in[i].base);
-        hal = 1; har = ha;
+        hal = 1;
+        har = ha;
         while (hal < har) {
             ham = (hal + har + BigIntHex().set(1)) / BigIntHex().set(2);
             if (ham * ham > ha) {
@@ -345,7 +339,8 @@ bool test7_sqrt() {
     }
     for (int i = 0; in[i].base; ++i) {
         hb.from_str(in[i].p1, in[i].base);
-        hbl = 1; hbr = hb;
+        hbl = 1;
+        hbr = hb;
         while (hbl < hbr) {
             hbm = (hbl + hbr + BigIntDec().set(1)) / BigIntDec().set(2);
             if (hbm * hbm > hb) {
@@ -366,18 +361,20 @@ bool test8_rnd_div() {
     BigIntDec hb1, hb2;
     BigIntM hc1, hc2;
     srand((unsigned)time(0));
-    for (int i = 0; i < 100; ++i)
-    {
+    for (int i = 0; i < 100; ++i) {
         hb1 = rand();
-        for (int j = 0; j < 16; ++j) hb1 += hb1 * RAND_MAX + BigIntDec().set(rand());
+        for (int j = 0; j < 16; ++j)
+            hb1 += hb1 * RAND_MAX + BigIntDec().set(rand());
         hb2 = rand();
-        for (int j = 0; j < 16; ++j) hb2 += hb2 * RAND_MAX + BigIntDec().set(rand());
+        for (int j = 0; j < 16; ++j)
+            hb2 += hb2 * RAND_MAX + BigIntDec().set(rand());
         string s1 = (hb1 * hb2).to_str(), s2 = hb1.to_str(), s3 = hb2.to_str();
 
         ha1.from_str(s1.c_str());
         ha2.from_str(s2.c_str());
         ha1 /= ha2;
         if (ha1.to_str() != s3) {
+            cout << "HEX:" << s1 << "/" << s2 << "=" << s3 << " out:" << ha1.to_str() << endl;
             return false;
         }
 
@@ -385,6 +382,7 @@ bool test8_rnd_div() {
         hb2.from_str(s2.c_str());
         hb1 /= hb2;
         if (hb1.to_str() != s3) {
+            cout << "DEC:" << s1 << "/" << s2 << "=" << s3 << " out:" << hb1.to_str() << endl;
             return false;
         }
 
@@ -392,6 +390,7 @@ bool test8_rnd_div() {
         hc2.from_str(s2.c_str());
         hc1 = hc1 / hc2;
         if (hc1.to_str() != s3) {
+            cout << "mini:" << s1 << "/" << s2 << "=" << s3 << " out:" << hc1.to_str() << endl;
             return false;
         }
     }
@@ -408,8 +407,7 @@ bool test_factorial() {
 
     t_beg = get_time();
     ha.set(1);
-    for (int i = 2; i <= fac; ++i)
-    {
+    for (int i = 2; i <= fac; ++i) {
         ha *= i;
     }
     t_end = get_time();
