@@ -8,7 +8,6 @@
 namespace BigIntDecMiniNS {
 const int BIGINT_MAXBASE = 1 << 15;
 const int COMPRESS_DECMOD = 10000;
-const int BIGINT_MUL_THRESHOLD = 64;
 
 class BigIntDecMini {
 protected:
@@ -261,19 +260,6 @@ public:
         }
         return r;
     }
-    BigIntDecMini &operator+=(const BigIntDecMini &b) {
-        if (this == &b) {
-            BigIntDecMini c = b;
-            return *this += c;
-        }
-        BigIntDecMini &r = *this;
-        if (sign * b.sign > 0) {
-            r.raw_add(b);
-        } else {
-            r.raw_sub(b);
-        }
-        return r;
-    }
     BigIntDecMini operator-(const BigIntDecMini &b) const {
         BigIntDecMini r = *this;
         if (sign * b.sign < 0) {
@@ -283,22 +269,9 @@ public:
         }
         return r;
     }
-    BigIntDecMini &operator-=(const BigIntDecMini &b) {
-        if (this == &b) {
-            set(0);
-            return *this;
-        }
-        BigIntDecMini &r = *this;
-        if (sign * b.sign < 0) {
-            r.raw_add(b);
-        } else {
-            r.raw_sub(b);
-        }
-        return r;
-    }
     BigIntDecMini operator-() const {
         BigIntDecMini r = *this;
-        r.sign *= -1;
+        r.sign = -r.sign;
         return r;
     }
     BigIntDecMini operator*(const BigIntDecMini &b) const {

@@ -110,7 +110,7 @@ bool test2_add() {
             continue;
         hc1.from_str(in[i].p1);
         hc2.from_str(in[i].p2);
-        hc1 += hc2;
+        hc1 = hc1 + hc2;
         if (hc1.to_str() != in[i].pa) {
             return false;
         }
@@ -162,7 +162,7 @@ bool test3_sub() {
             continue;
         hc1.from_str(in[i].p1);
         hc2.from_str(in[i].p2);
-        hc1 -= hc2;
+        hc1 = hc1 - hc2;
         if (hc1.to_str() != in[i].pa) {
             return false;
         }
