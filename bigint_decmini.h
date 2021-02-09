@@ -8,6 +8,7 @@
 namespace BigIntDecMiniNS {
 const int BIGINT_MAXBASE = 1 << 15;
 const int COMPRESS_DECMOD = 10000;
+const int COMPRESS_DIGITS = 4;
 
 class BigIntDecMini {
 protected:
@@ -192,17 +193,15 @@ public:
     }
     BigIntDecMini &from_str(const char *s) {
         v.clear();
-        int base = 10, sign = 1, digits = 1, hbase = base;
+        int base = 10, sign = 1, digits = COMPRESS_DIGITS, hbase = COMPRESS_DECMOD;
         const char *p = s + strlen(s);
         while (*s == '-')
             sign *= -1, ++s;
         while (*s == '0')
             ++s;
-        for (; hbase <= COMPRESS_DECMOD; hbase *= base, ++digits)
-            ;
 
-        int d = --digits, hdigit = 0, hdigit_mul = 1;
-        for (hbase /= base, p--; p >= s; p--) {
+        int d = digits, hdigit = 0, hdigit_mul = 1;
+        for (p--; p >= s; p--) {
             hdigit += (*p - '0') * hdigit_mul;
             hdigit_mul *= base;
             if (--d == 0) {
@@ -318,7 +317,7 @@ public:
                     d += v[i];
                 else if (d == 0)
                     break;
-                j += 4;
+                j += COMPRESS_DIGITS;
                 ++i;
             }
             out.push_back((d % 10) + '0');

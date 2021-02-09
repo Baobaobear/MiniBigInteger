@@ -586,6 +586,8 @@ public:
         else
             while ((int32_t)out.size() > pack && out.back() == '0')
                 out.pop_back();
+        while ((int32_t)out.size() < pack)
+            out.push_back('0');
         if (sign < 0 && !this->is_zero())
             out.push_back('-');
         std::reverse(out.begin(), out.end());

@@ -400,6 +400,7 @@ bool test8_rnd_div() {
 bool test_factorial() {
     BigIntHex ha;
     BigIntDec hb;
+    BigIntM hc;
     string s;
     int fac = 10000;
 
@@ -417,6 +418,7 @@ bool test_factorial() {
     cout << "    by hex: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "    trans to dec: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
     cout << "    total " << s.size() << " dec digits" << endl;
+    cout << "    total " << ha.to_str(16).size() << " hex digits" << endl;
 
     t_beg = get_time();
     hb.set(1);
@@ -430,6 +432,20 @@ bool test_factorial() {
     cout << "    by dec: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "    trans to hex: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
     cout << "    total " << s.size() << " hex digits" << endl;
+    cout << "    total " << hb.to_str().size() << " dec digits" << endl;
+
+    t_beg = get_time();
+    hc.set(1);
+    for (int i = 2; i <= fac; ++i) {
+        hc *= i;
+    }
+    t_end = get_time();
+    s = hc.to_str();
+    t_out = get_time();
+    cout << "calc " << fac << "!" << endl;
+    cout << "    by mini: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    to_str: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "    total " << s.size() << " dec digits" << endl;
     return true;
 }
 
