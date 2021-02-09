@@ -49,9 +49,11 @@ protected:
             add = v[i] / COMPRESS_DECMOD;
             v[i] %= COMPRESS_DECMOD;
         }
-        if (add)
+        if (add) {
             v.push_back(add);
-        trim();
+        } else {
+            trim();
+        }
         return *this;
     }
     BigIntDec &raw_sub(const BigIntDec &b) {
@@ -99,6 +101,7 @@ protected:
             add = v.back() / COMPRESS_DECMOD;
             v.back() %= COMPRESS_DECMOD;
         }
+        trim();
         return *this;
     }
     BigIntDec &raw_mul(const BigIntDec &a, const BigIntDec &b) {

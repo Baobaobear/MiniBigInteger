@@ -120,9 +120,11 @@ protected:
             add = v[i] >> COMPRESS_BIT;
             v[i] &= COMPRESS_MASK;
         }
-        if (add)
+        if (add) {
             v.push_back(add);
-        trim();
+        } else {
+            trim();
+        }
         return *this;
     }
     BigIntHex &raw_sub(const BigIntHex &b) {
@@ -166,6 +168,7 @@ protected:
             add = v.back() >> COMPRESS_BIT;
             v.back() &= COMPRESS_MASK;
         }
+        trim();
         return *this;
     }
     BigIntHex &raw_mul(const BigIntHex &a, const BigIntHex &b) {

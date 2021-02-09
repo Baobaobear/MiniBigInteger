@@ -51,9 +51,11 @@ protected:
             add = v[i] / COMPRESS_DECMOD;
             v[i] %= COMPRESS_DECMOD;
         }
-        if (add)
+        if (add) {
             v.push_back(add);
-        trim();
+        } else {
+            trim();
+        }
         return *this;
     }
     BigIntDecMini &raw_sub(const BigIntDecMini &b) {
