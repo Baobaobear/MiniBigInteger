@@ -74,7 +74,8 @@ const int COMPRESS_BIT = 15;
 const int COMPRESS_MOD = 1 << COMPRESS_BIT;
 const int COMPRESS_MASK = COMPRESS_MOD - 1;
 
-const int BIGINT_MUL_THRESHOLD = 64;
+const int BIGINT_MUL_THRESHOLD = 48;
+const int BIGINT_OUTPUT_THRESHOLD = 32;
 
 class BigIntHex {
 protected:
@@ -649,6 +650,9 @@ public:
         if (pack == 0)
             while (out.size() > 1 && out.back() == '0')
                 out.pop_back();
+        else
+            while (out.size() > pack && out.back() == '0')
+                out.pop_back();
         if (sign < 0 && !this->is_zero())
             out.push_back('-');
         std::reverse(out.begin(), out.end());
@@ -659,7 +663,7 @@ public:
         if (out_base == 16) {
             return out_hex();
         }
-        if (v.size() < 64) {
+        if (v.size() < BIGINT_OUTPUT_THRESHOLD) {
             return out_mul(out_base, pack);
         }
         if (sign < 0) {
