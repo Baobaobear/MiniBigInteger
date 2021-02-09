@@ -5,7 +5,7 @@ namespace BigIntDecNS {
 const int COMPRESS_DECMOD = 10000;
 
 const int BIGINT_MUL_THRESHOLD = 48;
-const int BIGINT_OUTPUT_THRESHOLD = 16;
+const int BIGINT_OUTPUT_THRESHOLD = 32;
 
 class BigIntDec {
 protected:

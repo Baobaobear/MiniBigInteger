@@ -75,7 +75,7 @@ const int COMPRESS_MOD = 1 << COMPRESS_BIT;
 const int COMPRESS_MASK = COMPRESS_MOD - 1;
 
 const int BIGINT_MUL_THRESHOLD = 48;
-const int BIGINT_OUTPUT_THRESHOLD = 16;
+const int BIGINT_OUTPUT_THRESHOLD = 32;
 
 class BigIntHex {
 protected:
