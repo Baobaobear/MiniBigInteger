@@ -374,7 +374,7 @@ bool test8_rnd_div() {
         ha2.from_str(s2.c_str());
         ha1 /= ha2;
         if (ha1.to_str() != s3) {
-            cout << "HEX:" << s1 << "/" << s2 << "=" << s3 << " out:" << ha1.to_str() << endl;
+            cout << "HEX: " << s1 << " / " << s2 << " = " << s3 << " out: " << ha1.to_str() << endl;
             return false;
         }
 
@@ -382,7 +382,7 @@ bool test8_rnd_div() {
         hb2.from_str(s2.c_str());
         hb1 /= hb2;
         if (hb1.to_str() != s3) {
-            cout << "DEC:" << s1 << "/" << s2 << "=" << s3 << " out:" << hb1.to_str() << endl;
+            cout << "DEC: " << s1 << " / " << s2 << " = " << s3 << " out: " << hb1.to_str() << endl;
             return false;
         }
 
@@ -390,7 +390,7 @@ bool test8_rnd_div() {
         hc2.from_str(s2.c_str());
         hc1 = hc1 / hc2;
         if (hc1.to_str() != s3) {
-            cout << "mini:" << s1 << "/" << s2 << "=" << s3 << " out:" << hc1.to_str() << endl;
+            cout << "mini: " << s1 << " / " << s2 << " = " << s3 << " out: " << hc1.to_str() << endl;
             return false;
         }
     }

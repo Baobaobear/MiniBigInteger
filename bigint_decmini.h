@@ -152,9 +152,7 @@ protected:
                     r.v[j] += COMPRESS_DECMOD, --add;
             }
         }
-        while (r.v.back() == 0 && r.v.size() > 1) {
-            r.v.pop_back();
-        }
+        r.trim();
         while (!r.raw_less(b)) {
             r.raw_sub(b);
             v[0]++;
