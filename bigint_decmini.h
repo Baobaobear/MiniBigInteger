@@ -175,8 +175,8 @@ protected:
     }
 
 public:
-    BigIntDecMini() {
-        set(0);
+    explicit BigIntDecMini(intmax_t n = 0) {
+        set(n);
     }
     BigIntDecMini &set(intmax_t n) {
         v.resize(1);
@@ -206,8 +206,7 @@ public:
 
         int d = --digits, hdigit = 0, hdigit_mul = 1;
         for (hbase /= base, p--; p >= s; p--) {
-            int digit = *p - '0';
-            hdigit += digit * hdigit_mul;
+            hdigit += (*p - '0') * hdigit_mul;
             hdigit_mul *= base;
             if (--d == 0) {
                 v.push_back(hdigit);
@@ -244,7 +243,7 @@ public:
         }
     }
     bool operator==(const BigIntDecMini &b) const {
-        if (size() == 1 && b.size() == 1 && v[0] == 0 && b.v[0] == 0)
+        if (is_zero() && b.is_zero())
             return true;
         if (sign != b.sign)
             return false;
@@ -336,9 +335,7 @@ public:
         return r;
     }
     BigIntDecMini operator%(const BigIntDecMini &b) const {
-        BigIntDecMini r;
-        r = *this - *this / b * b;
-        return r;
+        return *this - *this / b * b;
     }
 
     std::string to_str() const {

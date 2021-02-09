@@ -429,7 +429,7 @@ public:
         return !(*this < b);
     }
     bool operator==(const BigIntHex &b) const {
-        if (size() == 1 && b.size() == 1 && v[0] == 0 && b.v[0] == 0)
+        if (is_zero() && b.is_zero())
             return true;
         if (sign != b.sign)
             return false;

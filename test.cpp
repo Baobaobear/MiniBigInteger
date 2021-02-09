@@ -361,7 +361,44 @@ bool test7_sqrt() {
     return true;
 }
 
-bool test8_factorial() {
+bool test8_rnd_div() {
+    BigIntHex ha1, ha2;
+    BigIntDec hb1, hb2;
+    BigIntM hc1, hc2;
+    srand((unsigned)time(0));
+    for (int i = 0; i < 100; ++i)
+    {
+        hb1 = rand();
+        for (int j = 0; j < 16; ++j) hb1 += hb1 * RAND_MAX + BigIntDec().set(rand());
+        hb2 = rand();
+        for (int j = 0; j < 16; ++j) hb2 += hb2 * RAND_MAX + BigIntDec().set(rand());
+        string s1 = (hb1 * hb2).to_str(), s2 = hb1.to_str(), s3 = hb2.to_str();
+
+        ha1.from_str(s1.c_str());
+        ha2.from_str(s2.c_str());
+        ha1 /= ha2;
+        if (ha1.to_str() != s3) {
+            return false;
+        }
+
+        hb1.from_str(s1.c_str());
+        hb2.from_str(s2.c_str());
+        hb1 /= hb2;
+        if (hb1.to_str() != s3) {
+            return false;
+        }
+
+        hc1.from_str(s1.c_str());
+        hc2.from_str(s2.c_str());
+        hc1 = hc1 / hc2;
+        if (hc1.to_str() != s3) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool test_factorial() {
     BigIntHex ha;
     BigIntDec hb;
     string s;
@@ -398,7 +435,7 @@ bool test8_factorial() {
     return true;
 }
 
-bool test9_bigmul() {
+bool test_bigmul() {
     BigIntHex ha;
     BigIntDec hb;
     string s;
@@ -431,14 +468,15 @@ bool test9_bigmul() {
 }
 
 int main() {
-    cout << "test1_parse: " << (test1_parse() ? "pass" : "FAIL") << endl;
-    cout << "test2_add  : " << (test2_add() ? "pass" : "FAIL") << endl;
-    cout << "test3_sub  : " << (test3_sub() ? "pass" : "FAIL") << endl;
-    cout << "test4_mul  : " << (test4_mul() ? "pass" : "FAIL") << endl;
-    cout << "test5_div  : " << (test5_div() ? "pass" : "FAIL") << endl;
-    cout << "test6_mod  : " << (test6_mod() ? "pass" : "FAIL") << endl;
-    cout << "test7_sqrt : " << (test7_sqrt() ? "pass" : "FAIL") << endl;
-    test8_factorial();
-    test9_bigmul();
+    cout << "test1_parse : " << (test1_parse() ? "pass" : "FAIL") << endl;
+    cout << "test2_add   : " << (test2_add() ? "pass" : "FAIL") << endl;
+    cout << "test3_sub   : " << (test3_sub() ? "pass" : "FAIL") << endl;
+    cout << "test4_mul   : " << (test4_mul() ? "pass" : "FAIL") << endl;
+    cout << "test5_div   : " << (test5_div() ? "pass" : "FAIL") << endl;
+    cout << "test6_mod   : " << (test6_mod() ? "pass" : "FAIL") << endl;
+    cout << "test7_sqrt  : " << (test7_sqrt() ? "pass" : "FAIL") << endl;
+    cout << "test8_rnddiv: " << (test8_rnd_div() ? "pass" : "FAIL") << endl;
+    test_factorial();
+    test_bigmul();
     return 0;
 }
