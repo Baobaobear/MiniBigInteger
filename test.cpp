@@ -1,5 +1,6 @@
 #include "bigint.h"
 #include "bigint_dec.h"
+#include "bigint_decmini.h"
 
 #include <iostream>
 
@@ -30,11 +31,12 @@ double get_time_diff(time_point from, time_point to) {
 bool test1_parse() {
     BigIntHex ha;
     BigIntDec hb;
+    BigIntM hc;
     struct {
         const char* p;
         int base;
     } in[] = {
-        {"0", 2},
+        {"0", 10},
         {"-1", 2},
         {"12345678901234567890", 10},
         {"-12345678901234567890", 10},
@@ -54,12 +56,21 @@ bool test1_parse() {
             return false;
         }
     }
+    for (int i = 0; in[i].base; ++i) {
+        if (in[i].base != 10)
+            continue;
+        hc.from_str(in[i].p);
+        if (hc.to_str() != in[i].p) {
+            return false;
+        }
+    }
     return true;
 }
 
 bool test2_add() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
+    BigIntM hc1, hc2;
     struct {
         const char* p1;
         const char* p2;
@@ -96,12 +107,23 @@ bool test2_add() {
             return false;
         }
     }
+    for (int i = 0; in[i].base; ++i) {
+        if (in[i].base != 10)
+            continue;
+        hc1.from_str(in[i].p1);
+        hc2.from_str(in[i].p2);
+        hc1 += hc2;
+        if (hc1.to_str() != in[i].pa) {
+            return false;
+        }
+    }
     return true;
 }
 
 bool test3_sub() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
+    BigIntM hc1, hc2;
     struct {
         const char* p1;
         const char* p2;
@@ -138,12 +160,23 @@ bool test3_sub() {
             return false;
         }
     }
+    for (int i = 0; in[i].base; ++i) {
+        if (in[i].base != 10)
+            continue;
+        hc1.from_str(in[i].p1);
+        hc2.from_str(in[i].p2);
+        hc1 -= hc2;
+        if (hc1.to_str() != in[i].pa) {
+            return false;
+        }
+    }
     return true;
 }
 
 bool test4_mul() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
+    BigIntM hc1, hc2;
     struct {
         const char* p1;
         const char* p2;
@@ -176,12 +209,23 @@ bool test4_mul() {
             return false;
         }
     }
+    for (int i = 0; in[i].base; ++i) {
+        if (in[i].base != 10)
+            continue;
+        hc1.from_str(in[i].p1);
+        hc2.from_str(in[i].p2);
+        hc1 = hc1 * hc2;
+        if (hc1.to_str() != in[i].pa) {
+            return false;
+        }
+    }
     return true;
 }
 
 bool test5_div() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
+    BigIntM hc1, hc2;
     struct {
         const char* p1;
         const char* p2;
@@ -212,12 +256,23 @@ bool test5_div() {
             return false;
         }
     }
+    for (int i = 0; in[i].base; ++i) {
+        if (in[i].base != 10)
+            continue;
+        hc1.from_str(in[i].p1);
+        hc2.from_str(in[i].p2);
+        hc1 = hc1 / hc2;
+        if (hc1.to_str() != in[i].pa) {
+            return false;
+        }
+    }
     return true;
 }
 
 bool test6_mod() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
+    BigIntM hc1, hc2;
     struct {
         const char* p1;
         const char* p2;
@@ -245,6 +300,16 @@ bool test6_mod() {
         hb2.from_str(in[i].p2, in[i].base);
         hb1 %= hb2;
         if (hb1.to_str(in[i].base) != in[i].pa) {
+            return false;
+        }
+    }
+    for (int i = 0; in[i].base; ++i) {
+        if (in[i].base != 10)
+            continue;
+        hc1.from_str(in[i].p1);
+        hc2.from_str(in[i].p2);
+        hc1 = hc1 % hc2;
+        if (hc1.to_str() != in[i].pa) {
             return false;
         }
     }
@@ -299,6 +364,7 @@ bool test7_sqrt() {
 bool test8_factorial() {
     BigIntHex ha;
     BigIntDec hb;
+    string s;
     int fac = 10000;
 
     time_point t_beg, t_end, t_out;
@@ -310,11 +376,12 @@ bool test8_factorial() {
         ha *= i;
     }
     t_end = get_time();
-    ha.to_str();
+    s = ha.to_str();
     t_out = get_time();
     cout << "calc " << fac << "!" << endl;
-    cout << "    by hex:" << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "    trans to dec:" << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "    by hex: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    trans to dec: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "    total " << s.size() << " dec digits" << endl;
 
     t_beg = get_time();
     hb.set(1);
@@ -322,17 +389,19 @@ bool test8_factorial() {
         hb *= i;
     }
     t_end = get_time();
-    hb.to_str(16);
+    s = hb.to_str(16);
     t_out = get_time();
     cout << "calc " << fac << "!" << endl;
-    cout << "    by dec:" << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "    trans to hex:" << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "    by dec: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    trans to hex: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "    total " << s.size() << " hex digits" << endl;
     return true;
 }
 
 bool test9_bigmul() {
     BigIntHex ha;
     BigIntDec hb;
+    string s;
     int times = 20;
 
     time_point t_beg, t_end;
@@ -343,8 +412,10 @@ bool test9_bigmul() {
         ha *= ha;
     }
     t_end = get_time();
+    s = ha.to_str(16);
     cout << "calc 2^2^" << times << endl;
-    cout << "    by hex:" << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    by hex: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    total " << s.size() << " hex digits" << endl;
 
     t_beg = get_time();
     hb.set(2);
@@ -352,8 +423,10 @@ bool test9_bigmul() {
         hb *= hb;
     }
     t_end = get_time();
+    s = hb.to_str();
     cout << "calc 2^2^" << times << endl;
-    cout << "    by dec:" << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    by dec: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    total " << s.size() << " dec digits" << endl;
     return true;
 }
 

@@ -2,11 +2,11 @@
 
 [![Build Status]][Travis CI][![Appveyor status]][Appveyor] [![Language]](https://isocpp.org/)[![Standard]][Standard Cpp][![License]][MIT]
 
-This is a C++11 port of large integer library. It allow you parsing of numbers as strings in any bases between 2 and 36 and converting them back to string.
+This is a C++11 port of large integer library. It allows you parsing of numbers as strings in any bases between 2 and 36 and converting them back to string.
 
 ## Code Example
 
-Here is a example for calculate 2^100
+Here is an example for calculate 2^100
 
 ```c++
 #include <iostream>

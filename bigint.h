@@ -1,16 +1,11 @@
 #pragma once
 
 #include <algorithm>
+#include <cstring>
 #include <string>
 #include <vector>
 
-const int COMPRESS_BIT = 15;
-const int COMPRESS_MOD = 1 << COMPRESS_BIT;
-const int COMPRESS_MASK = COMPRESS_MOD - 1;
-
 const int BIGINT_MAXBASE = 1 << 15;
-
-const int BIGINT_MUL_THRESHOLD = 64;
 
 struct BigIntBase {
     int base;
@@ -74,6 +69,13 @@ struct BigIntBase {
     }
 };
 
+namespace BigIntHexNS {
+const int COMPRESS_BIT = 15;
+const int COMPRESS_MOD = 1 << COMPRESS_BIT;
+const int COMPRESS_MASK = COMPRESS_MOD - 1;
+
+const int BIGINT_MUL_THRESHOLD = 64;
+
 class BigIntHex {
 protected:
     int sign;
@@ -120,8 +122,7 @@ protected:
         if (add) {
             v.push_back(add);
         } else {
-            while (v.back() == 0 && v.size() > 1)
-                v.pop_back();
+            trim();
         }
         return *this;
     }
@@ -147,9 +148,7 @@ protected:
                 v[i] = v[i] ^ COMPRESS_MASK;
             }
         }
-        while (v.back() == 0 && v.size() > 1) {
-            v.pop_back();
-        }
+        trim();
         return *this;
     }
     BigIntHex &raw_mul_int(uint32_t m) {
@@ -184,9 +183,7 @@ protected:
                 v[i + b.size()] += add;
             }
         }
-        while (v.back() == 0 && v.size() > 1) {
-            v.pop_back();
-        }
+        trim();
         return *this;
     }
     // Karatsuba algorithm
@@ -277,12 +274,6 @@ protected:
         while (r.v.back() == 0 && r.v.size() > 1) {
             r.v.pop_back();
         }
-        for (int32_t mul = COMPRESS_MOD >> 1; mul > 1; mul >>= 1) {
-            while (!r.raw_less(b * mul)) {
-                r.raw_sub(b * mul);
-                v[0] += mul;
-            }
-        }
         while (!r.raw_less(b)) {
             r.raw_sub(b);
             v[0]++;
@@ -294,9 +285,7 @@ protected:
             add = v[i] >> COMPRESS_BIT;
             v[i] &= COMPRESS_MASK;
         }
-        while (v.back() == 0 && v.size() > 1) {
-            v.pop_back();
-        }
+        trim();
         return *this;
     }
     BigIntHex &raw_mod(const BigIntHex &a, const BigIntHex &b) {
@@ -327,12 +316,6 @@ protected:
                 r.v.pop_back();
             }
         }
-        for (int32_t mul = COMPRESS_MOD >> 1; mul > 1; mul >>= 1) {
-            while (!r.raw_less(b * mul)) {
-                r.raw_sub(b * mul);
-                v[0] += mul;
-            }
-        }
         while (!r.raw_less(b)) {
             r.raw_sub(b);
             v[0]++;
@@ -340,6 +323,10 @@ protected:
 
         *this = r;
         return *this;
+    }
+    void trim() {
+        while (v.back() == 0 && v.size() > 1)
+            v.pop_back();
     }
 
 public:
@@ -368,10 +355,8 @@ public:
         BigIntHex m;
         m.set(1);
         set(0);
-        const char *p = s;
-        int sign = 1;
-        while (*p)
-            ++p;
+        const char *p = s + strlen(s);
+        int sign = 1, digits = 1, hbase = base;
         while (*s == '-') {
             sign *= -1;
             ++s;
@@ -379,15 +364,11 @@ public:
         while (*s == '0') {
             ++s;
         }
-        int digits = 1;
-        int hbase = base;
-        for (digits = 1; hbase <= BIGINT_MAXBASE; hbase *= base, ++digits)
+        for (; hbase <= BIGINT_MAXBASE; hbase *= base, ++digits)
             ;
-        hbase /= base;
-        --digits;
 
-        int d = digits, hdigit = 0, hdigit_mul = 1;
-        for (p--; p >= s; p--) {
+        int d = --digits, hdigit = 0, hdigit_mul = 1;
+        for (hbase /= base, p--; p >= s; p--) {
             int digit = -1;
             if (*p >= '0' && *p <= '9')
                 digit = *p - '0';
@@ -494,8 +475,8 @@ public:
     }
     BigIntHex &operator-=(const BigIntHex &b) {
         if (this == &b) {
-            BigIntHex c = b;
-            return *this -= c;
+            set(0);
+            return *this;
         }
         BigIntHex &r = *this;
         if (sign * b.sign < 0) {
@@ -550,19 +531,16 @@ public:
         return *this * BigIntHex().set(b);
     }
 
-    BigIntHex &operator*=(int16_t b) {
-        if (b >= 0)
-            raw_mul_int((uint32_t)b);
-        else {
-            raw_mul_int((uint32_t)-b);
-            sign = -sign;
-        }
-        return *this;
-    }
-
     BigIntHex &operator*=(int32_t b) {
-        if (b < 0x7fff && -0x7fff < b)
-            return *this *= (int16_t)b;
+        if (b < 0x7fff && -0x7fff < b) {
+            if (b >= 0)
+                raw_mul_int((uint32_t)b);
+            else {
+                raw_mul_int((uint32_t)-b);
+                sign = -sign;
+            }
+            return *this;
+        }
         return *this *= BigIntHex().set(b);
     }
 
@@ -698,3 +676,6 @@ public:
         }
     }
 };
+} // namespace BigIntHexNS
+
+using BigIntHexNS::BigIntHex;

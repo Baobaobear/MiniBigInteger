@@ -1,6 +1,10 @@
 #pragma once
+#include "bigint.h"
 
+namespace BigIntDecNS {
 const int COMPRESS_DECMOD = 10000;
+
+const int BIGINT_MUL_THRESHOLD = 64;
 
 class BigIntDec {
 protected:
@@ -47,8 +51,7 @@ protected:
         if (add) {
             v.push_back(add);
         } else {
-            while (v.back() == 0 && v.size() > 1)
-                v.pop_back();
+            trim();
         }
         return *this;
     }
@@ -78,9 +81,7 @@ protected:
                 v[i] = COMPRESS_DECMOD - v[i] - 1;
             }
         }
-        while (v.back() == 0 && v.size() > 1) {
-            v.pop_back();
-        }
+        trim();
         return *this;
     }
     BigIntDec &raw_mul_int(uint32_t m) {
@@ -115,9 +116,7 @@ protected:
                 v[i + b.size()] += add;
             }
         }
-        while (v.back() == 0 && v.size() > 1) {
-            v.pop_back();
-        }
+        trim();
         return *this;
     }
     // Karatsuba algorithm
@@ -212,12 +211,6 @@ protected:
         while (r.v.back() == 0 && r.v.size() > 1) {
             r.v.pop_back();
         }
-        for (int32_t mul = COMPRESS_DECMOD >> 1; mul > 1; mul >>= 1) {
-            while (!r.raw_less(b * mul)) {
-                r.raw_sub(b * mul);
-                v[0] += mul;
-            }
-        }
         while (!r.raw_less(b)) {
             r.raw_sub(b);
             v[0]++;
@@ -229,9 +222,7 @@ protected:
             add = v[i] / COMPRESS_DECMOD;
             v[i] %= COMPRESS_DECMOD;
         }
-        while (v.back() == 0 && v.size() > 1) {
-            v.pop_back();
-        }
+        trim();
         return *this;
     }
     BigIntDec &raw_mod(const BigIntDec &a, const BigIntDec &b) {
@@ -264,12 +255,6 @@ protected:
                 r.v.pop_back();
             }
         }
-        for (int32_t mul = COMPRESS_DECMOD >> 1; mul > 1; mul >>= 1) {
-            while (!r.raw_less(b * mul)) {
-                r.raw_sub(b * mul);
-                v[0] += mul;
-            }
-        }
         while (!r.raw_less(b)) {
             r.raw_sub(b);
             v[0]++;
@@ -277,6 +262,10 @@ protected:
 
         *this = r;
         return *this;
+    }
+    void trim() {
+        while (v.back() == 0 && v.size() > 1)
+            v.pop_back();
     }
 
 public:
@@ -305,10 +294,8 @@ public:
         BigIntDec m;
         m.set(1);
         set(0);
-        const char *p = s;
-        int sign = 1;
-        while (*p)
-            ++p;
+        const char *p = s + strlen(s);
+        int sign = 1, digits = 1, hbase = base;
         while (*s == '-') {
             sign *= -1;
             ++s;
@@ -316,15 +303,11 @@ public:
         while (*s == '0') {
             ++s;
         }
-        int digits = 1;
-        int hbase = base;
-        for (digits = 1; hbase <= BIGINT_MAXBASE; hbase *= base, ++digits)
+        for (; hbase <= BIGINT_MAXBASE; hbase *= base, ++digits)
             ;
-        hbase /= base;
-        --digits;
 
-        int d = digits, hdigit = 0, hdigit_mul = 1;
-        for (p--; p >= s; p--) {
+        int d = --digits, hdigit = 0, hdigit_mul = 1;
+        for (hbase /= base, p--; p >= s; p--) {
             int digit = -1;
             if (*p >= '0' && *p <= '9')
                 digit = *p - '0';
@@ -431,8 +414,8 @@ public:
     }
     BigIntDec &operator-=(const BigIntDec &b) {
         if (this == &b) {
-            BigIntDec c = b;
-            return *this -= c;
+            set(0);
+            return *this;
         }
         BigIntDec &r = *this;
         if (sign * b.sign < 0) {
@@ -487,19 +470,16 @@ public:
         return *this * BigIntDec().set(b);
     }
 
-    BigIntDec &operator*=(int16_t b) {
-        if (b >= 0)
-            raw_mul_int((uint32_t)b);
-        else {
-            raw_mul_int((uint32_t)-b);
-            sign = -sign;
-        }
-        return *this;
-    }
-
     BigIntDec &operator*=(int32_t b) {
-        if (b < 0x7fff && -0x7fff < b)
-            return *this *= (int16_t)b;
+        if (b < 0x7fff && -0x7fff < b) {
+            if (b >= 0)
+                raw_mul_int((uint32_t)b);
+            else {
+                raw_mul_int((uint32_t)-b);
+                sign = -sign;
+            }
+            return *this;
+        }
         return *this *= BigIntDec().set(b);
     }
 
@@ -635,3 +615,6 @@ public:
         }
     }
 };
+} // namespace BigIntDecNS
+
+using BigIntDecNS::BigIntDec;
