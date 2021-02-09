@@ -5,7 +5,7 @@ namespace BigIntDecNS {
 const int COMPRESS_DECMOD = 10000;
 
 const int BIGINT_MUL_THRESHOLD = 48;
-const int BIGINT_OUTPUT_THRESHOLD = 32;
+const int BIGINT_OUTPUT_THRESHOLD = 16;
 
 class BigIntDec {
 protected:
@@ -49,11 +49,8 @@ protected:
             add = v[i] / COMPRESS_DECMOD;
             v[i] %= COMPRESS_DECMOD;
         }
-        if (add) {
+        if (add)
             v.push_back(add);
-        } else {
-            trim();
-        }
         return *this;
     }
     BigIntDec &raw_sub(const BigIntDec &b) {
@@ -432,10 +429,9 @@ public:
         }
         return r;
     }
-
     BigIntDec operator-() const {
         BigIntDec r = *this;
-        r.sign *= -1;
+        r.sign = -r.sign;
         return r;
     }
 
@@ -452,7 +448,6 @@ public:
             return r;
         }
     }
-
     BigIntDec &operator*=(const BigIntDec &b) {
         if (b.size() == 1) {
             raw_mul_int((uint32_t)b.v[0]);
@@ -472,11 +467,9 @@ public:
             }
         }
     }
-
     BigIntDec operator*(int32_t b) const {
         return *this * BigIntDec().set(b);
     }
-
     BigIntDec &operator*=(int32_t b) {
         if (b < 0x7fff && -0x7fff < b) {
             if (b >= 0)
@@ -496,7 +489,6 @@ public:
         r.sign = sign * b.sign;
         return r;
     }
-
     BigIntDec &operator/=(const BigIntDec &b) {
         if (this == &b) {
             BigIntDec c = b;
@@ -513,7 +505,6 @@ public:
         r.raw_mod(*this, b);
         return r;
     }
-
     BigIntDec &operator%=(const BigIntDec &b) {
         if (this == &b) {
             BigIntDec c = b;

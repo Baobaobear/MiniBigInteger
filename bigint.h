@@ -75,7 +75,7 @@ const int COMPRESS_MOD = 1 << COMPRESS_BIT;
 const int COMPRESS_MASK = COMPRESS_MOD - 1;
 
 const int BIGINT_MUL_THRESHOLD = 48;
-const int BIGINT_OUTPUT_THRESHOLD = 32;
+const int BIGINT_OUTPUT_THRESHOLD = 16;
 
 class BigIntHex {
 protected:
@@ -120,11 +120,8 @@ protected:
             add = v[i] >> COMPRESS_BIT;
             v[i] &= COMPRESS_MASK;
         }
-        if (add) {
+        if (add)
             v.push_back(add);
-        } else {
-            trim();
-        }
         return *this;
     }
     BigIntHex &raw_sub(const BigIntHex &b) {
@@ -494,10 +491,9 @@ public:
         }
         return r;
     }
-
     BigIntHex operator-() const {
         BigIntHex r = *this;
-        r.sign *= -1;
+        r.sign = -r.sign;
         return r;
     }
 
@@ -514,7 +510,6 @@ public:
             return r;
         }
     }
-
     BigIntHex &operator*=(const BigIntHex &b) {
         if (b.size() == 1) {
             raw_mul_int((uint32_t)b.v[0]);
@@ -534,11 +529,9 @@ public:
             }
         }
     }
-
     BigIntHex operator*(int32_t b) const {
         return *this * BigIntHex().set(b);
     }
-
     BigIntHex &operator*=(int32_t b) {
         if (b < 0x7fff && -0x7fff < b) {
             if (b >= 0)
@@ -558,7 +551,6 @@ public:
         r.sign = sign * b.sign;
         return r;
     }
-
     BigIntHex &operator/=(const BigIntHex &b) {
         if (this == &b) {
             BigIntHex c = b;
@@ -575,7 +567,6 @@ public:
         r.raw_mod(*this, b);
         return r;
     }
-
     BigIntHex &operator%=(const BigIntHex &b) {
         if (this == &b) {
             BigIntHex c = b;
