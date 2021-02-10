@@ -66,8 +66,8 @@ bool test_factorial() {
     s = h.to_str();
     t_out = get_time();
     cout << "calc " << fac << "!" << endl;
-    cout << "    by tiny: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "    to_str: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "    by tiny: " << (int)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    to_str: " << (int)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
     cout << "    total " << s.size() << " dec digits" << endl;
 
     return true;
@@ -88,7 +88,7 @@ bool test_bigmul() {
     t_end = get_time();
     s = h.to_str();
     cout << "calc 2^2^" << times << endl;
-    cout << "    by dec: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    by dec: " << (int)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "    total " << s.size() << " dec digits" << endl;
 
     return true;
