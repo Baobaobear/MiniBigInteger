@@ -98,6 +98,5 @@ int main() {
     cout << "test_rnddiv: " << (test_rnd_div() ? "pass" : "FAIL") << endl;
     test_factorial();
     test_bigmul();
-    scanf("%*s");
     return 0;
 }

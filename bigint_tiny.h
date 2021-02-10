@@ -32,39 +32,39 @@ struct BigIntTiny {
         }
         setsign(1, 1);
     }
-    int get_pos(int pos) const { return pos >= v.size() ? 0 : v[pos]; }
+    int get_pos(int pos) const { return pos >= (int)v.size() ? 0 : v[pos]; }
     BigIntTiny &setsign(int newsign, int rev) {
         for (int i = (int)v.size() - 1; i > 0 && v[i] == 0; i--)
             v.erase(v.begin() + i);
-        sign = (v.size() == 0 || v.size() == 1 && v[0] == 0) ? 1 : (rev ? newsign * sign : newsign);
+        sign = (v.size() == 0 || (v.size() == 1 && v[0] == 0)) ? 1 : (rev ? newsign * sign : newsign);
         return *this;
     }
     std::string to_str() const {
         BigIntTiny b = *this;
         std::string s;
         b.zip(1);
-        for (int i = 0; i < b.v.size(); ++i)
+        for (int i = 0; i < (int)b.v.size(); ++i)
             s += (*(b.v.rbegin() + i) + '0');
         return (sign < 0 ? "-" : "") + (s.empty() ? std::string("0") : s);
     }
     bool absless(const BigIntTiny &b) const {
         if (v.size() != b.v.size())
             return v.size() < b.v.size();
-        for (int i = v.size() - 1; i >= 0; i--)
+        for (int i = (int)v.size() - 1; i >= 0; i--)
             if (v[i] != b.v[i])
                 return v[i] < b.v[i];
         return false;
     }
     BigIntTiny operator-() const {
         BigIntTiny c = *this;
-        c.sign = v.size() > 1 || v[0] ? -c.sign : 1;
+        c.sign = (v.size() > 1 || v[0]) ? -c.sign : 1;
         return c;
     }
     BigIntTiny &operator=(const std::string &s) {
         if (s[0] == '-')
             *this = s.substr(1);
         else {
-            for (int i = (v.clear(), 0); i < s.size(); ++i)
+            for (int i = (v.clear(), 0); i < (int)s.size(); ++i)
                 v.push_back(*(s.rbegin() + i) - '0');
             zip(0);
         }
@@ -115,7 +115,7 @@ struct BigIntTiny {
     }
     BigIntTiny operator*(BigIntTiny b) const {
         BigIntTiny c;
-        for (int i = 0; i < v.size(); i++) {
+        for (int i = 0; i < (int)v.size(); i++) {
             c.add_mul(b, v[i]);
             b.v.insert(b.v.begin(), 0);
         }
