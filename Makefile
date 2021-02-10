@@ -18,4 +18,4 @@ test0: test.cpp bigint.h bigint_dec.h bigint_decmini.h
 	$(CXX) $(CFLAGS11) $(BENCHMARKFILE) -o test0
 
 test0: test03.cpp bigint_tiny.h
-	$(CXX) $(CFLAGS03) $(BENCHMARKFILE) -o test1
+	$(CXX) $(CFLAGS03) test03.cpp -o test1
