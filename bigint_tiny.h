@@ -91,14 +91,13 @@ struct BigIntTiny {
         BigIntTiny c = *this;
         return c += b;
     }
-    BigIntTiny &add_mul(const BigIntTiny &b, int mul) {
+    void add_mul(const BigIntTiny &b, int mul) {
         v.resize(std::max(v.size(), b.v.size()) + 2);
         for (int i = 0, carry = 0; i < (int)b.v.size() || carry; i++) {
             carry += v[i] + b.get_pos(i) * mul;
             v[i] = carry % 10000;
             carry /= 10000;
         }
-        return setsign(sign, 0);
     }
     BigIntTiny operator-(const BigIntTiny &b) const {
         if (sign != b.sign)
@@ -113,11 +112,13 @@ struct BigIntTiny {
         }
         return c.setsign(sign, 0);
     }
-    BigIntTiny operator*(BigIntTiny b) const {
-        BigIntTiny c;
+    BigIntTiny operator*(const BigIntTiny &b) const {
+        if (b < *this)
+            return b * *this;
+        BigIntTiny c, d = b;
         for (int i = 0; i < (int)v.size(); i++) {
-            c.add_mul(b, v[i]);
-            b.v.insert(b.v.begin(), 0);
+            c.add_mul(d, v[i]);
+            d.v.insert(d.v.begin(), 0);
         }
         return c.setsign(sign * b.sign, 0);
     }

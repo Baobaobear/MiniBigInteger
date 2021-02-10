@@ -347,6 +347,9 @@ public:
     BigIntHex() {
         set(0);
     }
+    explicit BigIntHex(intmax_t n) {
+        set(n);
+    }
     BigIntHex &set(intmax_t n) {
         v.resize(1);
         v[0] = 0;
@@ -455,14 +458,13 @@ public:
     }
 
     BigIntHex &operator=(intmax_t n) {
-        set(n);
-        return *this;
+        return set(n);
     }
     BigIntHex &operator=(const char* s) {
-        return this->from_str(s);
+        return from_str(s);
     }
     BigIntHex &operator=(const std::string s) {
-        return this->from_str(s);
+        return from_str(s);
     }
     BigIntHex operator+(const BigIntHex &b) const {
         BigIntHex r = *this;

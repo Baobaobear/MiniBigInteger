@@ -53,7 +53,7 @@ bool test_rnd_div() {
 bool test_factorial() {
     BigIntTiny h;
     string s;
-    int fac = 1000;
+    int fac = 10000;
 
     time_point t_beg, t_end, t_out;
 
@@ -88,7 +88,7 @@ bool test_bigmul() {
     t_end = get_time();
     s = h.to_str();
     cout << "calc 2^2^" << times << endl;
-    cout << "    by dec: " << (int)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    by tiny: " << (int)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "    total " << s.size() << " dec digits" << endl;
 
     return true;

@@ -8,16 +8,55 @@ This is a C++11 port of large integer library. It allows you parsing of numbers 
 
 Here is an example for calculate 2^100
 
+### BigIntHex or BigIntDec
+
 ```c++
 #include <iostream>
 #include "bigint.h"
+#include "bigint_dec.h"
 
 int main() {
     using namespace std;
-    BigIntHex s;
-    s.set(1);
+    BigIntHex s; // the same as BigIntDec
+    s = 1;
     for (int i = 1; i <= 100; ++i) {
-        s *= BigIntHex().set(2);
+        s *= 2;
+    }
+    cout << s.to_str() << endl;
+    return 0;
+}
+```
+
+### BigIntMini
+
+```c++
+#include <iostream>
+#include "bigint_decmini.h"
+
+int main() {
+    using namespace std;
+    BigIntMini s;
+    s = 1;
+    for (int i = 1; i <= 100; ++i) {
+        s = s * 2; // no operator*= overloading
+    }
+    cout << s.to_str() << endl;
+    return 0;
+}
+```
+
+### BigIntTiny
+
+```c++
+#include <iostream>
+#include "bigint_tiny.h"
+
+int main() {
+    using namespace std;
+    BigIntTiny s;
+    s = 1;
+    for (int i = 1; i <= 100; ++i) {
+        s = s * 2; // no operator*= overloading
     }
     cout << s.to_str() << endl;
     return 0;
@@ -32,6 +71,9 @@ The output is `1267650600228229401496703205376`
 
 ```c++
 BigIntHex a, b;
+a = 123;
+a = "123";
+a = std::string("123");
 a.set(123);
 a.from_str("ABCDEF", 16);
 a.from_str("1011010", 2);
@@ -75,7 +117,7 @@ a /= b;
 ### Comparison
 
 ```c++
-BigIntHex a, b;
+BigIntHex a, b; // or BigIntDec
 a < b;
 a <= b;
 a >= b;
@@ -84,14 +126,27 @@ a == b;
 a != b;
 ```
 
+```c++
+BigIntMini a, b; // or BigIntTiny
+a < b;
+a == b;
+//not support the belows
+//a <= b;
+//a >= b;
+//a > b;
+//a != b;
+```
+
 ### Output
 
 ```c++
-BigIntHex a;
+BigIntHex a; // or BigIntDec
 cout << a.to_str() << endl; // dec by default
 cout << a.to_str(16) << endl; // hex output
-```
 
+BigIntMini b; // or BigIntTiny
+cout << b.to_str() << endl;
+```
 
 # License
 

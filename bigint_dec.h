@@ -285,6 +285,9 @@ public:
     BigIntDec() {
         set(0);
     }
+    explicit BigIntDec(intmax_t n) {
+        set(n);
+    }
     BigIntDec &set(intmax_t n) {
         v.resize(1);
         v[0] = 0;
@@ -393,14 +396,13 @@ public:
     }
 
     BigIntDec &operator=(intmax_t n) {
-        set(n);
-        return *this;
+        return set(n);
     }
     BigIntDec &operator=(const char* s) {
-        return this->from_str(s);
+        return from_str(s);
     }
     BigIntDec &operator=(const std::string s) {
-        return this->from_str(s);
+        return from_str(s);
     }
     BigIntDec operator+(const BigIntDec &b) const {
         BigIntDec r = *this;

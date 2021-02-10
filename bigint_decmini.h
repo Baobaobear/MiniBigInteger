@@ -251,6 +251,16 @@ public:
         return raw_eq(b);
     }
 
+    BigIntDecMini &operator=(intmax_t n) {
+        return set(n);
+    }
+    BigIntDecMini &operator=(const char* s) {
+        return from_str(s);
+    }
+    BigIntDecMini &operator=(const std::string s) {
+        return from_str(s.c_str());
+    }
+
     BigIntDecMini operator+(const BigIntDecMini &b) const {
         BigIntDecMini r = *this;
         if (sign * b.sign > 0) {
@@ -335,4 +345,4 @@ public:
 };
 } // namespace BigIntDecMiniNS
 
-typedef BigIntDecMiniNS::BigIntDecMini BigIntM;
+typedef BigIntDecMiniNS::BigIntDecMini BigIntMini;

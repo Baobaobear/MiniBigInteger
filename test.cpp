@@ -32,7 +32,7 @@ double get_time_diff(time_point from, time_point to) {
 bool test1_parse() {
     BigIntHex ha;
     BigIntDec hb;
-    BigIntM hc;
+    BigIntMini hc;
     BigIntTiny hd;
     struct {
         const char *p;
@@ -79,7 +79,7 @@ bool test1_parse() {
 bool test2_add() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
-    BigIntM hc1, hc2;
+    BigIntMini hc1, hc2;
     BigIntTiny hd1, hd2;
     struct {
         const char *p1;
@@ -142,7 +142,7 @@ bool test2_add() {
 bool test3_sub() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
-    BigIntM hc1, hc2;
+    BigIntMini hc1, hc2;
     BigIntTiny hd1, hd2;
     struct {
         const char *p1;
@@ -205,7 +205,7 @@ bool test3_sub() {
 bool test4_mul() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
-    BigIntM hc1, hc2;
+    BigIntMini hc1, hc2;
     BigIntTiny hd1, hd2;
     struct {
         const char *p1;
@@ -264,7 +264,7 @@ bool test4_mul() {
 bool test5_div() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
-    BigIntM hc1, hc2;
+    BigIntMini hc1, hc2;
     BigIntTiny hd1, hd2;
     struct {
         const char *p1;
@@ -321,7 +321,7 @@ bool test5_div() {
 bool test6_mod() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
-    BigIntM hc1, hc2;
+    BigIntMini hc1, hc2;
     struct {
         const char *p1;
         const char *p2;
@@ -413,7 +413,7 @@ bool test7_sqrt() {
 bool test8_rnd_div() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
-    BigIntM hc1, hc2;
+    BigIntMini hc1, hc2;
     srand((unsigned)time(0));
     for (int i = 0; i < 100; ++i) {
         hb1 = rand();
@@ -454,7 +454,7 @@ bool test8_rnd_div() {
 bool test_factorial() {
     BigIntHex ha;
     BigIntDec hb;
-    BigIntM hc;
+    BigIntMini hc;
     string s;
     int fac = 10000;
 
