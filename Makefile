@@ -7,7 +7,7 @@ BENCHMARKFILE ?= test.cpp
 
 default: clean test
 
-test: test0
+test: test0 test1
 	./test0
 	./test1
 
@@ -17,5 +17,5 @@ clean:
 test0: test.cpp bigint.h bigint_dec.h bigint_decmini.h
 	$(CXX) $(CFLAGS11) $(BENCHMARKFILE) -o test0
 
-test0: test03.cpp bigint_tiny.h
+test1: test03.cpp bigint_tiny.h
 	$(CXX) $(CFLAGS03) test03.cpp -o test1
