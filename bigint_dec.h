@@ -1,3 +1,8 @@
+// filename:    bigint_dec.h
+// author:      baobaobear
+// create date: 2021-02-08
+// This library is compatible with C++11
+// https://github.com/Baobaobear/MiniBigInteger
 #pragma once
 #include "bigint.h"
 
@@ -302,7 +307,7 @@ public:
         BigIntDec m;
         m.set(1);
         set(0);
-        const char *p = s + strlen(s);
+        const char *p = s + strlen(s) - 1;
         int sign = 1, digits = 1, hbase = base;
         while (*s == '-') {
             sign *= -1;
@@ -315,7 +320,7 @@ public:
             ;
 
         int d = --digits, hdigit = 0, hdigit_mul = 1;
-        for (hbase /= base, p--; p >= s; p--) {
+        for (hbase /= base; p >= s; p--) {
             int digit = -1;
             if (*p >= '0' && *p <= '9')
                 digit = *p - '0';
@@ -342,6 +347,9 @@ public:
         }
         this->sign = sign;
         return *this;
+    }
+    BigIntDec &from_str(const std::string s, int base = 10) {
+        return this->from_str(s.c_str(), base);
     }
     size_t size() const {
         return v.size();
@@ -387,6 +395,12 @@ public:
     BigIntDec &operator=(intmax_t n) {
         set(n);
         return *this;
+    }
+    BigIntDec &operator=(const char* s) {
+        return this->from_str(s);
+    }
+    BigIntDec &operator=(const std::string s) {
+        return this->from_str(s);
     }
     BigIntDec operator+(const BigIntDec &b) const {
         BigIntDec r = *this;

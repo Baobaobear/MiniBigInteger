@@ -1,6 +1,7 @@
 #include "bigint.h"
 #include "bigint_dec.h"
 #include "bigint_decmini.h"
+#include "bigint_tiny.h"
 
 #include <iostream>
 
@@ -32,6 +33,7 @@ bool test1_parse() {
     BigIntHex ha;
     BigIntDec hb;
     BigIntM hc;
+    BigIntTiny hd;
     struct {
         const char *p;
         int base;
@@ -63,6 +65,14 @@ bool test1_parse() {
             return false;
         }
     }
+    for (int i = 0; in[i].base; ++i) {
+        if (in[i].base != 10)
+            continue;
+        hd = in[i].p;
+        if (hd.to_str() != in[i].p) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -70,6 +80,7 @@ bool test2_add() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
     BigIntM hc1, hc2;
+    BigIntTiny hd1, hd2;
     struct {
         const char *p1;
         const char *p2;
@@ -115,6 +126,16 @@ bool test2_add() {
             return false;
         }
     }
+    for (int i = 0; in[i].base; ++i) {
+        if (in[i].base != 10)
+            continue;
+        hd1 = in[i].p1;
+        hd2 = in[i].p2;
+        hd1 = hd1 + hd2;
+        if (hd1.to_str() != in[i].pa) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -122,6 +143,7 @@ bool test3_sub() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
     BigIntM hc1, hc2;
+    BigIntTiny hd1, hd2;
     struct {
         const char *p1;
         const char *p2;
@@ -167,6 +189,16 @@ bool test3_sub() {
             return false;
         }
     }
+    for (int i = 0; in[i].base; ++i) {
+        if (in[i].base != 10)
+            continue;
+        hd1 = in[i].p1;
+        hd2 = in[i].p2;
+        hd1 = hd1 - hd2;
+        if (hd1.to_str() != in[i].pa) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -174,6 +206,7 @@ bool test4_mul() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
     BigIntM hc1, hc2;
+    BigIntTiny hd1, hd2;
     struct {
         const char *p1;
         const char *p2;
@@ -215,6 +248,16 @@ bool test4_mul() {
             return false;
         }
     }
+    for (int i = 0; in[i].base; ++i) {
+        if (in[i].base != 10)
+            continue;
+        hd1 = in[i].p1;
+        hd2 = in[i].p2;
+        hd1 = hd1 * hd2;
+        if (hd1.to_str() != in[i].pa) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -222,6 +265,7 @@ bool test5_div() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
     BigIntM hc1, hc2;
+    BigIntTiny hd1, hd2;
     struct {
         const char *p1;
         const char *p2;
@@ -258,6 +302,16 @@ bool test5_div() {
         hc2.from_str(in[i].p2);
         hc1 = hc1 / hc2;
         if (hc1.to_str() != in[i].pa) {
+            return false;
+        }
+    }
+    for (int i = 0; in[i].base; ++i) {
+        if (in[i].base != 10)
+            continue;
+        hd1 = in[i].p1;
+        hd2 = in[i].p2;
+        hd1 = hd1 / hd2;
+        if (hd1.to_str() != in[i].pa) {
             return false;
         }
     }

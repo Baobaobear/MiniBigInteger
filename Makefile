@@ -9,9 +9,13 @@ default: clean test
 
 test: test0
 	./test0
+	./test1
 
 clean:
-	rm -f test0
+	rm -f test0 test1
 
-test0: test.cpp bigint.h bigint_dec.h
+test0: test.cpp bigint.h bigint_dec.h bigint_decmini.h
 	$(CXX) $(CFLAGS11) $(BENCHMARKFILE) -o test0
+
+test0: test03.cpp bigint_tiny.h
+	$(CXX) $(CFLAGS03) $(BENCHMARKFILE) -o test1

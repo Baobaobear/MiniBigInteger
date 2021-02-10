@@ -1,3 +1,8 @@
+// filename:    bigint_decmini.h
+// author:      baobaobear
+// create date: 2021-02-09
+// This library is compatible with C++11
+// https://github.com/Baobaobear/MiniBigInteger
 #pragma once
 
 #include <algorithm>
@@ -193,15 +198,15 @@ public:
     }
     BigIntDecMini &from_str(const char *s) {
         v.clear();
-        int base = 10, sign = 1, digits = COMPRESS_DIGITS, hbase = COMPRESS_DECMOD;
-        const char *p = s + strlen(s);
+        int base = 10, sign = 1, digits = COMPRESS_DIGITS;
+        const char *p = s + strlen(s) - 1;
         while (*s == '-')
             sign *= -1, ++s;
         while (*s == '0')
             ++s;
 
         int d = digits, hdigit = 0, hdigit_mul = 1;
-        for (p--; p >= s; p--) {
+        for (; p >= s; p--) {
             hdigit += (*p - '0') * hdigit_mul;
             hdigit_mul *= base;
             if (--d == 0) {
@@ -246,10 +251,6 @@ public:
         return raw_eq(b);
     }
 
-    BigIntDecMini &operator=(intmax_t n) {
-        set(n);
-        return *this;
-    }
     BigIntDecMini operator+(const BigIntDecMini &b) const {
         BigIntDecMini r = *this;
         if (sign * b.sign > 0) {
