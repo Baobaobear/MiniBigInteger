@@ -81,13 +81,13 @@ bool test_bigmul() {
     time_point t_beg, t_end;
 
     t_beg = get_time();
-    h = 2;
+    h = 3;
     for (int i = 1; i <= times; ++i) {
         h = h * h;
     }
     t_end = get_time();
     s = h.to_str();
-    cout << "calc 2^2^" << times << endl;
+    cout << "calc 3^2^" << times << endl;
     cout << "    by tiny: " << (int)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "        total " << s.size() << " dec digits" << endl;
 
@@ -101,7 +101,7 @@ bool test_bigdiv() {
 
     time_point t_beg, t_end;
 
-    a = 2;
+    a = 3;
     for (int i = 1; i <= times; ++i) {
         a = a * a;
     }
@@ -115,7 +115,7 @@ bool test_bigdiv() {
     ha1 = ha1 / ha2;
     t_end = get_time();
     s = ha1.to_str();
-    cout << "calc 2^2^" << times + 1 << " / 2^2^" << times << endl;
+    cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
     cout << "    by tiny: " << (int)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "        total " << s.size() << " dec digits" << endl;
 
