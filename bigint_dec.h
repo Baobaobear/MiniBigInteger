@@ -8,6 +8,7 @@
 
 namespace BigIntDecNS {
 const int COMPRESS_DECMOD = 10000;
+const int COMPRESS_DIGITS = 4;
 
 const int BIGINT_MUL_THRESHOLD = 48;
 const int BIGINT_OUTPUT_THRESHOLD = 32;
@@ -312,7 +313,36 @@ public:
         }
         return *this;
     }
+    BigIntDec &from_str_base10(const char *s) {
+        v.clear();
+        int base = 10, sign = 1, digits = COMPRESS_DIGITS;
+        const char *p = s + strlen(s) - 1;
+        while (*s == '-')
+            sign *= -1, ++s;
+        while (*s == '0')
+            ++s;
+
+        int d = digits, hdigit = 0, hdigit_mul = 1;
+        for (; p >= s; p--) {
+            hdigit += (*p - '0') * hdigit_mul;
+            hdigit_mul *= base;
+            if (--d == 0) {
+                v.push_back(hdigit);
+                d = digits;
+                hdigit = 0;
+                hdigit_mul = 1;
+            }
+        }
+        if (hdigit || v.empty()) {
+            v.push_back(hdigit);
+        }
+        this->sign = sign;
+        return *this;
+    }
     BigIntDec &from_str(const char *s, int base = 10) {
+        if (base == 10) {
+            return from_str_base10(s);
+        }
         BigIntDec m;
         m.set(1);
         set(0);
@@ -333,12 +363,10 @@ public:
             int digit = -1;
             if (*p >= '0' && *p <= '9')
                 digit = *p - '0';
-            else if (base > 10) {
-                if (*p >= 'A' && *p <= 'Z')
-                    digit = *p - 'A' + 10;
-                else if (*p >= 'a' && *p <= 'z')
-                    digit = *p - 'A' + 10;
-            }
+            else if (*p >= 'A' && *p <= 'Z')
+                digit = *p - 'A' + 10;
+            else if (*p >= 'a' && *p <= 'z')
+                digit = *p - 'A' + 10;
             hdigit += digit * hdigit_mul;
             hdigit_mul *= base;
             if (--d == 0) {

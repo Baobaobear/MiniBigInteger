@@ -534,7 +534,7 @@ bool test_bigmul() {
     cout << "    by dec : " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "        total " << s.size() << " dec digits" << endl;
 
-    times -= 1;
+    times -= 2;
     t_beg = get_time();
     hc = 3;
     for (int i = 1; i <= times; ++i) {
@@ -553,7 +553,7 @@ bool test_bigdiv() {
     BigIntDec hb1, hb2, a, b;
     BigIntMini hc1, hc2;
     string s, sa, sb;
-    int times = 18;
+    int times = 17;
 
     time_point t_beg, t_end;
 
@@ -593,14 +593,31 @@ bool test_bigdiv() {
 }
 
 int main() {
-    cout << "test1_parse : " << (test1_parse() ? "pass" : "FAIL") << endl;
-    cout << "test2_add   : " << (test2_add() ? "pass" : "FAIL") << endl;
-    cout << "test3_sub   : " << (test3_sub() ? "pass" : "FAIL") << endl;
-    cout << "test4_mul   : " << (test4_mul() ? "pass" : "FAIL") << endl;
-    cout << "test5_div   : " << (test5_div() ? "pass" : "FAIL") << endl;
-    cout << "test6_mod   : " << (test6_mod() ? "pass" : "FAIL") << endl;
-    cout << "test7_sqrt  : " << (test7_sqrt() ? "pass" : "FAIL") << endl;
-    cout << "test8_rnddiv: " << (test8_rnd_div() ? "pass" : "FAIL") << endl;
+    bool pass = true;
+    cout << "test1_parse : " << ((pass = test1_parse()) ? "pass" : "FAIL") << endl;
+    if (!pass)
+        return -1;
+    cout << "test2_add   : " << ((pass = test2_add()) ? "pass" : "FAIL") << endl;
+    if (!pass)
+        return -1;
+    cout << "test3_sub   : " << ((pass = test3_sub()) ? "pass" : "FAIL") << endl;
+    if (!pass)
+        return -1;
+    cout << "test4_mul   : " << ((pass = test4_mul()) ? "pass" : "FAIL") << endl;
+    if (!pass)
+        return -1;
+    cout << "test5_div   : " << ((pass = test5_div()) ? "pass" : "FAIL") << endl;
+    if (!pass)
+        return -1;
+    cout << "test6_mod   : " << ((pass = test6_mod()) ? "pass" : "FAIL") << endl;
+    if (!pass)
+        return -1;
+    cout << "test7_sqrt  : " << ((pass = test7_sqrt()) ? "pass" : "FAIL") << endl;
+    if (!pass)
+        return -1;
+    cout << "test8_rnddiv: " << ((pass = test8_rnd_div()) ? "pass" : "FAIL") << endl;
+    if (!pass)
+        return -1;
     test_factorial();
     test_bigmul();
     test_bigdiv();

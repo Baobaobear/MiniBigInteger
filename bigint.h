@@ -374,7 +374,46 @@ public:
         }
         return *this;
     }
+    BigIntHex &from_str_base2(const char *s, int bits) {
+        v.clear();
+        int base = 10, sign = 1;
+        const char *p = s + strlen(s) - 1;
+        while (*s == '-')
+            sign *= -1, ++s;
+        while (*s == '0')
+            ++s;
+
+        int32_t d = 0, hdigit = 0;
+        for (; p >= s; p--) {
+            int32_t digit = -1;
+            if (*p >= '0' && *p <= '9')
+                digit = *p - '0';
+            else if (*p >= 'A' && *p <= 'Z')
+                digit = *p - 'A' + 10;
+            else if (*p >= 'a' && *p <= 'z')
+                digit = *p - 'a' + 10;
+            hdigit += digit << d;
+            d += bits;
+            if (d >= COMPRESS_BIT) {
+                v.push_back(hdigit & COMPRESS_MASK);
+                d -= COMPRESS_BIT;
+                hdigit >>= COMPRESS_BIT;
+            }
+        }
+        if (hdigit || v.empty()) {
+            v.push_back(hdigit);
+        }
+        this->sign = sign;
+        return *this;
+    }
     BigIntHex &from_str(const char *s, int base = 10) {
+        if (base == 16) {
+            return from_str_base2(s, 4);
+        } else if (base == 8) {
+            return from_str_base2(s, 3);
+        } else if (base == 2) {
+            return from_str_base2(s, 1);
+        }
         BigIntHex m;
         m.set(1);
         set(0);
@@ -395,12 +434,10 @@ public:
             int digit = -1;
             if (*p >= '0' && *p <= '9')
                 digit = *p - '0';
-            else if (base > 10) {
-                if (*p >= 'A' && *p <= 'Z')
-                    digit = *p - 'A' + 10;
-                else if (*p >= 'a' && *p <= 'z')
-                    digit = *p - 'A' + 10;
-            }
+            else if (*p >= 'A' && *p <= 'Z')
+                digit = *p - 'A' + 10;
+            else if (*p >= 'a' && *p <= 'z')
+                digit = *p - 'a' + 10;
             hdigit += digit * hdigit_mul;
             hdigit_mul *= base;
             if (--d == 0) {

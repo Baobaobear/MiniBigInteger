@@ -123,7 +123,10 @@ bool test_bigdiv() {
 }
 
 int main() {
-    cout << "test_rnddiv: " << (test_rnd_div() ? "pass" : "FAIL") << endl;
+    bool pass = true;
+    cout << "test_rnddiv: " << ((pass = test_rnd_div()) ? "pass" : "FAIL") << endl;
+    if (!pass)
+        return -1;
     test_factorial();
     test_bigmul();
     test_bigdiv();
