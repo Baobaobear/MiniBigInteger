@@ -116,7 +116,7 @@ bool test_bigdiv() {
     t_end = get_time();
     s = ha1.to_str();
     cout << "calc 2^2^" << times + 1 << " / 2^2^" << times << endl;
-    cout << "    by tiny: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    by tiny: " << (int)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "        total " << s.size() << " dec digits" << endl;
 
     return true;
@@ -127,6 +127,5 @@ int main() {
     test_factorial();
     test_bigmul();
     test_bigdiv();
-    scanf("%*s");
     return 0;
 }
