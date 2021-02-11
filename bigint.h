@@ -10,6 +10,102 @@
 #include <string>
 #include <vector>
 
+namespace NTT_NS {
+
+const int NTT_N = 1 << 18;
+const int NTT_POW = 20;
+const int NTT_P = (479 << 21) + 1;
+const int NTT_G = 3;
+
+int64_t ntt_wn[NTT_POW];
+int64_t ntt_a[NTT_N], ntt_b[NTT_N];
+
+int64_t quick_pow_mod(int64_t a, int64_t b, int64_t m) {
+    int64_t ans = 1;
+    a %= m;
+    while (b) {
+        if (b & 1) {
+            ans = ans * a % m;
+            b--;
+        }
+        b >>= 1;
+        a = a * a % m;
+    }
+    return ans;
+}
+
+void GetWn() {
+    for (int i = 0; i < NTT_POW; i++)
+        ntt_wn[i] = quick_pow_mod(NTT_G, (NTT_P - 1) / (1 << i), NTT_P);
+}
+
+void Prepare(const int32_t A[], size_t size_a, const int32_t B[], size_t size_b, size_t &len) {
+    len = 1;
+    size_t L1 = size_a, L2 = size_b;
+    while (len <= 2 * std::max(L1, L2))
+        len <<= 1;
+    for (size_t i = 0; i < len; i++) {
+        ntt_a[i] = i < L1 ? A[i] : 0;
+        ntt_b[i] = i < L2 ? B[i] : 0;
+    }
+}
+
+void Rader(int64_t a[], size_t len) {
+    size_t j = len >> 1;
+    for (size_t i = 1; i + 1 < len; i++) {
+        if (i < j)
+            std::swap(a[i], a[j]);
+        size_t k = len >> 1;
+        while (j >= k) {
+            j -= k;
+            k >>= 1;
+        }
+        if (j < k)
+            j += k;
+    }
+}
+
+void NTT(int64_t a[], size_t len, int on) {
+    Rader(a, len);
+    for (size_t h = 2, id = 1; h <= len; h <<= 1, ++id) {
+        for (size_t j = 0; j < len; j += h) {
+            int64_t w = 1;
+            for (size_t k = j; k < j + h / 2; k++) {
+                int64_t u = a[k];
+                int64_t t = w * a[k + h / 2] % NTT_P;
+                a[k] = (u + t) % NTT_P;
+                a[k + h / 2] = (u - t + NTT_P) % NTT_P;
+                w = w * ntt_wn[id] % NTT_P;
+            }
+        }
+    }
+    if (on == -1) {
+        for (size_t i = 1; i < len / 2; i++)
+            std::swap(a[i], a[len - i]);
+        int64_t inv = quick_pow_mod(len, NTT_P - 2, NTT_P);
+        for (size_t i = 0; i < len; i++)
+            a[i] = a[i] * inv % NTT_P;
+    }
+}
+
+void Conv(size_t n) {
+    NTT(ntt_a, n, 1);
+    NTT(ntt_b, n, 1);
+    for (size_t i = 0; i < n; i++)
+        ntt_a[i] = ntt_a[i] * ntt_b[i] % NTT_P;
+    NTT(ntt_a, n, -1);
+}
+
+void AddUp(size_t n, int32_t mod) {
+    int64_t t = 0;
+    for (size_t i = 0; i < n; i++) {
+        ntt_a[i] += t;
+        t = ntt_a[i] / mod;
+        ntt_a[i] %= mod;
+    }
+}
+} // namespace NTT_NS
+
 const int BIGINT_MAXBASE = 1 << 15;
 
 struct BigIntBase {
@@ -75,12 +171,13 @@ struct BigIntBase {
 };
 
 namespace BigIntHexNS {
-const int COMPRESS_BIT = 15;
-const int COMPRESS_MOD = 1 << COMPRESS_BIT;
-const int COMPRESS_MASK = COMPRESS_MOD - 1;
+const int32_t COMPRESS_BIT = 15;
+const int32_t COMPRESS_MOD = 1 << COMPRESS_BIT;
+const int32_t COMPRESS_MASK = COMPRESS_MOD - 1;
 
-const int BIGINT_MUL_THRESHOLD = 48;
-const int BIGINT_OUTPUT_THRESHOLD = 32;
+const int32_t BIGINT_NTT_THRESHOLD = 2048;
+const int32_t BIGINT_MUL_THRESHOLD = 48;
+const int32_t BIGINT_OUTPUT_THRESHOLD = 32;
 
 class BigIntHex {
 protected:
@@ -251,6 +348,26 @@ protected:
         }
         return *this;
     }
+    BigIntHex &raw_nttmul(const BigIntHex &a, const BigIntHex &b) {
+        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
+            return raw_mul(a, b);
+        }
+        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) {
+            return raw_fastmul(a, b);
+        }
+        size_t len;
+        NTT_NS::GetWn();
+        NTT_NS::Prepare(&*a.v.cbegin(), a.v.size(), &*b.v.cbegin(), b.v.size(), len);
+        NTT_NS::Conv(len);
+        NTT_NS::AddUp(len, COMPRESS_MOD);
+        while (len > 0 && NTT_NS::ntt_a[--len] == 0)
+            ;
+        v.resize(len + 1);
+        for (size_t i = 0; i <= len; i++) {
+            v[i] = NTT_NS::ntt_a[i];
+        }
+        return *this;
+    }
     BigIntHex &raw_div(const BigIntHex &a, const BigIntHex &b) {
         if (a.size() < b.size()) {
             set(0);
@@ -290,6 +407,7 @@ protected:
             r.raw_sub(b);
             v[0]++;
         }
+        last_mod() = r;
 
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
@@ -443,7 +561,7 @@ public:
             if (--d == 0) {
                 *this += m * hdigit;
                 if (p > s) {
-                    m *= hbase;
+                    m.raw_mul_int((uint32_t)hbase);
                 }
                 d = digits;
                 hdigit = 0;
@@ -466,6 +584,10 @@ public:
         if (v.size() == 1 && v[0] == 0)
             return true;
         return false;
+    }
+    static BigIntHex &last_mod() {
+        static BigIntHex m;
+        return m;
     }
     bool operator<(const BigIntHex &b) const {
         if (sign * b.sign > 0) {
@@ -568,7 +690,7 @@ public:
             return r;
         } else {
             BigIntHex r;
-            r.raw_fastmul(*this, b);
+            r.raw_nttmul(*this, b);
             r.sign = sign * b.sign;
             return r;
         }
@@ -581,12 +703,12 @@ public:
         } else {
             if (this == &b) {
                 BigIntHex r = *this, c = b;
-                raw_fastmul(r, c);
+                raw_nttmul(r, c);
                 sign = r.sign * c.sign;
                 return *this;
             } else {
                 BigIntHex r = *this;
-                raw_fastmul(r, b);
+                raw_nttmul(r, b);
                 sign = r.sign * b.sign;
                 return *this;
             }

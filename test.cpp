@@ -40,7 +40,7 @@ bool test1_parse() {
     } in[] = {
         {"0", 10},
         {"-1", 2},
-        {"12345678901234567890", 10},
+        {"1234567890123456789", 10},
         {"-12345678901234567890", 10},
         {"123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 36},
         {"-123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 36},
@@ -226,6 +226,9 @@ bool test4_mul() {
         ha1.from_str(in[i].p1, in[i].base);
         ha2.from_str(in[i].p2, in[i].base);
         ha1 *= ha2;
+        std::string s = ha1.to_str(in[i].base);
+        std::string s16 = ha1.to_str(16);
+        std::string sa = ha2.from_str(in[i].pa, in[i].base).to_str(16);
         if (ha1.to_str(in[i].base) != in[i].pa) {
             return false;
         }
@@ -508,7 +511,7 @@ bool test_bigmul() {
     BigIntDec hb;
     BigIntMini hc;
     string s;
-    int times = 20;
+    int times = 21;
 
     time_point t_beg, t_end;
 
@@ -534,7 +537,7 @@ bool test_bigmul() {
     cout << "    by dec : " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "        total " << s.size() << " dec digits" << endl;
 
-    times -= 2;
+    times = 18;
     t_beg = get_time();
     hc = 3;
     for (int i = 1; i <= times; ++i) {
@@ -557,32 +560,33 @@ bool test_bigdiv() {
 
     time_point t_beg, t_end;
 
-    a = 3;
+    ha2 = 3;
     for (int i = 1; i <= times; ++i) {
-        a *= a;
+        ha2 *= ha2;
     }
-    b = a * a;
-    sa = b.to_str();
-    sb = a.to_str();
-
-    ha1 = sa;
-    ha2 = sb;
+    ha1 = ha2 * ha2;
     t_beg = get_time();
     ha1 /= ha2;
     t_end = get_time();
     cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
     cout << "    by hex: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
 
-    hb1 = sa;
-    hb2 = sb;
+    hb2 = 3;
+    for (int i = 1; i <= times; ++i) {
+        hb2 *= hb2;
+    }
+    hb1 = hb2 * hb2;
     t_beg = get_time();
     hb1 /= hb2;
     t_end = get_time();
     //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
     cout << "    by dec: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
 
-    hc1 = sa;
-    hc2 = sb;
+    hc2 = 3;
+    for (int i = 1; i <= times; ++i) {
+        hc2 = hc2 * hc2;
+    }
+    hc1 = hc2 * hc2;
     t_beg = get_time();
     hc1 = hc1 / hc2;
     t_end = get_time();

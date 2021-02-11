@@ -11,9 +11,9 @@
 #include <vector>
 
 namespace BigIntDecMiniNS {
-const int BIGINT_MAXBASE = 1 << 15;
-const int COMPRESS_DECMOD = 10000;
-const int COMPRESS_DIGITS = 4;
+const int32_t BIGINT_MAXBASE = 1 << 15;
+const int32_t COMPRESS_DECMOD = 10000;
+const int32_t COMPRESS_DIGITS = 4;
 
 class BigIntDecMini {
 protected:
@@ -162,7 +162,7 @@ protected:
             r.raw_sub(b);
             v[0]++;
         }
-
+        last_mod() = r;
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
             v[i] += add;
@@ -232,6 +232,10 @@ public:
         if (v.size() == 1 && v[0] == 0)
             return true;
         return false;
+    }
+    static BigIntDecMini &last_mod() {
+        static BigIntDecMini m;
+        return m;
     }
     bool operator<(const BigIntDecMini &b) const {
         if (sign * b.sign > 0) {

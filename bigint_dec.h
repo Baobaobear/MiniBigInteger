@@ -10,6 +10,7 @@ namespace BigIntDecNS {
 const int COMPRESS_DECMOD = 10000;
 const int COMPRESS_DIGITS = 4;
 
+const int BIGINT_NTT_THRESHOLD = 3000;
 const int BIGINT_MUL_THRESHOLD = 48;
 const int BIGINT_OUTPUT_THRESHOLD = 32;
 
@@ -187,6 +188,26 @@ protected:
         }
         return *this;
     }
+    BigIntDec &raw_nttmul(const BigIntDec &a, const BigIntDec &b) {
+        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
+            return raw_mul(a, b);
+        }
+        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) {
+            return raw_fastmul(a, b);
+        }
+        size_t len;
+        NTT_NS::GetWn();
+        NTT_NS::Prepare(&*a.v.cbegin(), a.v.size(), &*b.v.cbegin(), b.v.size(), len);
+        NTT_NS::Conv(len);
+        NTT_NS::AddUp(len, COMPRESS_DECMOD);
+        while (len > 0 && NTT_NS::ntt_a[--len] == 0)
+            ;
+        v.resize(len + 1);
+        for (size_t i = 0; i <= len; i++) {
+            v[i] = NTT_NS::ntt_a[i];
+        }
+        return *this;
+    }
     BigIntDec &raw_div(const BigIntDec &a, const BigIntDec &b) {
         if (a.size() < b.size()) {
             set(0);
@@ -225,6 +246,7 @@ protected:
             r.raw_sub(b);
             v[0]++;
         }
+        last_mod() = r;
 
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
@@ -372,7 +394,7 @@ public:
             if (--d == 0) {
                 *this += m * hdigit;
                 if (p > s) {
-                    m *= hbase;
+                    m.raw_mul_int((uint32_t)hbase);
                 }
                 d = digits;
                 hdigit = 0;
@@ -395,6 +417,10 @@ public:
         if (v.size() == 1 && v[0] == 0)
             return true;
         return false;
+    }
+    static BigIntDec &last_mod() {
+        static BigIntDec m;
+        return m;
     }
     bool operator<(const BigIntDec &b) const {
         if (sign * b.sign > 0) {
@@ -497,7 +523,7 @@ public:
             return r;
         } else {
             BigIntDec r;
-            r.raw_fastmul(*this, b);
+            r.raw_nttmul(*this, b);
             r.sign = sign * b.sign;
             return r;
         }
@@ -510,12 +536,12 @@ public:
         } else {
             if (this == &b) {
                 BigIntDec r = *this, c = b;
-                raw_fastmul(r, c);
+                raw_nttmul(r, c);
                 sign = r.sign * c.sign;
                 return *this;
             } else {
                 BigIntDec r = *this;
-                raw_fastmul(r, b);
+                raw_nttmul(r, b);
                 sign = r.sign * b.sign;
                 return *this;
             }
