@@ -97,7 +97,7 @@ bool test_bigmul() {
 bool test_bigdiv() {
     BigIntTiny ha1, ha2, a, b;
     string s, sa, sb;
-    int times = 15;
+    int times = 17;
 
     time_point t_beg, t_end;
 

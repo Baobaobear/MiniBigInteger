@@ -553,7 +553,7 @@ bool test_bigdiv() {
     BigIntDec hb1, hb2, a, b;
     BigIntMini hc1, hc2;
     string s, sa, sb;
-    int times = 17;
+    int times = 18;
 
     time_point t_beg, t_end;
 
