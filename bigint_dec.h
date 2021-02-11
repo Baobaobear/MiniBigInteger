@@ -288,6 +288,12 @@ public:
     explicit BigIntDec(intmax_t n) {
         set(n);
     }
+    explicit BigIntDec(const char *s, int base = 10) {
+        from_str(s, base);
+    }
+    explicit BigIntDec(const std::string &s, int base = 10) {
+        from_str(s, base);
+    }
     BigIntDec &set(intmax_t n) {
         v.resize(1);
         v[0] = 0;
@@ -398,7 +404,7 @@ public:
     BigIntDec &operator=(intmax_t n) {
         return set(n);
     }
-    BigIntDec &operator=(const char* s) {
+    BigIntDec &operator=(const char *s) {
         return from_str(s);
     }
     BigIntDec &operator=(const std::string s) {

@@ -181,6 +181,9 @@ public:
     explicit BigIntDecMini(intmax_t n = 0) {
         set(n);
     }
+    explicit BigIntDecMini(const std::string &s) {
+        from_str(s.c_str());
+    }
     BigIntDecMini &set(intmax_t n) {
         v.resize(1);
         v[0] = 0;
@@ -254,7 +257,7 @@ public:
     BigIntDecMini &operator=(intmax_t n) {
         return set(n);
     }
-    BigIntDecMini &operator=(const char* s) {
+    BigIntDecMini &operator=(const char *s) {
         return from_str(s);
     }
     BigIntDecMini &operator=(const std::string s) {

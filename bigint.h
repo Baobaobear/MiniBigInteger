@@ -350,6 +350,12 @@ public:
     explicit BigIntHex(intmax_t n) {
         set(n);
     }
+    explicit BigIntHex(const char *s, int base = 10) {
+        from_str(s, base);
+    }
+    explicit BigIntHex(const std::string &s, int base = 10) {
+        from_str(s, base);
+    }
     BigIntHex &set(intmax_t n) {
         v.resize(1);
         v[0] = 0;
@@ -413,7 +419,7 @@ public:
         this->sign = sign;
         return *this;
     }
-    BigIntHex &from_str(const std::string s, int base = 10) {
+    BigIntHex &from_str(const std::string &s, int base = 10) {
         return this->from_str(s.c_str(), base);
     }
     size_t size() const {
@@ -460,7 +466,7 @@ public:
     BigIntHex &operator=(intmax_t n) {
         return set(n);
     }
-    BigIntHex &operator=(const char* s) {
+    BigIntHex &operator=(const char *s) {
         return from_str(s);
     }
     BigIntHex &operator=(const std::string s) {

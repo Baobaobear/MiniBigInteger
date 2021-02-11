@@ -148,6 +148,30 @@ BigIntMini b; // or BigIntTiny
 cout << b.to_str() << endl;
 ```
 
+## Features preview
+
+|operators|BigIntHex|BigIntDec|BigIntMini|BigIntTiny|
+|--------|---------|---------|---------|---------|
+| constructor Bigint|✔|✔|✔|✔|
+| constructor int|✔|✔|✔|✔|
+| constructor char*|✔|✔|❌|❌|
+| constructor string|✔|✔|✔|✔|
+| =Bigint|✔|✔|✔|✔|
+| =int   |✔|✔|✔|✔|
+| =string|✔|✔|✔|✔|
+| =char* |✔|✔|✔|❌|
+| \<, == Bigint |✔|✔|✔|✔|
+| \>, <=, >=, != Bigint |✔|✔|❌|❌|
+| +, -, /, % int |❌|❌|❌|✔|
+| * int |✔|✔|❌|✔|
+| *= int |✔|✔|✔|❌|
+| +=, -=, /=, %= int |❌|❌|❌|❌|
+| +, -, *, /, % Bigint|✔|✔|✔|✔|
+| += Bigint|✔|✔|❌|✔|
+| -=, *=, /=, %= Bigint|✔|✔|❌|❌|
+| Base conversion|✔|✔|❌|❌|
+| Efficiency|✬✬✬✬|✬✬✬|✬✬|✬|
+
 # License
 
 This project is licensed under the MIT License.
