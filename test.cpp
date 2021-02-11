@@ -461,7 +461,7 @@ bool test_factorial() {
     time_point t_beg, t_end, t_out;
 
     t_beg = get_time();
-    ha.set(1);
+    ha = 1;
     for (int i = 2; i <= fac; ++i) {
         ha *= i;
     }
@@ -470,68 +470,125 @@ bool test_factorial() {
     t_out = get_time();
     cout << "calc " << fac << "!" << endl;
     cout << "    by hex: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "    trans to dec: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
-    cout << "    total " << s.size() << " dec digits" << endl;
-    cout << "    total " << ha.to_str(16).size() << " hex digits" << endl;
+    cout << "        trans to dec: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "        total " << s.size() << " dec digits" << endl;
+    cout << "        total " << ha.to_str(16).size() << " hex digits" << endl;
 
     t_beg = get_time();
-    hb.set(1);
+    hb = 1;
     for (int i = 2; i <= fac; ++i) {
         hb *= i;
     }
     t_end = get_time();
     s = hb.to_str(16);
     t_out = get_time();
-    cout << "calc " << fac << "!" << endl;
+    //cout << "calc " << fac << "!" << endl;
     cout << "    by dec: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "    trans to hex: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
-    cout << "    total " << s.size() << " hex digits" << endl;
-    cout << "    total " << hb.to_str().size() << " dec digits" << endl;
+    cout << "        trans to hex: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "        total " << s.size() << " hex digits" << endl;
+    cout << "        total " << hb.to_str().size() << " dec digits" << endl;
 
     t_beg = get_time();
-    hc.set(1);
+    hc = 1;
     for (int i = 2; i <= fac; ++i) {
         hc *= i;
     }
     t_end = get_time();
     s = hc.to_str();
     t_out = get_time();
-    cout << "calc " << fac << "!" << endl;
+    //cout << "calc " << fac << "!" << endl;
     cout << "    by mini: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "    to_str: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
-    cout << "    total " << s.size() << " dec digits" << endl;
+    cout << "        to_str: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "        total " << s.size() << " dec digits" << endl;
     return true;
 }
 
 bool test_bigmul() {
     BigIntHex ha;
     BigIntDec hb;
+    BigIntMini hc;
     string s;
     int times = 20;
 
     time_point t_beg, t_end;
 
     t_beg = get_time();
-    ha.set(2);
+    ha = 2;
     for (int i = 1; i <= times; ++i) {
         ha *= ha;
     }
     t_end = get_time();
     s = ha.to_str(16);
     cout << "calc 2^2^" << times << endl;
-    cout << "    by hex: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "    total " << s.size() << " hex digits" << endl;
+    cout << "    by hex : " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "        total " << s.size() << " hex digits" << endl;
 
     t_beg = get_time();
-    hb.set(2);
+    hb = 2;
     for (int i = 1; i <= times; ++i) {
         hb *= hb;
     }
     t_end = get_time();
     s = hb.to_str();
+    //cout << "calc 2^2^" << times << endl;
+    cout << "    by dec : " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "        total " << s.size() << " dec digits" << endl;
+
+    times -= 1;
+    t_beg = get_time();
+    hc = 2;
+    for (int i = 1; i <= times; ++i) {
+        hc = hc * hc;
+    }
+    t_end = get_time();
+    s = hc.to_str();
     cout << "calc 2^2^" << times << endl;
+    cout << "    by mini: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "        total " << s.size() << " dec digits" << endl;
+    return true;
+}
+
+bool test_bigdiv() {
+    BigIntHex ha1, ha2;
+    BigIntDec hb1, hb2, a, b;
+    BigIntMini hc1, hc2;
+    string s, sa, sb;
+    int times = 17;
+
+    time_point t_beg, t_end;
+
+    a = 2;
+    for (int i = 1; i <= times; ++i) {
+        a *= a;
+    }
+    b = a * a;
+    sa = b.to_str();
+    sb = a.to_str();
+
+    ha1 = sa;
+    ha2 = sb;
+    t_beg = get_time();
+    ha1 /= ha2;
+    t_end = get_time();
+    cout << "calc 2^2^" << times + 1 << " / 2^2^" << times << endl;
+    cout << "    by hex: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+
+    hb1 = sa;
+    hb2 = sb;
+    t_beg = get_time();
+    hb1 /= hb2;
+    t_end = get_time();
+    //cout << "calc 2^2^" << times + 1 << " / 2^2^" << times << endl;
     cout << "    by dec: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "    total " << s.size() << " dec digits" << endl;
+
+    hc1 = sa;
+    hc2 = sb;
+    t_beg = get_time();
+    hc1 = hc1 / hc2;
+    t_end = get_time();
+    //cout << "calc 2^2^" << times + 1 << " / 2^2^" << times << endl;
+    cout << "    by mini: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+
     return true;
 }
 
@@ -546,5 +603,6 @@ int main() {
     cout << "test8_rnddiv: " << (test8_rnd_div() ? "pass" : "FAIL") << endl;
     test_factorial();
     test_bigmul();
+    test_bigdiv();
     return 0;
 }
