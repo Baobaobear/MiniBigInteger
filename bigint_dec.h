@@ -195,7 +195,7 @@ protected:
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) * 4 > NTT_NS::NTT_N) {
+        if ((a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) * 4 > NTT_NS::NTT_N) {
             return raw_fastmul(a, b);
         }
         size_t len;

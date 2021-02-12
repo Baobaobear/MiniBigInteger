@@ -12,13 +12,14 @@
 
 namespace NTT_NS {
 
-const int32_t NTT_N = 1 << 19;
+const int32_t NTT_N = 1 << 18;
 const int32_t NTT_POW = 22;
 const int32_t NTT_P = (479 << 21) + 1;
 const int32_t NTT_G = 3;
 
-int64_t ntt_wn[2][NTT_POW];
-int64_t ntt_a[NTT_N], ntt_b[NTT_N], ntt_r[NTT_N];
+int32_t ntt_wn[2][NTT_POW];
+int64_t ntt_a[NTT_N], ntt_b[NTT_N];
+size_t ntt_r[NTT_N];
 
 int64_t quick_pow_mod(int64_t a, int64_t b) {
     int64_t ans = 1;
@@ -37,8 +38,8 @@ int64_t quick_pow_mod(int64_t a, int64_t b) {
 void GetWn() {
     if (ntt_wn[1][0] == 0) {
         for (int i = 0; i < NTT_POW; i++) {
-            ntt_wn[1][i] = quick_pow_mod(NTT_G, (NTT_P - 1) / (1 << i));
-            ntt_wn[0][i] = quick_pow_mod(ntt_wn[1][i], NTT_P - 2);
+            ntt_wn[1][i] = (int32_t)quick_pow_mod(NTT_G, (NTT_P - 1) / (1 << i));
+            ntt_wn[0][i] = (int32_t)quick_pow_mod(ntt_wn[1][i], NTT_P - 2);
         }
     }
 }
@@ -63,7 +64,7 @@ void NTT(int64_t a[], size_t len, int on) {
             std::swap(a[i], a[ntt_r[i]]);
     }
     for (size_t h = 1, id = 1; h < len; h <<= 1, ++id) {
-        int wn = ntt_wn[on][id];
+        int32_t wn = ntt_wn[on][id];
         for (size_t j = 0; j < len; j += h << 1) {
             int64_t w = 1;
             for (size_t k = j; k < j + h; k++) {
@@ -337,7 +338,7 @@ protected:
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) * 3 > NTT_NS::NTT_N) {
+        if ((a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) * 3 > NTT_NS::NTT_N) {
             return raw_fastmul(a, b);
         }
         size_t len;
@@ -496,7 +497,7 @@ public:
     }
     BigIntHex &from_str_base2(const char *s, int bits) {
         v.clear();
-        int base = 10, sign = 1;
+        int sign = 1;
         const char *p = s + strlen(s) - 1;
         while (*s == '-')
             sign *= -1, ++s;
