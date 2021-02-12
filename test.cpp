@@ -553,7 +553,7 @@ bool test_bigmul() {
 
 bool test_bigdiv() {
     BigIntHex ha1, ha2;
-    BigIntDec hb1, hb2, a, b;
+    BigIntDec hb1, hb2;
     BigIntMini hc1, hc2;
     string s, sa, sb;
     int times = 17;
@@ -568,6 +568,9 @@ bool test_bigdiv() {
     t_beg = get_time();
     ha1 /= ha2;
     t_end = get_time();
+    if (ha1 != ha2) {
+        return false;
+    }
     cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
     cout << "    by hex: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
 
@@ -579,6 +582,10 @@ bool test_bigdiv() {
     t_beg = get_time();
     hb1 /= hb2;
     t_end = get_time();
+    if (hb1 != hb2) {
+        cout << "b\n";
+        return false;
+    }
     //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
     cout << "    by dec: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
 
@@ -590,6 +597,9 @@ bool test_bigdiv() {
     t_beg = get_time();
     hc1 = hc1 / hc2;
     t_end = get_time();
+    if (!(hc1 == hc2)) {
+        return false;
+    }
     //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
     cout << "    by mini: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
 
@@ -624,6 +634,10 @@ int main() {
         return -1;
     test_factorial();
     test_bigmul();
-    test_bigdiv();
+    pass = test_bigdiv();
+    if (!pass) {
+        cout << "test_bigdiv FAIL" << endl;
+        return -1;
+    }
     return 0;
 }

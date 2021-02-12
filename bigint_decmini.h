@@ -299,6 +299,11 @@ public:
             r.raw_mul_int((uint32_t)b.v[0]);
             r.sign *= b.sign;
             return r;
+        } else if (v.size() == 1) {
+            BigIntDecMini r = b;
+            r.raw_mul_int((uint32_t)v[0]);
+            r.sign *= sign;
+            return r;
         } else {
             BigIntDecMini r;
             r.raw_mul(*this, b);

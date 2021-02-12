@@ -141,9 +141,8 @@ protected:
         }
         if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD)
             ;
-        else if (a.size() <= NTT_NS::NTT_N && b.size() <= NTT_NS::NTT_N) {
+        else if ((a.size() + b.size()) * 4 <= NTT_NS::NTT_N)
             return raw_nttmul(a, b);
-        }
         BigIntDec ah, al, bh, bl, h, m;
         size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
         al.v.resize(split);
@@ -196,20 +195,39 @@ protected:
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD || a.size() > NTT_NS::NTT_N || b.size() > NTT_NS::NTT_N) {
+        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) * 4 > NTT_NS::NTT_N) {
             return raw_fastmul(a, b);
         }
         size_t len;
         NTT_NS::GetWn();
-        NTT_NS::Prepare(&*a.v.cbegin(), a.v.size(), &*b.v.cbegin(), b.v.size(), len);
+        std::vector<int32_t> va(a.size() * 4); // split COMPRESS_DECMOD into 10^4, so there is (a.size() + b.size()) * 4 > NTT_NS::NTT_N
+        std::vector<int32_t> vb(b.size() * 4);
+        for (size_t i = 0, j = 0; i < a.size(); ++i, j += 4) {
+            va[j] = a.v[i] % 10;
+            va[j + 1] = (a.v[i] / 10) % 10;
+            va[j + 2] = (a.v[i] / 100) % 10;
+            va[j + 3] = (a.v[i] / 1000) % 10;
+        }
+        for (size_t i = 0, j = 0; i < b.size(); ++i, j += 4) {
+            vb[j] = b.v[i] % 10;
+            vb[j + 1] = b.v[i] / 10 % 10;
+            vb[j + 2] = b.v[i] / 100 % 10;
+            vb[j + 3] = b.v[i] / 1000 % 10;
+        }
+        NTT_NS::Prepare(&*va.cbegin(), va.size(), &*vb.cbegin(), vb.size(), len);
         NTT_NS::Conv(len);
-        NTT_NS::AddUp(len, COMPRESS_DECMOD);
         while (len > 0 && NTT_NS::ntt_a[--len] == 0)
             ;
-        v.resize(len + 1);
-        for (size_t i = 0; i <= len; i++) {
-            v[i] = (int32_t)NTT_NS::ntt_a[i];
+        v.clear();
+        int64_t add = 0;
+        for (size_t i = 0; i <= len; i += 4) {
+            int64_t s = add + NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] * 10) + (NTT_NS::ntt_a[i + 2] * 100) + (NTT_NS::ntt_a[i + 3] * 1000);
+            add = s / COMPRESS_DECMOD;
+            v.push_back(s % COMPRESS_DECMOD);
         }
+        for (; add;)
+            v.push_back(add % COMPRESS_DECMOD), add /= COMPRESS_DECMOD;
+        trim();
         return *this;
     }
     BigIntDec &raw_div(const BigIntDec &a, const BigIntDec &b) {
@@ -524,6 +542,11 @@ public:
             BigIntDec r = *this;
             r.raw_mul_int((uint32_t)b.v[0]);
             r.sign *= b.sign;
+            return r;
+        } else if (v.size() == 1) {
+            BigIntDec r = b;
+            r.raw_mul_int((uint32_t)v[0]);
+            r.sign *= sign;
             return r;
         } else {
             BigIntDec r;
