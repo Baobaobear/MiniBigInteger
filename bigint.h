@@ -175,7 +175,7 @@ const int32_t COMPRESS_BIT = 15;
 const int32_t COMPRESS_MOD = 1 << COMPRESS_BIT;
 const int32_t COMPRESS_MASK = COMPRESS_MOD - 1;
 
-const int32_t BIGINT_NTT_THRESHOLD = 2048;
+const int32_t BIGINT_NTT_THRESHOLD = 256;
 const int32_t BIGINT_MUL_THRESHOLD = 48;
 const int32_t BIGINT_OUTPUT_THRESHOLD = 32;
 
@@ -270,7 +270,6 @@ protected:
             add = v.back() >> COMPRESS_BIT;
             v.back() &= COMPRESS_MASK;
         }
-        trim();
         return *this;
     }
     BigIntHex &raw_mul(const BigIntHex &a, const BigIntHex &b) {
@@ -302,6 +301,11 @@ protected:
         }
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
+        }
+        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD)
+            ;
+        else if (a.size() <= NTT_NS::NTT_N && b.size() <= NTT_NS::NTT_N) {
+            return raw_nttmul(a, b);
         }
         BigIntHex ah, al, bh, bl, h, m;
         size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
@@ -352,7 +356,7 @@ protected:
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) {
+        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD || a.size() > NTT_NS::NTT_N || b.size() > NTT_NS::NTT_N) {
             return raw_fastmul(a, b);
         }
         size_t len;
@@ -364,7 +368,7 @@ protected:
             ;
         v.resize(len + 1);
         for (size_t i = 0; i <= len; i++) {
-            v[i] = NTT_NS::ntt_a[i];
+            v[i] = (int32_t)NTT_NS::ntt_a[i];
         }
         return *this;
     }

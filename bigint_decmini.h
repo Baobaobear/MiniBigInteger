@@ -135,8 +135,10 @@ protected:
         BigIntDecMini r = a;
         int32_t offset = (int32_t)b.size();
         double db = b.v.back();
-        if (b.size() > 1) {
-            db += (b.v[b.size() - 2] + 1) / (double)COMPRESS_DECMOD;
+        if (b.size() > 2) { // works when COMPRESS_DECMOD^3 << 2^52
+            db += b.v[b.size() - 2] / (double)COMPRESS_DECMOD + (b.v[b.size() - 3] + 1) / (double)COMPRESS_DECMOD / COMPRESS_DECMOD;
+        } else if (b.size() > 1) {
+            db += b.v[b.size() - 2] / (double)COMPRESS_DECMOD;
         }
         for (size_t i = r.size() - offset; i <= a.size(); i--) {
             int32_t rm = ((i + offset < r.size() ? r.v[i + offset] : 0) * COMPRESS_DECMOD) + r.v[i + offset - 1], m;

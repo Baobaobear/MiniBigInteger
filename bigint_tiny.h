@@ -125,9 +125,7 @@ struct BigIntTiny {
     BigIntTiny operator/(const BigIntTiny &b) const {
         BigIntTiny c, d;
         d.v.resize(v.size());
-        double db = b.v.back();
-        if (b.v.size() > 1)
-            db += (b.v[b.v.size() - 2] + 1) / 10000.0;
+        double db = b.v.back() + (b.v.size() > 1 ? b.v[b.v.size() - 2] / 1e4 : 0) + (b.v.size() > 2 ? (b.v[b.v.size() - 3] + 1) / 1e8 : 0);
         for (int i = (int)v.size() - 1; i >= 0; i--) {
             c.v.insert(c.v.begin(), v[i]);
             int m = (int)((c.get_pos(b.v.size()) * 10000 + c.get_pos(b.v.size() - 1)) / db);

@@ -10,7 +10,7 @@ namespace BigIntDecNS {
 const int COMPRESS_DECMOD = 10000;
 const int COMPRESS_DIGITS = 4;
 
-const int BIGINT_NTT_THRESHOLD = 3000;
+const int BIGINT_NTT_THRESHOLD = 300;
 const int BIGINT_MUL_THRESHOLD = 48;
 const int BIGINT_OUTPUT_THRESHOLD = 32;
 
@@ -108,7 +108,6 @@ protected:
             add = v.back() / COMPRESS_DECMOD;
             v.back() %= COMPRESS_DECMOD;
         }
-        trim();
         return *this;
     }
     BigIntDec &raw_mul(const BigIntDec &a, const BigIntDec &b) {
@@ -139,6 +138,11 @@ protected:
         }
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
+        }
+        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD)
+            ;
+        else if (a.size() <= NTT_NS::NTT_N && b.size() <= NTT_NS::NTT_N) {
+            return raw_nttmul(a, b);
         }
         BigIntDec ah, al, bh, bl, h, m;
         size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
@@ -192,7 +196,7 @@ protected:
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) {
+        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD || a.size() > NTT_NS::NTT_N || b.size() > NTT_NS::NTT_N) {
             return raw_fastmul(a, b);
         }
         size_t len;
@@ -204,7 +208,7 @@ protected:
             ;
         v.resize(len + 1);
         for (size_t i = 0; i <= len; i++) {
-            v[i] = NTT_NS::ntt_a[i];
+            v[i] = (int32_t)NTT_NS::ntt_a[i];
         }
         return *this;
     }
