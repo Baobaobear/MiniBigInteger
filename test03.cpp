@@ -50,85 +50,10 @@ bool test_rnd_div() {
     return true;
 }
 
-bool test_factorial() {
-    BigIntTiny h;
-    string s;
-    int fac = 10000;
-
-    time_point t_beg, t_end, t_out;
-
-    t_beg = get_time();
-    h = 1;
-    for (int i = 2; i <= fac; ++i) {
-        h = h * i;
-    }
-    t_end = get_time();
-    s = h.to_str();
-    t_out = get_time();
-    cout << "calc " << fac << "!" << endl;
-    cout << "    by tiny: " << (int)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "        to_str: " << (int)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
-    cout << "        total " << s.size() << " dec digits" << endl;
-
-    return true;
-}
-
-bool test_bigmul() {
-    BigIntTiny h;
-    string s;
-    int times = 18;
-
-    time_point t_beg, t_end;
-
-    t_beg = get_time();
-    h = 3;
-    for (int i = 1; i <= times; ++i) {
-        h = h * h;
-    }
-    t_end = get_time();
-    s = h.to_str();
-    cout << "calc 3^2^" << times << endl;
-    cout << "    by tiny: " << (int)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "        total " << s.size() << " dec digits" << endl;
-
-    return true;
-}
-
-bool test_bigdiv() {
-    BigIntTiny ha1, ha2, a, b;
-    string s, sa, sb;
-    int times = 17;
-
-    time_point t_beg, t_end;
-
-    a = 3;
-    for (int i = 1; i <= times; ++i) {
-        a = a * a;
-    }
-    b = a * a;
-    sa = b.to_str();
-    sb = a.to_str();
-
-    ha1 = sa;
-    ha2 = sb;
-    t_beg = get_time();
-    ha1 = ha1 / ha2;
-    t_end = get_time();
-    s = ha1.to_str();
-    cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
-    cout << "    by tiny: " << (int)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "        total " << s.size() << " dec digits" << endl;
-
-    return true;
-}
-
 int main() {
     bool pass = true;
     cout << "test_rnddiv: " << ((pass = test_rnd_div()) ? "pass" : "FAIL") << endl;
     if (!pass)
         return -1;
-    test_factorial();
-    test_bigmul();
-    test_bigdiv();
     return 0;
 }

@@ -458,6 +458,7 @@ bool test_factorial() {
     BigIntHex ha;
     BigIntDec hb;
     BigIntMini hc;
+    BigIntTiny hd;
     string s;
     int fac = 10000;
 
@@ -501,7 +502,18 @@ bool test_factorial() {
     t_out = get_time();
     //cout << "calc " << fac << "!" << endl;
     cout << "    by mini: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "        to_str: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "        total " << s.size() << " dec digits" << endl;
+
+    t_beg = get_time();
+    hd = 1;
+    for (int i = 2; i <= fac; ++i) {
+        hd = hd * i;
+    }
+    t_end = get_time();
+    s = hd.to_str();
+    t_out = get_time();
+    //cout << "calc " << fac << "!" << endl;
+    cout << "    by tiny: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "        total " << s.size() << " dec digits" << endl;
     return true;
 }
@@ -510,6 +522,7 @@ bool test_bigmul() {
     BigIntHex ha;
     BigIntDec hb;
     BigIntMini hc;
+    BigIntTiny hd;
     string s;
     int times = 21;
 
@@ -548,6 +561,17 @@ bool test_bigmul() {
     cout << "calc 3^2^" << times << endl;
     cout << "    by mini: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "        total " << s.size() << " dec digits" << endl;
+
+    t_beg = get_time();
+    hd = 3;
+    for (int i = 1; i <= times; ++i) {
+        hd = hd * hd;
+    }
+    t_end = get_time();
+    s = hc.to_str();
+    //cout << "calc 3^2^" << times << endl;
+    cout << "    by tiny: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "        total " << s.size() << " dec digits" << endl;
     return true;
 }
 
@@ -555,6 +579,7 @@ bool test_bigdiv() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
     BigIntMini hc1, hc2;
+    BigIntMini hd1, hd2;
     string s, sa, sb;
     int times = 17;
 
@@ -602,6 +627,20 @@ bool test_bigdiv() {
     }
     //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
     cout << "    by mini: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    
+    hd2 = 3;
+    for (int i = 1; i <= times; ++i) {
+        hd2 = hd2 * hd2;
+    }
+    hd1 = hd2 * hd2;
+    t_beg = get_time();
+    hd1 = hd1 / hd2;
+    t_end = get_time();
+    if (!(hd1 == hd2)) {
+        return false;
+    }
+    //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
+    cout << "    by tiny: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
 
     return true;
 }
