@@ -600,7 +600,7 @@ bool test_bigdiv() {
         return false;
     }
     cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
-    cout << "    by hex : mul: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    by hex : mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
 
     hb2 = 3;
     for (int i = 1; i <= times; ++i) {
