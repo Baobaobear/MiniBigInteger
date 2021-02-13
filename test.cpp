@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include "bigint.h"
 #include "bigint_dec.h"
 #include "bigint_decmini.h"
@@ -524,7 +526,7 @@ bool test_bigmul() {
     BigIntMini hc;
     BigIntTiny hd;
     string s;
-    int times = 21;
+    int times = 20;
 
     time_point t_beg, t_end;
 
@@ -583,12 +585,13 @@ bool test_bigdiv() {
     string s, sa, sb;
     int times = 17;
 
-    time_point t_beg, t_end;
+    time_point t_pre, t_beg, t_end;
 
     ha2 = 3;
     for (int i = 1; i <= times; ++i) {
         ha2 *= ha2;
     }
+    t_pre = get_time();
     ha1 = ha2 * ha2;
     t_beg = get_time();
     ha1 /= ha2;
@@ -597,12 +600,13 @@ bool test_bigdiv() {
         return false;
     }
     cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
-    cout << "    by hex: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    by hex : mul: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
 
     hb2 = 3;
     for (int i = 1; i <= times; ++i) {
         hb2 *= hb2;
     }
+    t_pre = get_time();
     hb1 = hb2 * hb2;
     t_beg = get_time();
     hb1 /= hb2;
@@ -612,12 +616,13 @@ bool test_bigdiv() {
         return false;
     }
     //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
-    cout << "    by dec: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    by dec : mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
 
     hc2 = 3;
     for (int i = 1; i <= times; ++i) {
         hc2 = hc2 * hc2;
     }
+    t_pre = get_time();
     hc1 = hc2 * hc2;
     t_beg = get_time();
     hc1 = hc1 / hc2;
@@ -626,12 +631,13 @@ bool test_bigdiv() {
         return false;
     }
     //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
-    cout << "    by mini: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    
+    cout << "    by mini: mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+
     hd2 = 3;
     for (int i = 1; i <= times; ++i) {
         hd2 = hd2 * hd2;
     }
+    t_pre = get_time();
     hd1 = hd2 * hd2;
     t_beg = get_time();
     hd1 = hd1 / hd2;
@@ -640,7 +646,7 @@ bool test_bigdiv() {
         return false;
     }
     //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
-    cout << "    by tiny: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+    cout << "    by tiny: mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
 
     return true;
 }

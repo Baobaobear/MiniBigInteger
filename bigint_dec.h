@@ -4,7 +4,7 @@
 // This library is compatible with C++11
 // https://github.com/Baobaobear/MiniBigInteger
 #pragma once
-#include "bigint.h"
+#include "bigint_base.h"
 
 namespace BigIntDecNS {
 const int COMPRESS_DECMOD = 10000;
@@ -171,9 +171,6 @@ protected:
             v[i + split] += add;
             add = v[i + split] / COMPRESS_DECMOD;
             v[i + split] %= COMPRESS_DECMOD;
-        }
-        if (add) {
-            v[m.size() + split] += add;
         }
         add = 0;
         for (size_t i = 0; i < h.size(); ++i) {
@@ -410,7 +407,7 @@ public:
             else if (*p >= 'A' && *p <= 'Z')
                 digit = *p - 'A' + 10;
             else if (*p >= 'a' && *p <= 'z')
-                digit = *p - 'A' + 10;
+                digit = *p - 'a' + 10;
             hdigit += digit * hdigit_mul;
             hdigit_mul *= base;
             if (--d == 0) {
@@ -622,7 +619,7 @@ public:
         return *this;
     }
 
-    std::string out_dec(int32_t pack = 0) const {
+    std::string out_dec() const {
         std::string out;
         int32_t d = 0;
         for (size_t i = 0, j = 0;;) {
@@ -638,9 +635,8 @@ public:
             d /= 10;
             j -= 1;
         }
-        if (pack == 0)
-            while (out.size() > 1 && out.back() == '0')
-                out.pop_back();
+        while (out.size() > 1 && out.back() == '0')
+            out.pop_back();
         if (sign < 0 && !this->is_zero())
             out.push_back('-');
         std::reverse(out.begin(), out.end());
