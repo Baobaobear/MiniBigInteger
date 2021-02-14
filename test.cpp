@@ -581,7 +581,7 @@ bool test_bigdiv() {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
     BigIntMini hc1, hc2;
-    BigIntMini hd1, hd2;
+    BigIntTiny hd1, hd2;
     string s, sa, sb;
     int times = 17;
 
