@@ -89,11 +89,11 @@ void Conv(size_t n) {
 }
 } // namespace NTT_NS
 
-const int BIGINT_MAXBASE = 1 << 15;
+const int32_t BIGINT_MAXBASE = 1 << 15;
 
 struct BigIntBase {
-    int base;
-    int digits;
+    int32_t base;
+    int32_t digits;
     std::vector<int32_t> v;
 
     BigIntBase(int b) { // b > 1

@@ -7,12 +7,13 @@
 #include "bigint_base.h"
 
 namespace BigIntDecNS {
-const int COMPRESS_DECMOD = 10000;
-const int COMPRESS_DIGITS = 4;
+const int32_t COMPRESS_DECMOD = 10000;
+const int32_t COMPRESS_DIGITS = 4;
 
-const int BIGINT_NTT_THRESHOLD = 300;
-const int BIGINT_MUL_THRESHOLD = 48;
-const int BIGINT_OUTPUT_THRESHOLD = 32;
+const int32_t BIGINT_NTT_THRESHOLD = 300;
+const int32_t BIGINT_MUL_THRESHOLD = 48;
+const int32_t BIGINT_DIV_THRESHOLD = 10000;
+const int32_t BIGINT_OUTPUT_THRESHOLD = 32;
 
 class BigIntDec {
 protected:
@@ -60,6 +61,20 @@ protected:
             v.push_back(add);
         } else {
             trim();
+        }
+        return *this;
+    }
+    BigIntDec &raw_offset_add(const BigIntDec &b, int32_t offset) {
+        int32_t add = 0;
+        for (size_t i = 0; i < b.size(); ++i) {
+            v[i + offset] += add + b.v[i];
+            add = v[i + offset] / COMPRESS_DECMOD;
+            v[i + offset] %= COMPRESS_DECMOD;
+        }
+        for (size_t i = b.size() + offset; add; ++i) {
+            v[i] += add;
+            add = v[i] / COMPRESS_DECMOD;
+            v[i] %= COMPRESS_DECMOD;
         }
         return *this;
     }
@@ -161,31 +176,9 @@ protected:
         m.raw_sub(h);
         v.resize(a.size() + b.size());
 
-        int32_t add = 0;
-        for (size_t i = 0; i < m.size(); ++i) {
-            v[i + split] += add + m.v[i];
-            add = v[i + split] / COMPRESS_DECMOD;
-            v[i + split] %= COMPRESS_DECMOD;
-        }
-        for (size_t i = m.size(); add; ++i) {
-            v[i + split] += add;
-            add = v[i + split] / COMPRESS_DECMOD;
-            v[i + split] %= COMPRESS_DECMOD;
-        }
-        add = 0;
-        for (size_t i = 0; i < h.size(); ++i) {
-            v[i + split2] += add + h.v[i];
-            add = v[i + split2] / COMPRESS_DECMOD;
-            v[i + split2] %= COMPRESS_DECMOD;
-        }
-        for (size_t i = h.size(); add; ++i) {
-            v[i + split2] += add;
-            add = v[i + split2] / COMPRESS_DECMOD;
-            v[i + split2] %= COMPRESS_DECMOD;
-        }
-        while (v.back() == 0 && v.size() > 1) {
-            v.pop_back();
-        }
+        raw_offset_add(m, split);
+        raw_offset_add(h, split2);
+        trim();
         return *this;
     }
     BigIntDec &raw_nttmul(const BigIntDec &a, const BigIntDec &b) {
@@ -228,8 +221,9 @@ protected:
         return *this;
     }
     BigIntDec &raw_div(const BigIntDec &a, const BigIntDec &b) {
-        if (a.size() < b.size()) {
+        if (a.raw_less(b)) {
             set(0);
+            last_mod() = a;
             return *this;
         }
         v.resize(a.size() - b.size() + 1);
@@ -276,6 +270,38 @@ protected:
         trim();
         return *this;
     }
+    BigIntDec &raw_shr(size_t n) {
+        size_t t = 0, s = n;
+        for (; s < v.size(); ++t, ++s)
+            v[t] = v[s];
+        v.resize(t);
+        return *this;
+    }
+    BigIntDec &raw_fastdiv(const BigIntDec &a, const BigIntDec &b) {
+        if (a.raw_less(b)) {
+            set(0);
+            return *this;
+        } else if (b.size() < BIGINT_DIV_THRESHOLD) {
+            return raw_div(a, b);
+        }
+        v.resize(a.size() - b.size() + 1);
+        BigIntDec b2, x0, x1;
+        b2.v.resize(v.size());
+        b2.v.push_back(2);
+        x1.v.resize(v.size());
+        x1.v.back() = (COMPRESS_DECMOD - 1) / b.v.back();
+        while (x0.v[0] != x1.v[0] || x1 != x0) {
+            x0 = x1;
+            x1 = x0 * (b2 - (x0 * b).raw_shr(b.size() - 1));
+            x1.raw_shr(v.size());
+        }
+        x0 *= a;
+        if (x0.v[a.size() - 1] >= COMPRESS_DECMOD >> 1)
+            *this = x0.raw_shr(a.size()).raw_add(BigIntDec(1));
+        else
+            *this = x0.raw_shr(a.size());
+        return *this;
+    }
     BigIntDec &raw_mod(const BigIntDec &a, const BigIntDec &b) {
         if (a.size() < b.size()) {
             *this = a;
@@ -314,8 +340,7 @@ protected:
             r.raw_sub(b);
             v[0]++;
         }
-
-        *this = r;
+        *this = last_mod() = r;
         return *this;
     }
     void trim() {

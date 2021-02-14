@@ -13,6 +13,7 @@ const int32_t COMPRESS_MASK = COMPRESS_MOD - 1;
 
 const int32_t BIGINT_NTT_THRESHOLD = 256;
 const int32_t BIGINT_MUL_THRESHOLD = 48;
+const int32_t BIGINT_DIV_THRESHOLD = 10000;
 const int32_t BIGINT_OUTPUT_THRESHOLD = 32;
 
 class BigIntHex {
@@ -62,6 +63,20 @@ protected:
             v.push_back(add);
         } else {
             trim();
+        }
+        return *this;
+    }
+    BigIntHex &raw_offset_add(const BigIntHex &b, int32_t offset) {
+        int32_t add = 0;
+        for (size_t i = 0; i < b.size(); ++i) {
+            v[i + offset] += add + b.v[i];
+            add = v[i + offset] >> COMPRESS_BIT;
+            v[i + offset] &= COMPRESS_MASK;
+        }
+        for (size_t i = b.size() + offset; add; ++i) {
+            v[i] += add;
+            add = v[i] >> COMPRESS_BIT;
+            v[i] &= COMPRESS_MASK;
         }
         return *this;
     }
@@ -159,31 +174,9 @@ protected:
         m.raw_sub(h);
         v.resize(a.size() + b.size());
 
-        int32_t add = 0;
-        for (size_t i = 0; i < m.size(); ++i) {
-            v[i + split] += add + m.v[i];
-            add = v[i + split] >> COMPRESS_BIT;
-            v[i + split] &= COMPRESS_MASK;
-        }
-        for (size_t i = m.size(); add; ++i) {
-            v[i + split] += add;
-            add = v[i + split] >> COMPRESS_BIT;
-            v[i + split] &= COMPRESS_MASK;
-        }
-        add = 0;
-        for (size_t i = 0; i < h.size(); ++i) {
-            v[i + split2] += add + h.v[i];
-            add = v[i + split2] >> COMPRESS_BIT;
-            v[i + split2] &= COMPRESS_MASK;
-        }
-        for (size_t i = h.size(); add; ++i) {
-            v[i + split2] += add;
-            add = v[i + split2] >> COMPRESS_BIT;
-            v[i + split2] &= COMPRESS_MASK;
-        }
-        while (v.back() == 0 && v.size() > 1) {
-            v.pop_back();
-        }
+        raw_offset_add(m, split);
+        raw_offset_add(h, split2);
+        trim();
         return *this;
     }
     BigIntHex &raw_nttmul(const BigIntHex &a, const BigIntHex &b) {
@@ -201,21 +194,11 @@ protected:
             va[j] = a.v[i] & 0x1f;
             va[j + 1] = (a.v[i] >> 5) & 0x1f;
             va[j + 2] = (a.v[i] >> 10) & 0x1f;
-            //va[j] = a.v[i] & 7;
-            //va[j + 1] = (a.v[i] >> 3) & 7;
-            //va[j + 2] = (a.v[i] >> 6) & 7;
-            //va[j + 3] = (a.v[i] >> 9) & 7;
-            //va[j + 4] = (a.v[i] >> 12) & 7;
         }
         for (size_t i = 0, j = 0; i < b.size(); ++i, j += 3) {
             vb[j] = b.v[i] & 0x1f;
             vb[j + 1] = (b.v[i] >> 5) & 0x1f;
             vb[j + 2] = (b.v[i] >> 10) & 0x1f;
-            //vb[j] = b.v[i] & 7;
-            //vb[j + 1] = (b.v[i] >> 3) & 7;
-            //vb[j + 2] = (b.v[i] >> 6) & 7;
-            //vb[j + 3] = (b.v[i] >> 9) & 7;
-            //vb[j + 4] = (b.v[i] >> 12) & 7;
         }
         NTT_NS::Prepare(&*va.cbegin(), va.size(), &*vb.cbegin(), vb.size(), len);
         NTT_NS::Conv(len);
@@ -228,19 +211,15 @@ protected:
             v.push_back(s & COMPRESS_MASK);
             add = s >> COMPRESS_BIT;
         }
-        //for (size_t i = 0; i <= len; i += 5) {
-        //    int64_t s = add + NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] << 3) + (NTT_NS::ntt_a[i + 2] << 6) + (NTT_NS::ntt_a[i + 3] << 9) + (NTT_NS::ntt_a[i + 4] << 12);
-        //    v.push_back(s & COMPRESS_MASK);
-        //    add = s >> COMPRESS_BIT;
-        //}
         for (; add;)
             v.push_back(add & COMPRESS_MASK), add >>= COMPRESS_BIT;
         trim();
         return *this;
     }
     BigIntHex &raw_div(const BigIntHex &a, const BigIntHex &b) {
-        if (a.size() < b.size()) {
+        if (a.raw_less(b)) {
             set(0);
+            last_mod() = a;
             return *this;
         }
         v.resize(a.size() - b.size() + 1);
@@ -288,6 +267,38 @@ protected:
         trim();
         return *this;
     }
+    BigIntHex &raw_shr(size_t n) {
+        size_t t = 0, s = n;
+        for (; s < v.size(); ++t, ++s)
+            v[t] = v[s];
+        v.resize(t);
+        return *this;
+    }
+    BigIntHex &raw_fastdiv(const BigIntHex &a, const BigIntHex &b) {
+        if (a.raw_less(b)) {
+            set(0);
+            return *this;
+        } else if (b.size() < BIGINT_DIV_THRESHOLD) {
+            return raw_div(a, b);
+        }
+        v.resize(a.size() - b.size() + 1);
+        BigIntHex b2, x0, x1;
+        b2.v.resize(v.size());
+        b2.v.push_back(2);
+        x1.v.resize(v.size());
+        x1.v.back() = (COMPRESS_MOD - 1) / b.v.back();
+        while (x0.v[0] != x1.v[0] || x1 != x0) {
+            x0 = x1;
+            x1 = x0 * (b2 - (x0 * b).raw_shr(b.size() - 1));
+            x1.raw_shr(v.size());
+        }
+        x0 *= a;
+        if (x0.v[a.size() - 1] >= COMPRESS_MOD >> 1)
+            *this = x0.raw_shr(a.size()).raw_add(BigIntHex(1));
+        else
+            *this = x0.raw_shr(a.size());
+        return *this;
+    }
     BigIntHex &raw_mod(const BigIntHex &a, const BigIntHex &b) {
         if (a.size() < b.size()) {
             *this = a;
@@ -322,8 +333,7 @@ protected:
             r.raw_sub(b);
             v[0]++;
         }
-
-        *this = r;
+        *this = last_mod() = r;
         return *this;
     }
     void trim() {
@@ -607,7 +617,7 @@ public:
 
     BigIntHex operator/(const BigIntHex &b) const {
         BigIntHex r;
-        r.raw_div(*this, b);
+        r.raw_fastdiv(*this, b);
         r.sign = sign * b.sign;
         return r;
     }
@@ -617,7 +627,7 @@ public:
             return *this /= c;
         }
         BigIntHex r = *this;
-        raw_div(r, b);
+        raw_fastdiv(r, b);
         sign = r.sign * b.sign;
         return *this;
     }
