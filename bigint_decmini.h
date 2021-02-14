@@ -15,6 +15,8 @@ const int32_t BIGINT_MAXBASE = 1 << 15;
 const int32_t COMPRESS_DECMOD = 10000;
 const int32_t COMPRESS_DIGITS = 4;
 
+const int BIGINT_MUL_THRESHOLD = 48;
+
 class BigIntDecMini {
 protected:
     int sign;
@@ -61,6 +63,20 @@ protected:
             v.push_back(add);
         } else {
             trim();
+        }
+        return *this;
+    }
+    BigIntDecMini &raw_offset_add(const BigIntDecMini &b, int32_t offset) {
+        int32_t add = 0;
+        for (size_t i = 0; i < b.size(); ++i) {
+            v[i + offset] += add + b.v[i];
+            add = v[i + offset] / COMPRESS_DECMOD;
+            v[i + offset] %= COMPRESS_DECMOD;
+        }
+        for (size_t i = b.size() + offset; add; ++i) {
+            v[i] += add;
+            add = v[i] / COMPRESS_DECMOD;
+            v[i] %= COMPRESS_DECMOD;
         }
         return *this;
     }
@@ -127,8 +143,9 @@ protected:
         return *this;
     }
     BigIntDecMini &raw_div(const BigIntDecMini &a, const BigIntDecMini &b) {
-        if (a.size() < b.size()) {
+        if (a.raw_less(b)) {
             set(0);
+            last_mod() = a;
             return *this;
         }
         v.resize(a.size() - b.size() + 1);
@@ -171,6 +188,42 @@ protected:
             add = v[i] / COMPRESS_DECMOD;
             v[i] %= COMPRESS_DECMOD;
         }
+        trim();
+        return *this;
+    }
+    BigIntDecMini &raw_fastmul(const BigIntDecMini &a, const BigIntDecMini &b) {
+        if (a.size() <= 1 || b.size() <= 1) {
+            if (a.size() >= b.size()) {
+                *this = a;
+                return raw_mul_int(b.v[0]);
+            } else {
+                *this = b;
+                return raw_mul_int(a.v[0]);
+            }
+        }
+        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
+            return raw_mul(a, b);
+        }
+        BigIntDecMini ah, al, bh, bl, h, m;
+        size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
+        al.v.resize(split);
+        std::copy_n(a.v.begin(), al.v.size(), al.v.begin());
+        ah.v.resize(a.size() - split);
+        std::copy_n(a.v.begin() + split, ah.v.size(), ah.v.begin());
+        bl.v.resize(split);
+        std::copy_n(b.v.begin(), bl.v.size(), bl.v.begin());
+        bh.v.resize(b.size() - split);
+        std::copy_n(b.v.begin() + split, bh.v.size(), bh.v.begin());
+
+        raw_fastmul(al, bl);
+        h.raw_fastmul(ah, bh);
+        m.raw_fastmul(al + ah, bl + bh);
+        m.raw_sub(*this);
+        m.raw_sub(h);
+        v.resize(a.size() + b.size());
+
+        raw_offset_add(m, split);
+        raw_offset_add(h, split2);
         trim();
         return *this;
     }
@@ -306,7 +359,7 @@ public:
             return r;
         } else {
             BigIntDecMini r;
-            r.raw_mul(*this, b);
+            r.raw_fastmul(*this, b);
             r.sign = sign * b.sign;
             return r;
         }
