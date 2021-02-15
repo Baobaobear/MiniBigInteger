@@ -15,6 +15,12 @@ const int32_t BIGINT_MUL_THRESHOLD = 48;
 const int32_t BIGINT_DIV_THRESHOLD = 2000;
 const int32_t BIGINT_OUTPUT_THRESHOLD = 32;
 
+#ifdef NTT_DOUBLE_MOD
+const int32_t NTT_MAX_SIZE = 1 << 24;
+#else
+const int32_t NTT_MAX_SIZE = 1 << 21;
+#endif
+
 class BigIntDec {
 protected:
     int sign;
@@ -156,7 +162,7 @@ protected:
         }
         if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD)
             ;
-        else if ((a.size() + b.size()) * 4 <= NTT_NS::NTT_N)
+        else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
             return raw_nttmul(a, b);
         BigIntDec ah, al, bh, bl, h, m;
         size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
@@ -185,35 +191,54 @@ protected:
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if ((a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) * 4 > NTT_NS::NTT_N) {
+        if ((a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) > NTT_MAX_SIZE) {
             return raw_fastmul(a, b);
         }
         size_t len;
         NTT_NS::GetWn();
-        // split COMPRESS_DECMOD into 10^4, so there is (a.size() + b.size()) * 4 > NTT_NS::NTT_N
-        for (size_t i = 0, j = 0; i < a.size(); ++i, j += 4) {
-            NTT_NS::ntt_a[j] = a.v[i] % 10;
-            NTT_NS::ntt_a[j + 1] = (a.v[i] / 10) % 10;
-            NTT_NS::ntt_a[j + 2] = (a.v[i] / 100) % 10;
-            NTT_NS::ntt_a[j + 3] = (a.v[i] / 1000) % 10;
+        NTT_NS::ntt_a.clear();
+        NTT_NS::ntt_b.clear();
+#ifdef NTT_DOUBLE_MOD
+        for (size_t i = 0; i < a.size(); ++i) {
+            NTT_NS::ntt_a.push_back(a.v[i]);
         }
-        for (size_t i = 0, j = 0; i < b.size(); ++i, j += 4) {
-            NTT_NS::ntt_b[j] = b.v[i] % 10;
-            NTT_NS::ntt_b[j + 1] = b.v[i] / 10 % 10;
-            NTT_NS::ntt_b[j + 2] = b.v[i] / 100 % 10;
-            NTT_NS::ntt_b[j + 3] = b.v[i] / 1000 % 10;
+        for (size_t i = 0; i < b.size(); ++i) {
+            NTT_NS::ntt_b.push_back(b.v[i]);
+        }
+        NTT_NS::Prepare(a.size(), b.size(), len);
+#else
+        for (size_t i = 0; i < a.size(); ++i) {
+            NTT_NS::ntt_a.push_back(a.v[i] % 10);
+            NTT_NS::ntt_a.push_back(a.v[i] / 10 % 10);
+            NTT_NS::ntt_a.push_back(a.v[i] / 100 % 10);
+            NTT_NS::ntt_a.push_back(a.v[i] / 1000 % 10);
+        }
+        for (size_t i = 0; i < b.size(); ++i) {
+            NTT_NS::ntt_b.push_back(b.v[i] % 10);
+            NTT_NS::ntt_b.push_back(b.v[i] / 10 % 10);
+            NTT_NS::ntt_b.push_back(b.v[i] / 100 % 10);
+            NTT_NS::ntt_b.push_back(b.v[i] / 1000 % 10);
         }
         NTT_NS::Prepare(a.size() * 4, b.size() * 4, len);
+#endif
         NTT_NS::Conv(len);
         while (len > 0 && NTT_NS::ntt_a[--len] == 0)
             ;
         v.clear();
         int64_t add = 0;
+#ifdef NTT_DOUBLE_MOD
+        for (size_t i = 0; i <= len; i++) {
+            int64_t s = add + NTT_NS::ntt_a[i];
+            v.push_back(s % COMPRESS_DECMOD);
+            add = s / COMPRESS_DECMOD;
+        }
+#else
         for (size_t i = 0; i <= len; i += 4) {
             int64_t s = add + NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] * 10) + (NTT_NS::ntt_a[i + 2] * 100) + (NTT_NS::ntt_a[i + 3] * 1000);
-            add = s / COMPRESS_DECMOD;
             v.push_back(s % COMPRESS_DECMOD);
+            add = s / COMPRESS_DECMOD;
         }
+#endif
         for (; add; add /= COMPRESS_DECMOD)
             v.push_back(add % COMPRESS_DECMOD);
         trim();
@@ -222,7 +247,6 @@ protected:
     BigIntDec &raw_div(const BigIntDec &a, const BigIntDec &b) {
         if (a.raw_less(b)) {
             set(0);
-            last_mod() = a;
             return *this;
         }
         v.resize(a.size() - b.size() + 1);
@@ -258,7 +282,6 @@ protected:
             r.raw_sub(b);
             v[0]++;
         }
-        last_mod() = r;
 
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
@@ -352,7 +375,7 @@ protected:
             r.raw_sub(b);
             v[0]++;
         }
-        *this = last_mod() = r;
+        *this = r;
         return *this;
     }
     void trim() {
@@ -473,10 +496,6 @@ public:
         if (v.size() == 1 && v[0] == 0)
             return true;
         return false;
-    }
-    static BigIntDec &last_mod() {
-        static BigIntDec m;
-        return m;
     }
     bool operator<(const BigIntDec &b) const {
         if (sign * b.sign > 0) {
@@ -643,16 +662,11 @@ public:
 
     BigIntDec operator%(const BigIntDec &b) const {
         BigIntDec r;
-        r.raw_mod(*this, b);
+        r = *this - *this / b * b;
         return r;
     }
     BigIntDec &operator%=(const BigIntDec &b) {
-        if (this == &b) {
-            BigIntDec c = b;
-            return *this %= c;
-        }
-        BigIntDec r = *this;
-        raw_mod(r, b);
+        *this = *this - *this / b * b;
         return *this;
     }
 

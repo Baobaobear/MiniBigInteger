@@ -16,6 +16,13 @@ const int32_t BIGINT_MUL_THRESHOLD = 48;
 const int32_t BIGINT_DIV_THRESHOLD = 2000;
 const int32_t BIGINT_OUTPUT_THRESHOLD = 32;
 
+#ifdef NTT_DOUBLE_MOD
+const int32_t NTT_MAX_SIZE = 1 << 24;
+#else
+const int32_t NTT_MAX_SIZE = 1 << 21;
+const int32_t NTT_MID_SIZE = 1 << 18;
+#endif
+
 class BigIntHex {
 protected:
     int sign;
@@ -154,7 +161,7 @@ protected:
         }
         if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD)
             ;
-        else if ((a.size() + b.size()) * 3 <= NTT_NS::NTT_N)
+        else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
             return raw_nttmul(a, b);
         BigIntHex ah, al, bh, bl, h, m;
         size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
@@ -183,33 +190,79 @@ protected:
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if ((a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) * 3 > NTT_NS::NTT_N) {
+        if ((a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) > NTT_MAX_SIZE) {
             return raw_fastmul(a, b);
         }
         size_t len;
         NTT_NS::GetWn();
         // split COMPRESS_BIT into 5bit * 3, so there is (a.size() + b.size()) * 3 > NTT_NS::NTT_N
-        for (size_t i = 0, j = 0; i < a.size(); ++i, j += 3) {
-            NTT_NS::ntt_a[j] = a.v[i] & 0x1f;
-            NTT_NS::ntt_a[j + 1] = (a.v[i] >> 5) & 0x1f;
-            NTT_NS::ntt_a[j + 2] = (a.v[i] >> 10) & 0x1f;
+        NTT_NS::ntt_a.clear();
+        NTT_NS::ntt_b.clear();
+#ifdef NTT_DOUBLE_MOD
+        for (size_t i = 0; i < a.size(); ++i) {
+            NTT_NS::ntt_a.push_back(a.v[i]);
         }
-        for (size_t i = 0, j = 0; i < b.size(); ++i, j += 3) {
-            NTT_NS::ntt_b[j] = b.v[i] & 0x1f;
-            NTT_NS::ntt_b[j + 1] = (b.v[i] >> 5) & 0x1f;
-            NTT_NS::ntt_b[j + 2] = (b.v[i] >> 10) & 0x1f;
+        for (size_t i = 0; i < b.size(); ++i) {
+            NTT_NS::ntt_b.push_back(b.v[i]);
         }
-        NTT_NS::Prepare(a.size() * 3, b.size() * 3, len);
+        NTT_NS::Prepare(a.size(), b.size(), len);
+#else
+        if (a.size() + b.size() <= NTT_MID_SIZE) {
+            for (size_t i = 0; i < a.size(); ++i) {
+                NTT_NS::ntt_a.push_back(a.v[i] & 0x1f);
+                NTT_NS::ntt_a.push_back((a.v[i] >> 5) & 0x1f);
+                NTT_NS::ntt_a.push_back((a.v[i] >> 10) & 0x1f);
+            }
+            for (size_t i = 0; i < b.size(); ++i) {
+                NTT_NS::ntt_b.push_back(b.v[i] & 0x1f);
+                NTT_NS::ntt_b.push_back((b.v[i] >> 5) & 0x1f);
+                NTT_NS::ntt_b.push_back((b.v[i] >> 10) & 0x1f);
+            }
+            NTT_NS::Prepare(a.size() * 3, b.size() * 3, len);
+        } else {
+            for (size_t i = 0; i < a.size(); ++i) {
+                NTT_NS::ntt_a.push_back(a.v[i] & 7);
+                NTT_NS::ntt_a.push_back((a.v[i] >> 3) & 7);
+                NTT_NS::ntt_a.push_back((a.v[i] >> 6) & 7);
+                NTT_NS::ntt_a.push_back((a.v[i] >> 9) & 7);
+                NTT_NS::ntt_a.push_back((a.v[i] >> 12) & 7);
+            }
+            for (size_t i = 0; i < b.size(); ++i) {
+                NTT_NS::ntt_b.push_back(b.v[i] & 7);
+                NTT_NS::ntt_b.push_back((b.v[i] >> 3) & 7);
+                NTT_NS::ntt_b.push_back((b.v[i] >> 6) & 7);
+                NTT_NS::ntt_b.push_back((b.v[i] >> 9) & 7);
+                NTT_NS::ntt_b.push_back((b.v[i] >> 12) & 7);
+            }
+            NTT_NS::Prepare(a.size() * 5, b.size() * 5, len);
+        }
+#endif
         NTT_NS::Conv(len);
         while (len > 0 && NTT_NS::ntt_a[--len] == 0)
             ;
         v.clear();
         int64_t add = 0;
-        for (size_t i = 0; i <= len; i += 3) {
-            int64_t s = add + NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] << 5) + (NTT_NS::ntt_a[i + 2] << 10);
+#ifdef NTT_DOUBLE_MOD
+        for (size_t i = 0; i <= len; i++) {
+            int64_t s = add + NTT_NS::ntt_a[i];
             v.push_back(s & COMPRESS_MASK);
             add = s >> COMPRESS_BIT;
         }
+#else
+        if (a.size() + b.size() <= NTT_MID_SIZE) {
+            for (size_t i = 0; i <= len; i += 3) {
+                int64_t s = add + NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] << 5) + (NTT_NS::ntt_a[i + 2] << 10);
+                v.push_back(s & COMPRESS_MASK);
+                add = s >> COMPRESS_BIT;
+            }
+        } else {
+            for (size_t i = 0; i <= len; i += 5) {
+                int64_t s = add + NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] << 3) + (NTT_NS::ntt_a[i + 2] << 6) + (NTT_NS::ntt_a[i + 3] << 9) + (NTT_NS::ntt_a[i + 4] << 12);
+                v.push_back(s & COMPRESS_MASK);
+                add = s >> COMPRESS_BIT;
+            }
+        }
+#endif
         for (; add; add >>= COMPRESS_BIT)
             v.push_back(add & COMPRESS_MASK);
         trim();
@@ -218,7 +271,6 @@ protected:
     BigIntHex &raw_div(const BigIntHex &a, const BigIntHex &b) {
         if (a.raw_less(b)) {
             set(0);
-            last_mod() = a;
             return *this;
         }
         v.resize(a.size() - b.size() + 1);
@@ -255,7 +307,6 @@ protected:
             r.raw_sub(b);
             v[0]++;
         }
-        last_mod() = r;
 
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
@@ -347,7 +398,7 @@ protected:
             r.raw_sub(b);
             v[0]++;
         }
-        *this = last_mod() = r;
+        *this = r;
         return *this;
     }
     void trim() {
@@ -478,10 +529,6 @@ public:
         if (v.size() == 1 && v[0] == 0)
             return true;
         return false;
-    }
-    static BigIntHex &last_mod() {
-        static BigIntHex m;
-        return m;
     }
     bool operator<(const BigIntHex &b) const {
         if (sign * b.sign > 0) {
@@ -647,17 +694,10 @@ public:
     }
 
     BigIntHex operator%(const BigIntHex &b) const {
-        BigIntHex r;
-        r.raw_mod(*this, b);
-        return r;
+        return *this - *this / b * b;
     }
     BigIntHex &operator%=(const BigIntHex &b) {
-        if (this == &b) {
-            BigIntHex c = b;
-            return *this %= c;
-        }
-        BigIntHex r = *this;
-        raw_mod(r, b);
+        *this = *this - *this / b * b;
         return *this;
     }
 

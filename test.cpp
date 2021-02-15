@@ -1,4 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
+#define NTT_MODE 0
 
 #include "bigint.h"
 #include "bigint_dec.h"
