@@ -677,8 +677,10 @@ int main() {
     cout << "test8_rnddiv: " << ((pass = test8_rnd_div()) ? "pass" : "FAIL") << endl;
     if (!pass)
         return -1;
+#ifndef _DEBUG
     test_factorial();
     test_bigmul();
+#endif
     pass = test_bigdiv();
     if (!pass) {
         cout << "test_bigdiv FAIL" << endl;

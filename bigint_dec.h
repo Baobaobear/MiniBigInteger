@@ -12,7 +12,7 @@ const int32_t COMPRESS_DIGITS = 4;
 
 const int32_t BIGINT_NTT_THRESHOLD = 300;
 const int32_t BIGINT_MUL_THRESHOLD = 48;
-const int32_t BIGINT_DIV_THRESHOLD = 10000;
+const int32_t BIGINT_DIV_THRESHOLD = 2000;
 const int32_t BIGINT_OUTPUT_THRESHOLD = 32;
 
 class BigIntDec {
@@ -190,21 +190,20 @@ protected:
         }
         size_t len;
         NTT_NS::GetWn();
-        std::vector<int32_t> va(a.size() * 4); // split COMPRESS_DECMOD into 10^4, so there is (a.size() + b.size()) * 4 > NTT_NS::NTT_N
-        std::vector<int32_t> vb(b.size() * 4);
+        // split COMPRESS_DECMOD into 10^4, so there is (a.size() + b.size()) * 4 > NTT_NS::NTT_N
         for (size_t i = 0, j = 0; i < a.size(); ++i, j += 4) {
-            va[j] = a.v[i] % 10;
-            va[j + 1] = (a.v[i] / 10) % 10;
-            va[j + 2] = (a.v[i] / 100) % 10;
-            va[j + 3] = (a.v[i] / 1000) % 10;
+            NTT_NS::ntt_a[j] = a.v[i] % 10;
+            NTT_NS::ntt_a[j + 1] = (a.v[i] / 10) % 10;
+            NTT_NS::ntt_a[j + 2] = (a.v[i] / 100) % 10;
+            NTT_NS::ntt_a[j + 3] = (a.v[i] / 1000) % 10;
         }
         for (size_t i = 0, j = 0; i < b.size(); ++i, j += 4) {
-            vb[j] = b.v[i] % 10;
-            vb[j + 1] = b.v[i] / 10 % 10;
-            vb[j + 2] = b.v[i] / 100 % 10;
-            vb[j + 3] = b.v[i] / 1000 % 10;
+            NTT_NS::ntt_b[j] = b.v[i] % 10;
+            NTT_NS::ntt_b[j + 1] = b.v[i] / 10 % 10;
+            NTT_NS::ntt_b[j + 2] = b.v[i] / 100 % 10;
+            NTT_NS::ntt_b[j + 3] = b.v[i] / 1000 % 10;
         }
-        NTT_NS::Prepare(&*va.cbegin(), va.size(), &*vb.cbegin(), vb.size(), len);
+        NTT_NS::Prepare(a.size() * 4, b.size() * 4, len);
         NTT_NS::Conv(len);
         while (len > 0 && NTT_NS::ntt_a[--len] == 0)
             ;
@@ -215,8 +214,8 @@ protected:
             add = s / COMPRESS_DECMOD;
             v.push_back(s % COMPRESS_DECMOD);
         }
-        for (; add;)
-            v.push_back(add % COMPRESS_DECMOD), add /= COMPRESS_DECMOD;
+        for (; add; add /= COMPRESS_DECMOD)
+            v.push_back(add % COMPRESS_DECMOD);
         trim();
         return *this;
     }
@@ -277,6 +276,10 @@ protected:
         v.resize(t);
         return *this;
     }
+    BigIntDec &keep(size_t n) {
+        size_t s = n < v.size() ? v.size() - n : (size_t)0;
+        return raw_shr(s);
+    }
     BigIntDec &raw_fastdiv(const BigIntDec &a, const BigIntDec &b) {
         if (a.raw_less(b)) {
             set(0);
@@ -285,15 +288,24 @@ protected:
             return raw_div(a, b);
         }
         v.resize(a.size() - b.size() + 1);
-        BigIntDec b2, x0, x1;
+        BigIntDec b2, b2r, x0, x1, t;
         b2.v.resize(v.size());
         b2.v.push_back(2);
-        x1.v.resize(v.size());
-        x1.v.back() = (COMPRESS_DECMOD - 1) / b.v.back();
+        x1.v.resize(1);
+        x1.v.back() = COMPRESS_DECMOD / (b.v.back() + (b.v[b.size() - 2] + 1.0) / COMPRESS_DECMOD);
+        size_t keep_size = 1;
         while (x0.v[0] != x1.v[0] || x1 != x0) {
+            // x1 = x0(2 - x0 * b)
             x0 = x1;
-            x1 = x0 * (b2 - (x0 * b).raw_shr(b.size() - 1));
-            x1.raw_shr(v.size());
+            b2r = b2;
+            t = x0 * b;
+            t.keep(keep_size);
+            size_t offset = t.size();
+            if (t.v.back() != 1)
+                offset++;
+            x1 *= b2r.keep(offset) - t;
+            keep_size = std::min(keep_size * 2, v.size());
+            x1.keep(keep_size);
         }
         x0 *= a;
         if (x0.v[a.size() - 1] >= COMPRESS_DECMOD >> 1)
@@ -614,7 +626,7 @@ public:
 
     BigIntDec operator/(const BigIntDec &b) const {
         BigIntDec r;
-        r.raw_div(*this, b);
+        r.raw_fastdiv(*this, b);
         r.sign = sign * b.sign;
         return r;
     }
@@ -624,7 +636,7 @@ public:
             return *this /= c;
         }
         BigIntDec r = *this;
-        raw_div(r, b);
+        raw_fastdiv(r, b);
         sign = r.sign * b.sign;
         return *this;
     }

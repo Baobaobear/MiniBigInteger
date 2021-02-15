@@ -13,7 +13,7 @@ const int32_t COMPRESS_MASK = COMPRESS_MOD - 1;
 
 const int32_t BIGINT_NTT_THRESHOLD = 256;
 const int32_t BIGINT_MUL_THRESHOLD = 48;
-const int32_t BIGINT_DIV_THRESHOLD = 10000;
+const int32_t BIGINT_DIV_THRESHOLD = 2000;
 const int32_t BIGINT_OUTPUT_THRESHOLD = 32;
 
 class BigIntHex {
@@ -188,19 +188,18 @@ protected:
         }
         size_t len;
         NTT_NS::GetWn();
-        std::vector<int32_t> va(a.size() * 3); // split COMPRESS_BIT into 5bit * 3, so there is (a.size() + b.size()) * 3 > NTT_NS::NTT_N
-        std::vector<int32_t> vb(b.size() * 3);
+        // split COMPRESS_BIT into 5bit * 3, so there is (a.size() + b.size()) * 3 > NTT_NS::NTT_N
         for (size_t i = 0, j = 0; i < a.size(); ++i, j += 3) {
-            va[j] = a.v[i] & 0x1f;
-            va[j + 1] = (a.v[i] >> 5) & 0x1f;
-            va[j + 2] = (a.v[i] >> 10) & 0x1f;
+            NTT_NS::ntt_a[j] = a.v[i] & 0x1f;
+            NTT_NS::ntt_a[j + 1] = (a.v[i] >> 5) & 0x1f;
+            NTT_NS::ntt_a[j + 2] = (a.v[i] >> 10) & 0x1f;
         }
         for (size_t i = 0, j = 0; i < b.size(); ++i, j += 3) {
-            vb[j] = b.v[i] & 0x1f;
-            vb[j + 1] = (b.v[i] >> 5) & 0x1f;
-            vb[j + 2] = (b.v[i] >> 10) & 0x1f;
+            NTT_NS::ntt_b[j] = b.v[i] & 0x1f;
+            NTT_NS::ntt_b[j + 1] = (b.v[i] >> 5) & 0x1f;
+            NTT_NS::ntt_b[j + 2] = (b.v[i] >> 10) & 0x1f;
         }
-        NTT_NS::Prepare(&*va.cbegin(), va.size(), &*vb.cbegin(), vb.size(), len);
+        NTT_NS::Prepare(a.size() * 3, b.size() * 3, len);
         NTT_NS::Conv(len);
         while (len > 0 && NTT_NS::ntt_a[--len] == 0)
             ;
@@ -211,8 +210,8 @@ protected:
             v.push_back(s & COMPRESS_MASK);
             add = s >> COMPRESS_BIT;
         }
-        for (; add;)
-            v.push_back(add & COMPRESS_MASK), add >>= COMPRESS_BIT;
+        for (; add; add >>= COMPRESS_BIT)
+            v.push_back(add & COMPRESS_MASK);
         trim();
         return *this;
     }
@@ -268,11 +267,17 @@ protected:
         return *this;
     }
     BigIntHex &raw_shr(size_t n) {
+        if (n == 0)
+            return *this;
         size_t t = 0, s = n;
         for (; s < v.size(); ++t, ++s)
             v[t] = v[s];
         v.resize(t);
         return *this;
+    }
+    BigIntHex &keep(size_t n) {
+        size_t s = n < v.size() ? v.size() - n : (size_t)0;
+        return raw_shr(s);
     }
     BigIntHex &raw_fastdiv(const BigIntHex &a, const BigIntHex &b) {
         if (a.raw_less(b)) {
@@ -282,15 +287,24 @@ protected:
             return raw_div(a, b);
         }
         v.resize(a.size() - b.size() + 1);
-        BigIntHex b2, x0, x1;
+        BigIntHex b2, b2r, x0, x1, t;
         b2.v.resize(v.size());
         b2.v.push_back(2);
-        x1.v.resize(v.size());
-        x1.v.back() = (COMPRESS_MOD - 1) / b.v.back();
+        x1.v.resize(1);
+        x1.v.back() = COMPRESS_MOD / (b.v.back() + (b.v[b.size() - 2] + 1.0) / COMPRESS_MOD);
+        size_t keep_size = 1;
         while (x0.v[0] != x1.v[0] || x1 != x0) {
+            // x1 = x0(2 - x0 * b)
             x0 = x1;
-            x1 = x0 * (b2 - (x0 * b).raw_shr(b.size() - 1));
-            x1.raw_shr(v.size());
+            b2r = b2;
+            t = x0 * b;
+            t.keep(keep_size);
+            size_t offset = t.size();
+            if (t.v.back() != 1)
+                offset++;
+            x1 *= b2r.keep(offset) - t;
+            keep_size = std::min(keep_size * 2, v.size());
+            x1.keep(keep_size);
         }
         x0 *= a;
         if (x0.v[a.size() - 1] >= COMPRESS_MOD >> 1)

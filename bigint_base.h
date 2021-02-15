@@ -44,18 +44,17 @@ void GetWn() {
     }
 }
 
-void Prepare(const int32_t A[], size_t size_a, const int32_t B[], size_t size_b, size_t &len) {
+void Prepare(size_t size_a, size_t size_b, size_t &len) {
     len = 1;
     size_t L1 = size_a, L2 = size_b;
     while (len < L1 + L2)
         len <<= 1;
-    for (size_t i = 0; i < len; i++) {
-        ntt_a[i] = i < L1 ? A[i] : 0;
-        ntt_b[i] = i < L2 ? B[i] : 0;
-    }
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = size_a; i < len; i++)
+        ntt_a[i] = 0;
+    for (size_t i = size_b; i < len; i++)
+        ntt_b[i] = 0;
+    for (size_t i = 0; i < len; i++)
         ntt_r[i] = (ntt_r[i >> 1] >> 1) | ((i & 1) * (len >> 1));
-    }
 }
 
 void NTT(int64_t a[], size_t len, int on) {
@@ -63,15 +62,16 @@ void NTT(int64_t a[], size_t len, int on) {
         if (i < ntt_r[i])
             std::swap(a[i], a[ntt_r[i]]);
     }
-    for (size_t h = 1, id = 1; h < len; h <<= 1, ++id) {
-        int32_t wn = ntt_wn[on][id];
+    size_t id = 0;
+    for (size_t h = 1; h < len; h <<= 1) {
+        int32_t wn = ntt_wn[on][++id];
         for (size_t j = 0; j < len; j += h << 1) {
             int64_t w = 1;
-            for (size_t k = j; k < j + h; k++) {
-                int64_t u = a[k], t = w * a[k + h] % NTT_P;
-                a[k] = (u + t) % NTT_P;
-                a[k + h] = (u - t + NTT_P) % NTT_P;
-                w = w * wn % NTT_P;
+            size_t e = j + h;
+            for (size_t k = j; k < e; k++, w = w * wn % NTT_P) {
+                int32_t t = (int32_t)(w * a[k + h] % NTT_P);
+                a[k + h] = ((int32_t)a[k] - t + NTT_P) % NTT_P;
+                a[k] = (int32_t)(a[k] + t) % NTT_P;
             }
         }
     }
