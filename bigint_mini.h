@@ -66,7 +66,7 @@ protected:
         }
         return *this;
     }
-    BigIntDecMini &raw_offset_add(const BigIntDecMini &b, int32_t offset) {
+    BigIntDecMini &raw_offset_add(const BigIntDecMini &b, size_t offset) {
         int32_t add = 0;
         for (size_t i = 0; i < b.size(); ++i) {
             v[i + offset] += add + b.v[i];

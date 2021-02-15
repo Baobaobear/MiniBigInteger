@@ -12,7 +12,7 @@ Here is an example for calculate 2^100
 
 ```c++
 #include <iostream>
-#include "bigint.h"
+#include "bigint_hex.h"
 #include "bigint_dec.h"
 
 int main() {

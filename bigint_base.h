@@ -93,7 +93,7 @@ void Prepare(size_t size_a, size_t size_b, size_t &len) {
     ntt_d = ntt_b;
 #endif
     int32_t id = 0;
-    while ((1 << id) < len) ++id;
+    while ((1ULL << id) < len) ++id;
     if (ntt_ra[id].empty()) {
         std::vector<size_t>& r = ntt_ra[id];
         r.resize(len);

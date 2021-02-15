@@ -1,9 +1,9 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define NTT_MODE 0
 
-#include "bigint.h"
+#include "bigint_hex.h"
 #include "bigint_dec.h"
-#include "bigint_decmini.h"
+#include "bigint_mini.h"
 #include "bigint_tiny.h"
 
 #include <iostream>

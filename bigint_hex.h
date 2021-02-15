@@ -73,7 +73,7 @@ protected:
         }
         return *this;
     }
-    BigIntHex &raw_offset_add(const BigIntHex &b, int32_t offset) {
+    BigIntHex &raw_offset_add(const BigIntHex &b, size_t offset) {
         int32_t add = 0;
         for (size_t i = 0; i < b.size(); ++i) {
             v[i + offset] += add + b.v[i];
@@ -342,7 +342,7 @@ protected:
         b2.v.resize(v.size());
         b2.v.push_back(2);
         x1.v.resize(1);
-        x1.v.back() = COMPRESS_MOD / (b.v.back() + (b.v[b.size() - 2] + 1.0) / COMPRESS_MOD);
+        x1.v.back() = (int32_t)(COMPRESS_MOD / (b.v.back() + (b.v[b.size() - 2] + 1.0) / COMPRESS_MOD));
         size_t keep_size = 1;
         while (x0.v[0] != x1.v[0] || x1 != x0) {
             // x1 = x0(2 - x0 * b)
