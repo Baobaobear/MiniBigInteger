@@ -418,16 +418,16 @@ protected:
     }
 
 public:
-    BigInt_t() {
+    BigIntHex() {
         set(0);
     }
-    explicit BigInt_t(intmax_t n) {
+    explicit BigIntHex(intmax_t n) {
         set(n);
     }
-    explicit BigInt_t(const char *s, int base = 10) {
+    explicit BigIntHex(const char *s, int base = 10) {
         from_str(s, base);
     }
-    explicit BigInt_t(const std::string &s, int base = 10) {
+    explicit BigIntHex(const std::string &s, int base = 10) {
         from_str(s, base);
     }
     BigInt_t &set(intmax_t n) {

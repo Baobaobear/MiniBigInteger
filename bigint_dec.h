@@ -395,16 +395,16 @@ protected:
     }
 
 public:
-    BigInt_t() {
+    BigIntDec() {
         set(0);
     }
-    explicit BigInt_t(intmax_t n) {
+    explicit BigIntDec(intmax_t n) {
         set(n);
     }
-    explicit BigInt_t(const char *s, int base = 10) {
+    explicit BigIntDec(const char *s, int base = 10) {
         from_str(s, base);
     }
-    explicit BigInt_t(const std::string &s, int base = 10) {
+    explicit BigIntDec(const std::string &s, int base = 10) {
         from_str(s, base);
     }
     BigInt_t &set(intmax_t n) {
