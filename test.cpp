@@ -7,6 +7,7 @@
 #include "bigint_tiny.h"
 
 #include <iostream>
+#include <random>
 
 using namespace std;
 
@@ -416,19 +417,26 @@ bool test7_sqrt() {
     return true;
 }
 
-bool test8_rnd_div() {
+bool test8_rnd_div(int ncase, int len) {
     BigIntHex ha1, ha2;
     BigIntDec hb1, hb2;
     BigIntMini hc1, hc2;
-    srand((unsigned)time(0));
-    for (int i = 0; i < 100; ++i) {
-        hb1 = rand();
-        for (int j = 0; j < 16; ++j)
-            hb1 += hb1 * RAND_MAX + BigIntDec().set(rand());
-        hb2 = rand();
-        for (int j = 0; j < 16; ++j)
-            hb2 += hb2 * RAND_MAX + BigIntDec().set(rand());
-        string s1 = (hb1 * hb2).to_str(), s2 = hb1.to_str(), s3 = hb2.to_str();
+    string sa, sb;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, 15);
+    std::uniform_int_distribution<> distribf(1, 15);
+    char chars[] = "0123456789ABCDEF";
+    for (int i = 0; i < ncase; ++i) {
+        sa = chars[distribf(gen)];
+        for (int j = 0; j < len; ++j)
+            sa += chars[distrib(gen)];
+        sb = chars[distribf(gen)];
+        for (int j = 0; j < len; ++j)
+            sb += chars[distrib(gen)];
+        ha1.from_str(sa, 16);
+        ha2.from_str(sb, 16);
+        string s1 = (ha1 * ha2).to_str(), s2 = ha1.to_str(), s3 = ha2.to_str();
 
         ha1.from_str(s1.c_str());
         ha2.from_str(s2.c_str());
@@ -613,7 +621,6 @@ bool test_bigdiv() {
     hb1 /= hb2;
     t_end = get_time();
     if (hb1 != hb2) {
-        cout << "b\n";
         return false;
     }
     //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
@@ -652,6 +659,69 @@ bool test_bigdiv() {
     return true;
 }
 
+bool test_bigdivrnd(int len1, int len2 = 0) {
+    time_point t_pre, t_beg, t_end;
+    string sa, sb;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    char chars[] = "0123456789ABCDEF";
+    if (len2 == 0) {
+        len2 = len1;
+    }
+    for (int i = 0; i < 1; ++i) {
+        {
+            BigIntHex ha1, ha2, ha3;
+            std::uniform_int_distribution<> distrib(0, 15);
+            std::uniform_int_distribution<> distribf(1, 15);
+            sa = chars[distribf(gen)];
+            for (int j = 1; j < len1; ++j)
+                sa += chars[distrib(gen)];
+            sb = chars[distribf(gen)];
+            for (int j = 1; j < len2; ++j)
+                sb += chars[distrib(gen)];
+            ha2.from_str(sa, 16);
+            ha3.from_str(sb, 16);
+            string s1 = (ha2 * ha3).to_str(16);
+
+            t_pre = get_time();
+            ha1 = ha2 * ha3;
+            t_beg = get_time();
+            ha1 /= ha2;
+            t_end = get_time();
+            if (ha1 != ha3) {
+                return false;
+            }
+            cout << "calc " << sa.size() << "digits * " << sb.size() << "digits , " << s1.size() << "digits / " << sa.size() << "digits" << endl;
+            cout << "    by hex : mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+        }
+        {
+            BigIntDec hb1, hb2, hb3;
+            std::uniform_int_distribution<> distrib(0, 9);
+            std::uniform_int_distribution<> distribf(1, 9);
+            sa = chars[distribf(gen)];
+            for (int j = 1; j < len1; ++j)
+                sa += chars[distrib(gen)];
+            sb = chars[distribf(gen)];
+            for (int j = 1; j < len2; ++j)
+                sb += chars[distrib(gen)];
+            hb2.from_str(sa, 10);
+            hb3.from_str(sb, 10);
+            string s1 = (hb2 * hb3).to_str(10);
+            t_pre = get_time();
+            hb1 = hb2 * hb3;
+            t_beg = get_time();
+            hb1 /= hb2;
+            t_end = get_time();
+            if (hb1 != hb3) {
+                return false;
+            }
+            cout << "calc " << sa.size() << "digits * " << sb.size() << "digits , " << s1.size() << "digits / " << sa.size() << "digits" << endl;
+            cout << "    by dec : mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
+        }
+    }
+    return true;
+}
+
 int main() {
     bool pass = true;
     cout << "test1_parse : " << ((pass = test1_parse()) ? "pass" : "FAIL") << endl;
@@ -675,16 +745,21 @@ int main() {
     cout << "test7_sqrt  : " << ((pass = test7_sqrt()) ? "pass" : "FAIL") << endl;
     if (!pass)
         return -1;
-    cout << "test8_rnddiv: " << ((pass = test8_rnd_div()) ? "pass" : "FAIL") << endl;
+    cout << "test8_rnddiv: " << ((pass = test8_rnd_div(10, 128)) ? "pass" : "FAIL") << endl;
     if (!pass)
         return -1;
-#ifndef _DEBUG
     test_factorial();
+#ifndef _DEBUG
     test_bigmul();
-#endif
     pass = test_bigdiv();
     if (!pass) {
         cout << "test_bigdiv FAIL" << endl;
+        return -1;
+    }
+#endif
+    pass = test_bigdivrnd(1<<19, 1<<18);
+    if (!pass) {
+        cout << "test_bigdivrnd FAIL" << endl;
         return -1;
     }
     return 0;
