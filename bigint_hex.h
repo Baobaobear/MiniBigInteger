@@ -24,6 +24,16 @@ const int32_t NTT_MAX_SIZE = 1 << 21;
 const int32_t NTT_MID_SIZE = 1 << 18;
 #endif
 
+template <typename T>
+inline T high_digit(T digit) {
+    return digit >> COMPRESS_BIT;
+}
+
+template <typename T>
+inline int32_t low_digit(T digit) {
+    return (int32_t)(digit & COMPRESS_MASK);
+}
+
 class BigIntHex {
 protected:
     int sign;
@@ -52,7 +62,6 @@ protected:
         }
         return true;
     }
-
     BigInt_t &raw_add(const BigInt_t &b) {
         if (v.size() < b.size()) {
             v.resize(b.size());
@@ -60,13 +69,13 @@ protected:
         int32_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++) {
             v[i] += add + b.v[i];
-            add = v[i] >> COMPRESS_BIT;
-            v[i] &= COMPRESS_MASK;
+            add = high_digit(v[i]);
+            v[i] = low_digit(v[i]);
         }
         for (size_t i = b.v.size(); add && i < v.size(); i++) {
             v[i] += add;
-            add = v[i] >> COMPRESS_BIT;
-            v[i] &= COMPRESS_MASK;
+            add = high_digit(v[i]);
+            v[i] = low_digit(v[i]);
         }
         if (add) {
             v.push_back(add);
@@ -79,13 +88,13 @@ protected:
         int32_t add = 0;
         for (size_t i = 0; i < b.size(); ++i) {
             v[i + offset] += add + b.v[i];
-            add = v[i + offset] >> COMPRESS_BIT;
-            v[i + offset] &= COMPRESS_MASK;
+            add = high_digit(v[i + offset]);
+            v[i + offset] = low_digit(v[i + offset]);
         }
         for (size_t i = b.size() + offset; add; ++i) {
             v[i] += add;
-            add = v[i] >> COMPRESS_BIT;
-            v[i] &= COMPRESS_MASK;
+            add = high_digit(v[i]);
+            v[i] = low_digit(v[i]);
         }
         return *this;
     }
@@ -96,13 +105,13 @@ protected:
         int32_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++) {
             v[i] += add - b.v[i];
-            add = (v[i] >> COMPRESS_BIT);
-            v[i] &= COMPRESS_MASK;
+            add = high_digit(v[i]);
+            v[i] = low_digit(v[i]);
         }
         for (size_t i = b.v.size(); add && i < v.size(); i++) {
             v[i] += add;
-            add = (v[i] >> COMPRESS_BIT);
-            v[i] &= COMPRESS_MASK;
+            add = high_digit(v[i]);
+            v[i] = low_digit(v[i]);
         }
         if (add) {
             sign = -sign;
@@ -124,13 +133,12 @@ protected:
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = add + v[i] * m;
-            add = v[i] >> COMPRESS_BIT;
-            v[i] &= COMPRESS_MASK;
+            add = high_digit(v[i]);
+            v[i] = low_digit(v[i]);
         }
         while (add) {
-            v.push_back(add);
-            add = v.back() >> COMPRESS_BIT;
-            v.back() &= COMPRESS_MASK;
+            v.push_back(low_digit(add));
+            add = high_digit(add);
         }
         return *this;
     }
@@ -141,8 +149,8 @@ protected:
             int32_t add = 0;
             for (size_t j = 0; j < b.size(); j++) {
                 v[i + j] += add + a.v[i] * b.v[j];
-                add = v[i + j] >> COMPRESS_BIT;
-                v[i + j] &= COMPRESS_MASK;
+                add = high_digit(v[i + j]);
+                v[i + j] = low_digit(v[i + j]);
             }
             v[i + b.size()] += add;
         }
@@ -253,26 +261,26 @@ protected:
 #ifdef NTT_DOUBLE_MOD
         for (size_t i = 0; i <= len; i++) {
             int64_t s = add + NTT_NS::ntt_a[i];
-            v.push_back(s & COMPRESS_MASK);
-            add = s >> COMPRESS_BIT;
+            v.push_back(low_digit(s));
+            add = high_digit(s);
         }
 #else
         if (a.size() + b.size() <= NTT_MID_SIZE) {
             for (size_t i = 0; i <= len; i += 3) {
                 int64_t s = add + NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] << 5) + (NTT_NS::ntt_a[i + 2] << 10);
-                v.push_back(s & COMPRESS_MASK);
-                add = s >> COMPRESS_BIT;
+                v.push_back(low_digit(s));
+                add = high_digit(s);
             }
         } else {
             for (size_t i = 0; i <= len; i += 5) {
                 int64_t s = add + NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] << 3) + (NTT_NS::ntt_a[i + 2] << 6) + (NTT_NS::ntt_a[i + 3] << 9) + (NTT_NS::ntt_a[i + 4] << 12);
-                v.push_back(s & COMPRESS_MASK);
-                add = s >> COMPRESS_BIT;
+                v.push_back(low_digit(s));
+                add = high_digit(s);
             }
         }
 #endif
-        for (; add; add >>= COMPRESS_BIT)
-            v.push_back(add & COMPRESS_MASK);
+        for (; add; add = high_digit(add))
+            v.push_back(low_digit(add));
         trim();
         return *this;
     }
@@ -302,13 +310,13 @@ protected:
             int32_t add = 0;
             for (size_t j = 0; j < b.size(); j++) {
                 r.v[i + j] += add - b.v[j] * m;
-                add = r.v[i + j] >> COMPRESS_BIT;
-                r.v[i + j] &= COMPRESS_MASK;
+                add = high_digit(r.v[i + j]);
+                r.v[i + j] = low_digit(r.v[i + j]);
             }
             for (size_t j = i + b.size(); add && j < r.size(); ++j) {
                 r.v[j] += add;
-                add = r.v[j] >> COMPRESS_BIT;
-                r.v[j] &= COMPRESS_MASK;
+                add = high_digit(r.v[j]);
+                r.v[j] = low_digit(r.v[j]);
             }
         }
         r.trim();
@@ -321,8 +329,8 @@ protected:
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
             v[i] += add;
-            add = v[i] >> COMPRESS_BIT;
-            v[i] &= COMPRESS_MASK;
+            add = high_digit(v[i]);
+            v[i] = low_digit(v[i]);
         }
         trim();
         return *this;
@@ -426,7 +434,7 @@ protected:
             ma.raw_shl(1);
             mb.raw_shl(1);
         }
-        int32_t base = mb.size() / 2;
+        int32_t base = (int32_t)(mb.size() / 2);
         BigInt_t ha = ma.raw_shr_to(base);
         if ((int32_t)ma.size() <= base * 3) {
             BigInt_t hb = mb.raw_shr_to(base);
@@ -485,43 +493,6 @@ protected:
         d /= BigInt_t(mul);
         return *this;
     }
-    BigInt_t &raw_mod(const BigInt_t &a, const BigInt_t &b) {
-        if (a.size() < b.size()) {
-            *this = a;
-            return *this;
-        }
-        v.resize(a.size() - b.size() + 1);
-        BigInt_t r = a;
-        int32_t offset = (int32_t)b.size();
-        double db = b.v.back();
-        if (b.size() > 2) { // works when 3 * COMPRESS_BIT < 52
-            db += b.v[b.size() - 2] / (double)COMPRESS_MOD + (b.v[b.size() - 3] + 1) / (double)COMPRESS_MOD / COMPRESS_MOD;
-        } else if (b.size() > 1) {
-            db += b.v[b.size() - 2] / (double)COMPRESS_MOD;
-        }
-        for (size_t i = r.size() - offset; i <= a.size(); i--) {
-            int32_t rm = ((i + offset < r.size() ? r.v[i + offset] : 0) << COMPRESS_BIT) | r.v[i + offset - 1], m;
-            v[i] = m = (int32_t)(rm / db);
-            int32_t add = 0;
-            for (size_t j = 0; j < b.size(); j++) {
-                r.v[i + j] += add - b.v[j] * m;
-                add = r.v[i + j] >> COMPRESS_BIT;
-                r.v[i + j] &= COMPRESS_MASK;
-            }
-            for (size_t j = i + b.size(); add && j < r.size(); ++j) {
-                r.v[j] += add;
-                add = r.v[j] >> COMPRESS_BIT;
-                r.v[j] &= COMPRESS_MASK;
-            }
-        }
-        r.trim();
-        while (!r.raw_less(b)) {
-            r.raw_sub(b);
-            v[0]++;
-        }
-        *this = r;
-        return *this;
-    }
     void trim() {
         while (v.back() == 0 && v.size() > 1)
             v.pop_back();
@@ -553,8 +524,8 @@ public:
         }
         for (int i = 0; s; i++) {
             v.resize(i + 1);
-            v[i] = s & COMPRESS_MASK;
-            s >>= COMPRESS_BIT;
+            v[i] = low_digit(s);
+            s = high_digit(s);
         }
         return *this;
     }
