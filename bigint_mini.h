@@ -157,9 +157,10 @@ protected:
         } else if (b.size() > 1) {
             db += b.v[b.size() - 2] / (double)COMPRESS_DECMOD;
         }
+        db = 1 / db;
         for (size_t i = r.size() - offset; i <= a.size(); i--) {
             int32_t rm = ((i + offset < r.size() ? r.v[i + offset] : 0) * COMPRESS_DECMOD) + r.v[i + offset - 1], m;
-            v[i] = m = (int32_t)(rm / db);
+            v[i] = m = (int32_t)(rm * db);
             int32_t add = 0;
             for (size_t j = 0; j < b.size(); j++) {
                 r.v[i + j] += add - b.v[j] * m;

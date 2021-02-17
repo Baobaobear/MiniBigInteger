@@ -1,8 +1,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define NTT_MODE 0
 
-#include "bigint_hex.h"
 #include "bigint_dec.h"
+#include "bigint_hex.h"
 #include "bigint_mini.h"
 #include "bigint_tiny.h"
 
@@ -671,17 +671,17 @@ bool test_bigdivrnd(int len1, int len2 = 0) {
     for (int i = 0; i < 1; ++i) {
         {
             BigIntHex ha1, ha2, ha3;
-            std::uniform_int_distribution<> distrib(0, 15);
-            std::uniform_int_distribution<> distribf(1, 15);
+            std::uniform_int_distribution<> distrib(0, 7);
+            std::uniform_int_distribution<> distribf(1, 7);
             sa = chars[distribf(gen)];
-            for (int j = 1; j < len1; ++j)
+            for (int j = 1; j < len1 * 5; ++j)
                 sa += chars[distrib(gen)];
             sb = chars[distribf(gen)];
-            for (int j = 1; j < len2; ++j)
+            for (int j = 1; j < len2 * 5; ++j)
                 sb += chars[distrib(gen)];
-            ha2.from_str(sa, 16);
-            ha3.from_str(sb, 16);
-            string s1 = (ha2 * ha3).to_str(16);
+            ha2.from_str(sa, 8);
+            ha3.from_str(sb, 8);
+            string s1 = (ha2 * ha3).to_str(8);
 
             t_pre = get_time();
             ha1 = ha2 * ha3;
@@ -691,7 +691,7 @@ bool test_bigdivrnd(int len1, int len2 = 0) {
             if (ha1 != ha3) {
                 return false;
             }
-            cout << "calc " << sa.size() << "digits * " << sb.size() << "digits , " << s1.size() << "digits / " << sa.size() << "digits" << endl;
+            cout << "calc " << sa.size() << "digits * " << sb.size() << "digits , " << s1.size() << "digits / " << sa.size() << "digits (OCT)" << endl;
             cout << "    by hex : mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
         }
         {
@@ -699,10 +699,10 @@ bool test_bigdivrnd(int len1, int len2 = 0) {
             std::uniform_int_distribution<> distrib(0, 9);
             std::uniform_int_distribution<> distribf(1, 9);
             sa = chars[distribf(gen)];
-            for (int j = 1; j < len1; ++j)
+            for (int j = 1; j < len1 * 4; ++j)
                 sa += chars[distrib(gen)];
             sb = chars[distribf(gen)];
-            for (int j = 1; j < len2; ++j)
+            for (int j = 1; j < len2 * 4; ++j)
                 sb += chars[distrib(gen)];
             hb2.from_str(sa, 10);
             hb3.from_str(sb, 10);
@@ -715,7 +715,7 @@ bool test_bigdivrnd(int len1, int len2 = 0) {
             if (hb1 != hb3) {
                 return false;
             }
-            cout << "calc " << sa.size() << "digits * " << sb.size() << "digits , " << s1.size() << "digits / " << sa.size() << "digits" << endl;
+            cout << "calc " << sa.size() << "digits * " << sb.size() << "digits , " << s1.size() << "digits / " << sa.size() << "digits (DEC)" << endl;
             cout << "    by dec : mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
         }
     }
@@ -757,7 +757,12 @@ int main() {
         return -1;
     }
 #endif
-    pass = test_bigdivrnd(1<<19, 1<<18);
+    pass = test_bigdivrnd(1 << 17, 1 << 16);
+    if (!pass) {
+        cout << "test_bigdivrnd FAIL" << endl;
+        return -1;
+    }
+    pass = test_bigdivrnd(1 << 17);
     if (!pass) {
         cout << "test_bigdivrnd FAIL" << endl;
         return -1;

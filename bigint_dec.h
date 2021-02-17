@@ -13,6 +13,7 @@ const int32_t COMPRESS_DIGITS = 4;
 const int32_t BIGINT_NTT_THRESHOLD = 300;
 const int32_t BIGINT_MUL_THRESHOLD = 48;
 const int32_t BIGINT_DIV_THRESHOLD = 2000;
+const int32_t BIGINT_DIVIDEDIV_THRESHOLD = 128;
 const int32_t BIGINT_OUTPUT_THRESHOLD = 32;
 
 #ifdef NTT_DOUBLE_MOD
@@ -20,6 +21,14 @@ const int32_t NTT_MAX_SIZE = 1 << 24;
 #else
 const int32_t NTT_MAX_SIZE = 1 << 21;
 #endif
+
+inline int32_t high_digit(int32_t digit) {
+    return digit / COMPRESS_MOD;
+}
+
+inline int32_t low_digit(int32_t digit) {
+    return digit % COMPRESS_MOD;
+}
 
 class BigIntDec {
 protected:
@@ -118,6 +127,8 @@ protected:
         if (m == 0) {
             set(0);
             return *this;
+        } else if (m == 1) {
+            return *this;
         }
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
@@ -149,7 +160,9 @@ protected:
     }
     // Karatsuba algorithm
     BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
-        if (a.size() <= 1 || b.size() <= 1) {
+        if (a.is_zero() || b.is_zero()) {
+            return set(0);
+        } else if (a.size() <= 1 || b.size() <= 1) {
             if (a.size() >= b.size()) {
                 *this = a;
                 return raw_mul_int(b.v[0]);
@@ -247,13 +260,13 @@ protected:
         trim();
         return *this;
     }
-    BigInt_t &raw_div(const BigInt_t &a, const BigInt_t &b) {
+    BigInt_t &raw_div(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
         if (a.raw_less(b)) {
             set(0);
             return *this;
         }
         v.resize(a.size() - b.size() + 1);
-        BigInt_t r = a;
+        r = a;
         int32_t offset = (int32_t)b.size();
         double db = b.v.back();
         if (b.size() > 2) { // works when COMPRESS_MOD^3 << 2^52
@@ -261,9 +274,10 @@ protected:
         } else if (b.size() > 1) {
             db += b.v[b.size() - 2] / (double)COMPRESS_MOD;
         }
+        db = 1 / db;
         for (size_t i = r.size() - offset; i <= a.size(); i--) {
             int32_t rm = ((i + offset < r.size() ? r.v[i + offset] : 0) * COMPRESS_MOD) + r.v[i + offset - 1], m;
-            v[i] = m = (int32_t)(rm / db);
+            v[i] = m = (int32_t)(rm * db);
             int32_t add = 0;
             for (size_t j = 0; j < b.size(); j++) {
                 r.v[i + j] += add - b.v[j] * m;
@@ -285,6 +299,7 @@ protected:
             r.raw_sub(b);
             v[0]++;
         }
+        r.trim();
 
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
@@ -296,14 +311,45 @@ protected:
         return *this;
     }
     BigInt_t &raw_shr(size_t n) {
+        if (n == 0)
+            return *this;
+        if (n >= size()) {
+            set(0);
+            return *this;
+        }
         size_t t = 0, s = n;
         for (; s < v.size(); ++t, ++s)
             v[t] = v[s];
         v.resize(t);
         return *this;
     }
+    BigInt_t raw_shr_to(size_t n) const {
+        BigInt_t r;
+        if (n >= size()) {
+            return r;
+        }
+        r.v.clear();
+        size_t s = n;
+        for (; s < v.size(); ++s)
+            r.v.push_back(v[s]);
+        return r;
+    }
+    BigInt_t &raw_shl(size_t n) {
+        if (n == 0 || is_zero())
+            return *this;
+        v.resize(v.size() + n);
+        size_t t = v.size() - 1, s = t - n;
+        for (; s < v.size(); --t, --s)
+            v[t] = v[s];
+        for (; t < v.size(); --t)
+            v[t] = 0;
+        return *this;
+    }
     BigInt_t &keep(size_t n) {
         size_t s = n < v.size() ? v.size() - n : (size_t)0;
+        if (s && v[s - 1] >= COMPRESS_MOD >> 1) {
+            ++v[s];
+        }
         return raw_shr(s);
     }
     BigInt_t &raw_fastdiv(const BigInt_t &a, const BigInt_t &b) {
@@ -311,7 +357,8 @@ protected:
             set(0);
             return *this;
         } else if (b.size() < BIGINT_DIV_THRESHOLD) {
-            return raw_div(a, b);
+            BigInt_t r;
+            return raw_div(a, b, r);
         }
         if (b.size() * 2 - 2 > a.size()) {
             BigInt_t ta = a, tb = b;
@@ -327,6 +374,7 @@ protected:
         b2.v.push_back(2);
         x1.v.resize(1);
         x1.v.back() = (int32_t)(COMPRESS_MOD / (b.v.back() + (b.v[b.size() - 2] + 1.0) / COMPRESS_MOD));
+        x0.v.push_back(x1.v.back() + 1);
         size_t keep_size = 1;
         while (x0.v[0] != x1.v[0] || x1 != x0) {
             // x1 = x0(2 - x0 * b)
@@ -346,6 +394,78 @@ protected:
             *this = x0.raw_shr(a.size() + 1).raw_add(BigInt_t(1));
         else
             *this = x0.raw_shr(a.size() + 1);
+        return *this;
+    }
+    BigInt_t &raw_dividediv_recursion(const BigInt_t &a, const BigInt_t &b, BigInt_t &d) {
+        if (a < b) {
+            d = a;
+            return set(0);
+        }
+        if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) {
+            return raw_div(a, b, d);
+        }
+        BigInt_t ma = a, mb = b, e;
+        if (b.size() & 1) {
+            ma.raw_shl(1);
+            mb.raw_shl(1);
+        }
+        int32_t base = mb.size() / 2;
+        BigInt_t ha = ma.raw_shr_to(base);
+        if ((int32_t)ma.size() <= base * 3) {
+            BigInt_t hb = mb.raw_shr_to(base);
+            raw_dividediv(ha, hb, d);
+            ha = *this * b;
+            while (ha > a) {
+                ha -= b;
+                *this -= BigInt_t(1);
+            }
+            d = a - ha;
+            return *this;
+        }
+        e.raw_dividediv(ha, mb, d);
+        ma.v.resize(base + d.size());
+        for (size_t i = 0; i < d.size(); ++i) {
+            ma.v[base + i] = d.v[i];
+        }
+        ma.trim();
+
+        e.raw_shl(base);
+        raw_dividediv_recursion(ma, mb, d);
+        if (b.size() & 1)
+            d.raw_shr(1);
+        return *this += e;
+    }
+    BigInt_t &raw_dividediv(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
+        if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) {
+            raw_div(a, b, r);
+            return *this;
+        }
+        int32_t mul = (COMPRESS_MOD * COMPRESS_MOD - 1) / (*b.v.crbegin() * COMPRESS_MOD + *(b.v.crbegin() + 1) + 1);
+        BigInt_t ma = a * mul;
+        BigInt_t mb = b * mul;
+        while (mb.v.back() <= COMPRESS_MOD >> 1) {
+            int32_t m = 2;
+            ma *= m;
+            mb *= m;
+            mul *= m;
+        }
+        BigInt_t ha = ma.raw_shr_to(b.size());
+        BigInt_t c, d;
+        if (ha.size() >= mb.size() * 2) {
+            raw_dividediv(ha, mb, d);
+        } else {
+            raw_dividediv_recursion(ha, mb, d);
+        }
+        raw_shl(b.size());
+        ma.v.resize(b.size() + d.size());
+        for (size_t i = 0; i < d.size(); ++i) {
+            ma.v[b.size() + i] = d.v[i];
+        }
+        ma.trim();
+        c.raw_dividediv_recursion(ma, mb, d);
+        r.raw_div(d, BigInt_t(mul), ma);
+        raw_add(c);
+        d /= BigInt_t(mul);
         return *this;
     }
     BigInt_t &raw_mod(const BigInt_t &a, const BigInt_t &b) {
@@ -655,8 +775,9 @@ public:
     }
 
     BigInt_t operator/(const BigInt_t &b) const {
-        BigInt_t r;
-        r.raw_fastdiv(*this, b);
+        BigInt_t r, d;
+        //r.raw_fastdiv(*this, b);
+        r.raw_dividediv(*this, b, d);
         r.sign = sign * b.sign;
         return r;
     }
@@ -665,8 +786,9 @@ public:
             BigInt_t c = b;
             return *this /= c;
         }
-        BigInt_t r = *this;
-        raw_fastdiv(r, b);
+        BigInt_t r = *this, d;
+        //raw_fastdiv(r, b);
+        raw_dividediv(r, b, d);
         sign = r.sign * b.sign;
         return *this;
     }
@@ -680,6 +802,8 @@ public:
     }
 
     std::string out_dec() const {
+        if (is_zero())
+            return "0";
         std::string out;
         int32_t d = 0;
         for (size_t i = 0, j = 0;;) {
@@ -747,6 +871,8 @@ public:
                 out.pop_back();
         while ((int32_t)out.size() < pack)
             out.push_back('0');
+        if (out.empty())
+            out.push_back('0');
         if (sign < 0 && !this->is_zero())
             out.push_back('-');
         std::reverse(out.begin(), out.end());
@@ -754,6 +880,8 @@ public:
     }
 
     std::string to_str(int32_t out_base = 10, int32_t pack = 0) const {
+        static BigInt_t pow_list[32];
+        static int32_t last_base = 0, pow_list_cnt;
         if (out_base == 10) {
             return out_dec();
         }
@@ -765,18 +893,40 @@ public:
             a.sign = 1;
             return "-" + a.to_str(out_base);
         }
-        BigInt_t b;
-        b.set(out_base);
-        int32_t len = 1;
-        for (; b * b < *this; len *= 2, b = b * b)
-            ;
+        if (last_base != out_base) {
+            pow_list[0].set(out_base);
+            for (pow_list_cnt = 0; pow_list[pow_list_cnt] < *this; ++pow_list_cnt) {
+                pow_list[pow_list_cnt + 1] = pow_list[pow_list_cnt] * pow_list[pow_list_cnt];
+            }
+            last_base = out_base;
+        } else if (pow_list[pow_list_cnt] < *this) {
+            for (; pow_list[pow_list_cnt] < *this; ++pow_list_cnt) {
+                pow_list[pow_list_cnt + 1] = pow_list[pow_list_cnt] * pow_list[pow_list_cnt];
+            }
+        }
+        int32_t l = 0, r = pow_list_cnt;
+        for (; l < r;) {
+            int32_t m = (l + r + 1) / 2;
+            if (pow_list[m] < *this)
+                l = m;
+            else
+                r = m - 1;
+        }
+        BigInt_t &b = pow_list[l];
+        int32_t len = 1 << l;
         if (pack) {
-            std::string s1 = (*this / b).to_str(out_base, pack - len);
-            std::string s2 = (*this % b).to_str(out_base, len);
+            BigInt_t c, d;
+            c.raw_div(*this, b, d);
+            //c.raw_dividediv(*this, b, d);
+            std::string s1 = c.to_str(out_base, pack - len);
+            std::string s2 = d.to_str(out_base, len);
             return s1 + s2;
         } else {
-            std::string s1 = (*this / b).to_str(out_base, 0);
-            std::string s2 = (*this % b).to_str(out_base, len);
+            BigInt_t c, d;
+            c.raw_div(*this, b, d);
+            //c.raw_dividediv(*this, b, d);
+            std::string s1 = c.to_str(out_base, 0);
+            std::string s2 = d.to_str(out_base, len);
             return s1 + s2;
         }
     }

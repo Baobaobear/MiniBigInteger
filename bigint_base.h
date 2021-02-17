@@ -28,7 +28,7 @@ int32_t ntt_wn[2][NTT_POW];
 int32_t ntt_wn2[2][NTT_POW];
 std::vector<int64_t> ntt_a, ntt_b, ntt_c, ntt_d;
 std::vector<size_t> ntt_ra[32];
-size_t* ntt_r;
+size_t *ntt_r;
 
 int64_t quick_mul_mod(int64_t a, int64_t b) {
     a %= NTT_LCM;
@@ -93,9 +93,10 @@ void Prepare(size_t size_a, size_t size_b, size_t &len) {
     ntt_d = ntt_b;
 #endif
     int32_t id = 0;
-    while ((1ULL << id) < len) ++id;
+    while ((1ULL << id) < len)
+        ++id;
     if (ntt_ra[id].empty()) {
-        std::vector<size_t>& r = ntt_ra[id];
+        std::vector<size_t> &r = ntt_ra[id];
         r.resize(len);
         for (size_t i = 0; i < len; i++)
             r[i] = (r[i >> 1] >> 1) | ((i & 1) * (len >> 1));
