@@ -15,7 +15,7 @@ const int32_t BIGINT_NTT_THRESHOLD = 256;
 const int32_t BIGINT_MUL_THRESHOLD = 48;
 const int32_t BIGINT_DIV_THRESHOLD = 2000;
 const int32_t BIGINT_DIVIDEDIV_THRESHOLD = 128;
-const int32_t BIGINT_OUTPUT_THRESHOLD = 32;
+const int32_t BIGINT_OUTPUT_THRESHOLD = 16;
 
 #ifdef NTT_DOUBLE_MOD
 const int32_t NTT_MAX_SIZE = 1 << 24;
@@ -129,6 +129,8 @@ protected:
             return *this;
         } else if (m == 1) {
             return *this;
+        } else if (m == COMPRESS_MOD) {
+            return raw_shl(1);
         }
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
@@ -286,8 +288,11 @@ protected:
     }
     BigInt_t &raw_div(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
         if (a.raw_less(b)) {
-            set(0);
-            return *this;
+            r = a;
+            return set(0);
+        } else if (b.size() == 2 && b.v[1] == 1 && b.v[0] == 0) {
+            r.set(a.v[0]);
+            return raw_shr(1);
         }
         v.resize(a.size() - b.size() + 1);
         r = a;
@@ -776,29 +781,40 @@ public:
 
     BigInt_t operator/(const BigInt_t &b) const {
         BigInt_t r, d;
-        //r.raw_fastdiv(*this, b);
-        r.raw_dividediv(*this, b, d);
-        r.sign = sign * b.sign;
-        return r;
+        //d.raw_fastdiv(*this, b);
+        d.raw_dividediv(*this, b, r);
+        d.sign = sign * b.sign;
+        return d;
     }
     BigInt_t &operator/=(const BigInt_t &b) {
         if (this == &b) {
-            BigInt_t c = b;
-            return *this /= c;
+            return set(1);
         }
-        BigInt_t r = *this, d;
-        //raw_fastdiv(r, b);
-        raw_dividediv(r, b, d);
-        sign = r.sign * b.sign;
+        BigInt_t a = *this, r;
+        //raw_fastdiv(a, b);
+        raw_dividediv(a, b, r);
+        sign = a.sign * b.sign;
         return *this;
     }
-
     BigInt_t operator%(const BigInt_t &b) const {
         return *this - *this / b * b;
     }
     BigInt_t &operator%=(const BigInt_t &b) {
+        if (this == &b) {
+            return set(0);
+        }
         *this = *this - *this / b * b;
         return *this;
+    }
+    BigInt_t div(const BigInt_t &b, BigInt_t &r) {
+        if (this == &b) {
+            r.set(0);
+            return set(1);
+        }
+        BigInt_t d;
+        d.raw_dividediv(*this, b, r);
+        d.sign = sign * b.sign;
+        return d;
     }
 
     std::string out_base2(size_t bits) const {

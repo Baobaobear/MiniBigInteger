@@ -2,13 +2,13 @@
 
 [![Build Status]][Travis CI][![Appveyor status]][Appveyor] [![Language]](https://isocpp.org/)[![Standard]][Standard Cpp][![License]][MIT]
 
-[中文版本](README_cn.md)
+[English version](README.md)
 
-This is a C++11 port of large integer library. It allows you parsing of numbers as strings in any bases between 2 and 36 and converting them back to string.
+本项目是个兼容C++11的高精度大整数库。它能让你从字符串输入或输出大整数，且支持2到36之间的任意进制
 
-## Code Example
+## 代码例子
 
-Here is an example for calculate 2^100
+计算 2^100 的示例
 
 ### BigIntHex or BigIntDec
 
@@ -65,11 +65,11 @@ int main() {
 }
 ```
 
-The output is `1267650600228229401496703205376`
+输出结果为 `1267650600228229401496703205376`
 
-## Operators
+## 基本操作
 
-### Assignment
+### 赋值
 
 ```c++
 BigIntHex a, b;
@@ -83,7 +83,7 @@ a.from_str("123456789ABCDEFGZXY", 36);
 b = a;
 ```
 
-### Addition
+### 加法
 
 ```c++
 BigIntHex a, b;
@@ -91,7 +91,7 @@ a = a + b;
 a += b;
 ```
 
-### Subtraction
+### 减法
 
 ```c++
 BigIntHex a, b;
@@ -99,7 +99,7 @@ a = a - b;
 a -= b;
 ```
 
-### Multiplication
+### 乘法
 
 ```c++
 BigIntHex a, b;
@@ -108,7 +108,7 @@ a *= b;
 a *= 123;
 ```
 
-### Division
+### 除法
 
 ```c++
 BigIntHex a, b;
@@ -116,7 +116,7 @@ a = a / b;
 a /= b;
 ```
 
-### Comparison
+### 关系运算
 
 ```c++
 BigIntHex a, b; // or BigIntDec
@@ -139,7 +139,7 @@ a == b;
 //a != b;
 ```
 
-### Output
+### 输出
 
 ```c++
 BigIntHex a; // or BigIntDec
@@ -150,7 +150,7 @@ BigIntMini b; // or BigIntTiny
 cout << b.to_str() << endl;
 ```
 
-## Features preview
+## 特性预览
 
 |operators|BigIntHex|BigIntDec|BigIntMini|BigIntTiny|
 |--------|---------|---------|---------|---------|
@@ -174,9 +174,9 @@ cout << b.to_str() << endl;
 | Base conversion|✔|✔|❌|❌|
 | Efficiency|✬✬✬✬|✬✬✬|✬✬|✬|
 
-# License
+# 源码许可
 
-This project is licensed under the MIT License.
+本项目采用 MIT 许可协议.
 
 [Build Status]:     https://travis-ci.com/Baobaobear/MiniBigInteger.svg?branch=main
 [Travis CI]:        https://travis-ci.com/Baobaobear/MiniBigInteger
