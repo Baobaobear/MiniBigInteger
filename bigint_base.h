@@ -17,9 +17,9 @@
 typedef unsigned __int64 uint64_t;
 typedef __int64 int64_t;
 #else
-typedef unsigned __int64 uint64_t;
+typedef unsigned long long uint64_t;
 #if !defined(__linux__)
-typedef __int64 int64_t;
+typedef long long int64_t;
 #endif
 #endif
 typedef unsigned int uint32_t;
