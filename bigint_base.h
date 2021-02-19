@@ -26,6 +26,7 @@ typedef unsigned int uint32_t;
 typedef int int32_t;
 typedef unsigned short uint16_t;
 typedef short int16_t;
+#if !defined(__APPLE__)
 typedef uint64_t uintmax_t;
 typedef int64_t intmax_t;
 
@@ -41,6 +42,8 @@ OutputIt copy_n(InputIt first, Size count, OutputIt result) {
     return result;
 }
 } // namespace std
+#endif
+
 #endif
 
 #if !defined(NTT_MODE) || NTT_MODE == 0
