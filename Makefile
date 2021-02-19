@@ -15,7 +15,7 @@ clean:
 	rm -f test0 test1
 
 test0: test.cpp bigint_hex.h bigint_dec.h bigint_mini.h bigint_tiny.h
-	$(CXX) $(CFLAGS11) $(BENCHMARKFILE) -o test0
+	$(CXX) $(CFLAGS03) $(BENCHMARKFILE) -o test0
 
 test1: test03.cpp bigint_tiny.h
 	$(CXX) $(CFLAGS03) test03.cpp -o test1

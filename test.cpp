@@ -7,7 +7,6 @@
 #include "bigint_tiny.h"
 
 #include <iostream>
-#include <random>
 
 using namespace std;
 
@@ -31,6 +30,10 @@ time_point get_time() {
 
 double get_time_diff(time_point from, time_point to) {
     return (double)(to - from);
+}
+
+int randint(int a, int b) {
+    return rand() % (b - a + 1) + a;
 }
 
 bool test1_parse() {
@@ -422,18 +425,14 @@ bool test8_rnd_div(int ncase, int len) {
     BigIntDec hb1, hb2;
     BigIntMini hc1, hc2;
     string sa, sb;
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(0, 15);
-    std::uniform_int_distribution<> distribf(1, 15);
     char chars[] = "0123456789ABCDEF";
     for (int i = 0; i < ncase; ++i) {
-        sa = chars[distribf(gen)];
+        sa = chars[randint(1, 15)];
         for (int j = 0; j < len; ++j)
-            sa += chars[distrib(gen)];
-        sb = chars[distribf(gen)];
+            sa += chars[randint(0, 15)];
+        sb = chars[randint(1, 15)];
         for (int j = 0; j < len; ++j)
-            sb += chars[distrib(gen)];
+            sb += chars[randint(0, 15)];
         ha1.from_str(sa, 16);
         ha2.from_str(sb, 16);
         string s1 = (ha1 * ha2).to_str(), s2 = ha1.to_str(), s3 = ha2.to_str();
@@ -662,8 +661,6 @@ bool test_bigdiv() {
 bool test_bigdivrnd(int len1, int len2 = 0) {
     time_point t_pre, t_beg, t_end;
     string sa, sb;
-    std::random_device rd;
-    std::mt19937 gen(rd());
     char chars[] = "0123456789ABCDEF";
     if (len2 == 0) {
         len2 = len1;
@@ -671,14 +668,12 @@ bool test_bigdivrnd(int len1, int len2 = 0) {
     for (int i = 0; i < 1; ++i) {
         {
             BigIntHex ha1, ha2, ha3;
-            std::uniform_int_distribution<> distrib(0, 7);
-            std::uniform_int_distribution<> distribf(1, 7);
-            sa = chars[distribf(gen)];
+            sa = chars[randint(1, 7)];
             for (int j = 1; j < len1 * 5; ++j)
-                sa += chars[distrib(gen)];
-            sb = chars[distribf(gen)];
+                sa += chars[randint(0, 7)];
+            sb = chars[randint(1, 7)];
             for (int j = 1; j < len2 * 5; ++j)
-                sb += chars[distrib(gen)];
+                sb += chars[randint(0, 7)];
             ha2.from_str(sa, 8);
             ha3.from_str(sb, 8);
             string s1 = (ha2 * ha3).to_str(8);
@@ -696,14 +691,12 @@ bool test_bigdivrnd(int len1, int len2 = 0) {
         }
         {
             BigIntDec hb1, hb2, hb3;
-            std::uniform_int_distribution<> distrib(0, 9);
-            std::uniform_int_distribution<> distribf(1, 9);
-            sa = chars[distribf(gen)];
+            sa = chars[randint(0, 9)];
             for (int j = 1; j < len1 * 4; ++j)
-                sa += chars[distrib(gen)];
-            sb = chars[distribf(gen)];
+                sa += chars[randint(0, 9)];
+            sb = chars[randint(1, 9)];
             for (int j = 1; j < len2 * 4; ++j)
-                sb += chars[distrib(gen)];
+                sb += chars[randint(0, 9)];
             hb2.from_str(sa, 10);
             hb3.from_str(sb, 10);
             string s1 = (hb2 * hb3).to_str(10);
@@ -723,6 +716,7 @@ bool test_bigdivrnd(int len1, int len2 = 0) {
 }
 
 int main() {
+    srand(time(0));
     bool pass = true;
     cout << "test1_parse : " << ((pass = test1_parse()) ? "pass" : "FAIL") << endl;
     if (!pass)

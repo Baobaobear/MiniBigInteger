@@ -1,7 +1,7 @@
 // filename:    bigint_hex.h
 // author:      baobaobear
 // create date: 2021-02-08
-// This library is compatible with C++11
+// This library is compatible with C++03
 // https://github.com/Baobaobear/MiniBigInteger
 #pragma once
 #include "bigint_base.h"
@@ -15,7 +15,6 @@ const int32_t BIGINT_NTT_THRESHOLD = 256;
 const int32_t BIGINT_MUL_THRESHOLD = 48;
 const int32_t BIGINT_DIV_THRESHOLD = 2000;
 const int32_t BIGINT_DIVIDEDIV_THRESHOLD = 128;
-const int32_t BIGINT_OUTPUT_THRESHOLD = 16;
 
 #ifdef NTT_DOUBLE_MOD
 const int32_t NTT_MAX_SIZE = 1 << 24;
@@ -210,77 +209,26 @@ protected:
             return raw_fastmul(a, b);
         }
         size_t len, lenmul = 1;
-        NTT_NS::GetWn();
         NTT_NS::ntt_a.clear();
         NTT_NS::ntt_b.clear();
-#ifdef NTT_DOUBLE_MOD
         for (size_t i = 0; i < a.size(); ++i) {
             NTT_NS::ntt_a.push_back(a.v[i]);
         }
         for (size_t i = 0; i < b.size(); ++i) {
             NTT_NS::ntt_b.push_back(b.v[i]);
         }
-        NTT_NS::Prepare(a.size(), b.size(), len);
-#else
-        if (a.size() + b.size() <= NTT_MID_SIZE) {
-            for (size_t i = 0; i < a.size(); ++i) {
-                NTT_NS::ntt_a.push_back(a.v[i] & 0x1f);
-                NTT_NS::ntt_a.push_back((a.v[i] >> 5) & 0x1f);
-                NTT_NS::ntt_a.push_back((a.v[i] >> 10) & 0x1f);
-            }
-            for (size_t i = 0; i < b.size(); ++i) {
-                NTT_NS::ntt_b.push_back(b.v[i] & 0x1f);
-                NTT_NS::ntt_b.push_back((b.v[i] >> 5) & 0x1f);
-                NTT_NS::ntt_b.push_back((b.v[i] >> 10) & 0x1f);
-            }
-            NTT_NS::Prepare(a.size() * 3, b.size() * 3, len);
-            lenmul = 3;
-        } else {
-            for (size_t i = 0; i < a.size(); ++i) {
-                NTT_NS::ntt_a.push_back(a.v[i] & 7);
-                NTT_NS::ntt_a.push_back((a.v[i] >> 3) & 7);
-                NTT_NS::ntt_a.push_back((a.v[i] >> 6) & 7);
-                NTT_NS::ntt_a.push_back((a.v[i] >> 9) & 7);
-                NTT_NS::ntt_a.push_back((a.v[i] >> 12) & 7);
-            }
-            for (size_t i = 0; i < b.size(); ++i) {
-                NTT_NS::ntt_b.push_back(b.v[i] & 7);
-                NTT_NS::ntt_b.push_back((b.v[i] >> 3) & 7);
-                NTT_NS::ntt_b.push_back((b.v[i] >> 6) & 7);
-                NTT_NS::ntt_b.push_back((b.v[i] >> 9) & 7);
-                NTT_NS::ntt_b.push_back((b.v[i] >> 12) & 7);
-            }
-            lenmul = 5;
-            NTT_NS::Prepare(a.size() * 5, b.size() * 5, len);
-        }
-#endif
-        NTT_NS::Conv(len);
+        NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
+        NTT_NS::mul_conv2(len);
         len = (a.size() + b.size()) * lenmul;
         while (len > 0 && NTT_NS::ntt_a[--len] == 0)
             ;
         v.clear();
         int64_t add = 0;
-#ifdef NTT_DOUBLE_MOD
         for (size_t i = 0; i <= len; i++) {
             int64_t s = add + NTT_NS::ntt_a[i];
             v.push_back(low_digit(s));
             add = high_digit(s);
         }
-#else
-        if (a.size() + b.size() <= NTT_MID_SIZE) {
-            for (size_t i = 0; i <= len; i += 3) {
-                int64_t s = add + NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] << 5) + (NTT_NS::ntt_a[i + 2] << 10);
-                v.push_back(low_digit(s));
-                add = high_digit(s);
-            }
-        } else {
-            for (size_t i = 0; i <= len; i += 5) {
-                int64_t s = add + NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] << 3) + (NTT_NS::ntt_a[i + 2] << 6) + (NTT_NS::ntt_a[i + 3] << 9) + (NTT_NS::ntt_a[i + 4] << 12);
-                v.push_back(low_digit(s));
-                add = high_digit(s);
-            }
-        }
-#endif
         for (; add; add = high_digit(add))
             v.push_back(low_digit(add));
         trim();
@@ -470,10 +418,10 @@ protected:
             raw_div(a, b, r);
             return *this;
         }
-        int32_t mul = (COMPRESS_MOD * COMPRESS_MOD - 1) / (*b.v.crbegin() * COMPRESS_MOD + *(b.v.crbegin() + 1) + 1);
+        int32_t mul = (COMPRESS_MOD * COMPRESS_MOD - 1) / (*(b.v.begin() + b.v.size() - 1) * COMPRESS_MOD + *(b.v.begin() + b.v.size() - 2) + 1);
         BigInt_t ma = a * mul;
         BigInt_t mb = b * mul;
-        while (mb.v.back() <= COMPRESS_MOD >> 1) {
+        while (mb.v.back() < COMPRESS_MOD >> 1) {
             int32_t m = 2;
             ma *= m;
             mb *= m;
@@ -481,7 +429,7 @@ protected:
         }
         BigInt_t ha = ma.raw_shr_to(b.size());
         BigInt_t c, d;
-        if (ha.size() >= mb.size() * 2) {
+        if (ha.size() > mb.size() * 2) {
             raw_dividediv(ha, mb, d);
         } else {
             raw_dividediv_recursion(ha, mb, d);
@@ -592,7 +540,7 @@ public:
         while (*s == '0') {
             ++s;
         }
-        for (; hbase <= BIGINT_MAXBASE; hbase *= base, ++digits)
+        for (; hbase <= 1 << 15; hbase *= base, ++digits)
             ;
 
         int d = --digits, hdigit = 0, hdigit_mul = 1;
@@ -836,8 +784,8 @@ public:
             d >>= bits;
             j -= bits;
         }
-        while (out.size() > 1 && out.back() == '0')
-            out.pop_back();
+        while (out.size() > 1 && *out.rbegin() == '0')
+            out.erase(out.begin() + out.size() - 1);
         if (sign < 0 && !this->is_zero())
             out.push_back('-');
         std::reverse(out.begin(), out.end());
@@ -848,23 +796,56 @@ public:
         return out_base2(4);
     }
 
+    BigIntBase transbase(int32_t out_base) const {
+        if (size() <= 8) {
+            BigIntBase sum(out_base);
+            BigIntBase base(out_base);
+            {
+                base.set(1);
+                BigIntBase mul(out_base);
+                mul = base;
+                mul.raw_mul_int(v[0]);
+                sum.raw_add(mul);
+            }
+            for (size_t i = 1; i < v.size(); i++) {
+                base.raw_mul_int(COMPRESS_MOD);
+                BigIntBase mul(out_base);
+                mul = base;
+                mul.raw_mul_int(v[i]);
+                sum.raw_add(mul);
+            }
+            return sum;
+        } else {
+            static BigIntBase pow_list[32];
+            static int32_t last_base = 0, pow_list_cnt;
+            BigIntBase base(out_base);
+            if (out_base != last_base) {
+                pow_list[0] = base.set(COMPRESS_MOD);
+                pow_list_cnt = 0;
+                last_base = out_base;
+            }
+            size_t s = 1, id = 0;
+            for (; s < size() / 2; s *= 2, ++id) {
+                if (s >= (size_t)1 << pow_list_cnt) {
+                    pow_list[pow_list_cnt + 1].setbase(out_base);
+                    pow_list[pow_list_cnt + 1].raw_nttsqr(pow_list[pow_list_cnt]);
+                    ++pow_list_cnt;
+                }
+            }
+            base = pow_list[id];
+            BigInt_t h = raw_shr_to(s), l = *this;
+            l.v.resize(s);
+            BigIntBase r = h.transbase(out_base);
+            BigIntBase sum(out_base);
+            sum.raw_nttmul(r, base);
+            r = l.transbase(out_base);
+            sum.raw_add(r);
+            return sum;
+        }
+    }
+
     std::string out_mul(int32_t out_base = 10, int32_t pack = 0) const {
-        BigIntBase sum(out_base);
-        BigIntBase base(out_base);
-        {
-            base.set(1);
-            BigIntBase mul(out_base);
-            mul = base;
-            mul.raw_mul_int(v[0]);
-            sum.raw_add(mul);
-        }
-        for (size_t i = 1; i < v.size(); i++) {
-            base.raw_mul_int(COMPRESS_MOD);
-            BigIntBase mul(out_base);
-            mul = base;
-            mul.raw_mul_int(v[i]);
-            sum.raw_add(mul);
-        }
+        BigIntBase sum = transbase(out_base);
         std::string out;
         int32_t d = 0;
         for (size_t i = 0, j = 0;;) {
@@ -885,11 +866,11 @@ public:
             j -= 1;
         }
         if (pack == 0)
-            while (out.size() > 1 && out.back() == '0')
-                out.pop_back();
+            while (out.size() > 1 && *out.rbegin() == '0')
+                out.erase(out.begin() + out.size() - 1);
         else
-            while ((int32_t)out.size() > pack && out.back() == '0')
-                out.pop_back();
+            while ((int32_t)out.size() > pack && *out.rbegin() == '0')
+                out.erase(out.begin() + out.size() - 1);
         while ((int32_t)out.size() < pack)
             out.push_back('0');
         if (out.empty())
@@ -916,50 +897,7 @@ public:
                 return out_base2(5);
             }
         }
-        if (v.size() < BIGINT_OUTPUT_THRESHOLD) {
-            return out_mul(out_base, pack);
-        }
-        if (sign < 0) {
-            BigInt_t a = *this;
-            a.sign = 1;
-            return "-" + a.to_str(out_base);
-        }
-        if (last_base != out_base) {
-            pow_list[0].set(out_base);
-            for (pow_list_cnt = 0; pow_list[pow_list_cnt] < *this; ++pow_list_cnt) {
-                pow_list[pow_list_cnt + 1] = pow_list[pow_list_cnt] * pow_list[pow_list_cnt];
-            }
-            last_base = out_base;
-        } else if (pow_list[pow_list_cnt] < *this) {
-            for (; pow_list[pow_list_cnt] < *this; ++pow_list_cnt) {
-                pow_list[pow_list_cnt + 1] = pow_list[pow_list_cnt] * pow_list[pow_list_cnt];
-            }
-        }
-        int32_t l = 0, r = pow_list_cnt;
-        for (; l < r;) {
-            int32_t m = (l + r + 1) / 2;
-            if (pow_list[m] < *this)
-                l = m;
-            else
-                r = m - 1;
-        }
-        BigInt_t &b = pow_list[l];
-        int32_t len = 1 << l;
-        if (pack) {
-            BigInt_t c, d;
-            c.raw_div(*this, b, d);
-            //c.raw_dividediv(*this, b, d);
-            std::string s1 = c.to_str(out_base, pack - len);
-            std::string s2 = d.to_str(out_base, len);
-            return s1 + s2;
-        } else {
-            BigInt_t c, d;
-            c.raw_div(*this, b, d);
-            //c.raw_dividediv(*this, b, d);
-            std::string s1 = c.to_str(out_base, 0);
-            std::string s2 = d.to_str(out_base, len);
-            return s1 + s2;
-        }
+        return out_mul(out_base, pack);
     }
 };
 } // namespace BigIntHexNS

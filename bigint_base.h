@@ -1,7 +1,7 @@
 // filename:    bigint_base.h
 // author:      baobaobear
 // create date: 2021-02-13
-// This library is compatible with C++11
+// This library is compatible with C++03
 // https://github.com/Baobaobear/MiniBigInteger
 #pragma once
 
@@ -9,6 +9,37 @@
 #include <cstring>
 #include <string>
 #include <vector>
+
+#if __cplusplus >= 201103L || _MSC_VER >= 1600
+#include <cstdint>
+#else
+#ifdef _MSC_VER
+typedef unsigned __int64 uint64_t;
+typedef __int64 int64_t;
+#else
+typedef unsigned long long uint64_t;
+typedef long long int64_t;
+#endif
+typedef unsigned int uint32_t;
+typedef int int32_t;
+typedef unsigned short uint16_t;
+typedef short int16_t;
+typedef uint64_t uintmax_t;
+typedef int64_t intmax_t;
+
+namespace std {
+template <class InputIt, class Size, class OutputIt>
+OutputIt copy_n(InputIt first, Size count, OutputIt result) {
+    if (count > 0) {
+        *result++ = *first;
+        for (Size i = 1; i < count; ++i) {
+            *result++ = *++first;
+        }
+    }
+    return result;
+}
+} // namespace std
+#endif
 
 #if !defined(NTT_MODE) || NTT_MODE == 0
 #define NTT_DOUBLE_MOD
@@ -46,9 +77,8 @@ int64_t quick_pow_mod(int64_t a, int64_t b) {
     int64_t ans = 1;
     a %= NTT_P;
     while (b) {
-        if (b & 1) {
+        if (b & 1)
             ans = ans * a % NTT_P;
-        }
         b >>= 1;
         a = a * a % NTT_P;
     }
@@ -59,39 +89,37 @@ int64_t quick_pow_mod2(int64_t a, int64_t b) {
     int64_t ans = 1;
     a %= NTT_P2;
     while (b) {
-        if (b & 1) {
+        if (b & 1)
             ans = ans * a % NTT_P2;
-        }
         b >>= 1;
         a = a * a % NTT_P2;
     }
     return ans;
 }
 
-void GetWn() {
+void get_wn() {
     if (ntt_wn[1][0] == 0) {
         for (int i = 0; i < NTT_POW; i++) {
             ntt_wn[1][i] = (int32_t)quick_pow_mod(NTT_G, (NTT_P - 1) / ((int64_t)1 << i));
             ntt_wn[0][i] = (int32_t)quick_pow_mod(ntt_wn[1][i], NTT_P - 2);
-#ifdef NTT_DOUBLE_MOD
             ntt_wn2[1][i] = (int32_t)quick_pow_mod2(NTT_G, (NTT_P2 - 1) / ((int64_t)1 << i));
             ntt_wn2[0][i] = (int32_t)quick_pow_mod2(ntt_wn2[1][i], NTT_P2 - 2);
-#endif
         }
     }
 }
 
-void Prepare(size_t size_a, size_t size_b, size_t &len) {
+void ntt_prepare(size_t size_a, size_t size_b, size_t &len, int flag = 1) {
     len = 1;
     size_t L1 = size_a, L2 = size_b;
     while (len < L1 + L2)
         len <<= 1;
     ntt_a.resize(len);
-    ntt_b.resize(len);
-#ifdef NTT_DOUBLE_MOD
-    ntt_c = ntt_a;
-    ntt_d = ntt_b;
-#endif
+    if (flag & 1)
+        ntt_b.resize(len);
+    if (flag & 2)
+        ntt_c = ntt_a;
+    if (flag & 4)
+        ntt_d = ntt_b;
     int32_t id = 0;
     while ((1ULL << id) < len)
         ++id;
@@ -102,6 +130,7 @@ void Prepare(size_t size_a, size_t size_b, size_t &len) {
             r[i] = (r[i >> 1] >> 1) | ((i & 1) * (len >> 1));
     }
     ntt_r = &*ntt_ra[id].begin();
+    get_wn();
 }
 
 void NTT(int64_t a[], size_t len, int on) {
@@ -121,6 +150,11 @@ void NTT(int64_t a[], size_t len, int on) {
                 a[k] = (int32_t)(a[k] + t) % NTT_P;
             }
         }
+    }
+    if (on == 0) {
+        int64_t inv = quick_pow_mod(len, NTT_P - 2);
+        for (size_t i = 0; i < len; i++)
+            a[i] = a[i] * inv % NTT_P;
     }
 }
 
@@ -142,6 +176,11 @@ void NTT2(int64_t a[], size_t len, int on) {
             }
         }
     }
+    if (on == 0) {
+        int64_t inv = quick_pow_mod2(len, NTT_P2 - 2);
+        for (size_t i = 0; i < len; i++)
+            a[i] = a[i] * inv % NTT_P2;
+    }
 }
 
 void Conv(size_t n) {
@@ -151,37 +190,64 @@ void Conv(size_t n) {
         ntt_a[i] = ntt_a[i] * ntt_b[i] % NTT_P;
     NTT(&*ntt_a.begin(), n, 0);
 
-#ifdef NTT_DOUBLE_MOD
-    NTT2(&*ntt_c.begin(), n, 1);
-    NTT2(&*ntt_d.begin(), n, 1);
-    for (size_t i = 0; i < n; i++)
-        ntt_c[i] = ntt_c[i] * ntt_d[i] % NTT_P2;
-    NTT2(&*ntt_c.begin(), n, 0);
-#endif
     int64_t inv = quick_pow_mod(n, NTT_P - 2);
     for (size_t i = 0; i < n; i++)
         ntt_a[i] = ntt_a[i] * inv % NTT_P;
-#ifdef NTT_DOUBLE_MOD
-    inv = quick_pow_mod2(n, NTT_P2 - 2);
-    for (size_t i = 0; i < n; i++)
-        ntt_c[i] = ntt_c[i] * inv % NTT_P2;
+}
+
+void double_mod_rev(size_t n) {
     for (size_t i = 0; i < n; i++) {
         if (ntt_c[i] != ntt_a[i]) {
             ntt_a[i] = (quick_mul_mod(ntt_a[i], MOD_M1) + quick_mul_mod(ntt_c[i], MOD_M2)) % NTT_LCM;
         }
     }
-#endif
+}
+
+void mul_conv2(size_t n) {
+    NTT(&*ntt_a.begin(), n, 1);
+    NTT(&*ntt_b.begin(), n, 1);
+    for (size_t i = 0; i < n; i++)
+        ntt_a[i] = ntt_a[i] * ntt_b[i] % NTT_P;
+    NTT(&*ntt_a.begin(), n, 0);
+
+    NTT2(&*ntt_c.begin(), n, 1);
+    NTT2(&*ntt_d.begin(), n, 1);
+    for (size_t i = 0; i < n; i++)
+        ntt_c[i] = ntt_c[i] * ntt_d[i] % NTT_P2;
+    NTT2(&*ntt_c.begin(), n, 0);
+    double_mod_rev(n);
+}
+
+void sqr_conv2(size_t n) {
+    NTT(&*ntt_a.begin(), n, 1);
+    for (size_t i = 0; i < n; i++)
+        ntt_a[i] = ntt_a[i] * ntt_a[i] % NTT_P;
+    NTT(&*ntt_a.begin(), n, 0);
+
+    NTT2(&*ntt_c.begin(), n, 1);
+    for (size_t i = 0; i < n; i++)
+        ntt_c[i] = ntt_c[i] * ntt_c[i] % NTT_P2;
+    NTT2(&*ntt_c.begin(), n, 0);
+    double_mod_rev(n);
 }
 } // namespace NTT_NS
 
+namespace BigIntBaseNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;
+
+const int32_t BIGINT_MUL_THRESHOLD = 48;
+const int32_t BIGINT_NTT_THRESHOLD = 300;
+const int32_t NTT_MAX_SIZE = 1 << 24;
 
 struct BigIntBase {
     int32_t base;
     int32_t digits;
     std::vector<int32_t> v;
+    typedef BigIntBase BigInt_t;
 
-    BigIntBase(int b) { // b > 1
+    BigIntBase() {}
+    BigIntBase(int b) { setbase(b); }
+    void setbase(int b) { // b > 1
         base = b;
         for (digits = 1; base <= BIGINT_MAXBASE; base *= b, ++digits)
             ;
@@ -191,6 +257,7 @@ struct BigIntBase {
     }
     BigIntBase &set(intmax_t n) {
         v.resize(1);
+        v[0] = 0;
         uintmax_t s;
         if (n < 0) {
             s = -n;
@@ -207,22 +274,71 @@ struct BigIntBase {
     size_t size() const {
         return v.size();
     }
-    BigIntBase &raw_add(const BigIntBase &b) {
+    BigInt_t &raw_add(const BigInt_t &b) {
         if (v.size() < b.size()) {
             v.resize(b.size());
         }
         int32_t add = 0;
-        for (size_t i = 0; i < v.size(); i++) {
+        for (size_t i = 0; i < b.v.size(); i++) {
             v[i] += add + b.v[i];
+            add = v[i] / base;
+            v[i] %= base;
+        }
+        for (size_t i = b.v.size(); add && i < v.size(); i++) {
+            v[i] += add;
             add = v[i] / base;
             v[i] %= base;
         }
         if (add) {
             v.push_back(add);
+        } else {
+            trim();
         }
         return *this;
     }
-    BigIntBase &raw_mul_int(uint32_t m) {
+    BigInt_t &raw_offset_add(const BigInt_t &b, size_t offset) {
+        int32_t add = 0;
+        for (size_t i = 0; i < b.size(); ++i) {
+            v[i + offset] += add + b.v[i];
+            add = v[i + offset] / base;
+            v[i + offset] %= base;
+        }
+        for (size_t i = b.size() + offset; add; ++i) {
+            v[i] += add;
+            add = v[i] / base;
+            v[i] %= base;
+        }
+        return *this;
+    }
+    BigInt_t &raw_sub(const BigInt_t &b) {
+        if (v.size() < b.v.size()) {
+            v.resize(b.v.size());
+        }
+        int32_t add = 0;
+        for (size_t i = 0; i < b.v.size(); i++) {
+            v[i] += add - b.v[i];
+            add = v[i] / base;
+            v[i] %= base;
+            if (v[i] < 0)
+                v[i] += base, add -= 1;
+        }
+        for (size_t i = b.v.size(); add && i < v.size(); i++) {
+            v[i] += add;
+            add = v[i] / base;
+            v[i] %= base;
+            if (v[i] < 0)
+                v[i] += base, add -= 1;
+        }
+        if (add) {
+            v[0] = base - v[0];
+            for (size_t i = 1; i < v.size(); i++) {
+                v[i] = base - v[i] - 1;
+            }
+        }
+        trim();
+        return *this;
+    }
+    BigInt_t &raw_mul_int(uint32_t m) {
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = add + v[i] * m;
@@ -236,4 +352,122 @@ struct BigIntBase {
         }
         return *this;
     }
+    BigInt_t &raw_mul(const BigInt_t &a, const BigInt_t &b) {
+        v.clear();
+        v.resize(a.size() + b.size());
+        for (size_t i = 0; i < a.size(); i++) {
+            int32_t add = 0;
+            for (size_t j = 0; j < b.size(); j++) {
+                v[i + j] += add + a.v[i] * b.v[j];
+                add = v[i + j] / base;
+                v[i + j] %= base;
+            }
+            v[i + b.size()] += add;
+        }
+        trim();
+        return *this;
+    }
+    void trim() {
+        while (v.back() == 0 && v.size() > 1)
+            v.pop_back();
+    }
+    BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
+        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
+            return raw_mul(a, b);
+        }
+        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD)
+            ;
+        else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
+            return raw_nttmul(a, b);
+        BigInt_t ah(base), al(base), bh(base), bl(base), h(base), m(base);
+        size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
+        al.v.resize(split);
+        std::copy_n(a.v.begin(), al.v.size(), al.v.begin());
+        ah.v.resize(a.size() - split);
+        std::copy_n(a.v.begin() + split, ah.v.size(), ah.v.begin());
+        bl.v.resize(split);
+        std::copy_n(b.v.begin(), bl.v.size(), bl.v.begin());
+        bh.v.resize(b.size() - split);
+        std::copy_n(b.v.begin() + split, bh.v.size(), bh.v.begin());
+
+        raw_fastmul(al, bl);
+        h.raw_fastmul(ah, bh);
+        m.raw_fastmul(al.raw_add(ah), bl.raw_add(bh));
+        m.raw_sub(*this);
+        m.raw_sub(h);
+        v.resize(a.size() + b.size());
+
+        raw_offset_add(m, split);
+        raw_offset_add(h, split2);
+        trim();
+        return *this;
+    }
+    BigInt_t &raw_nttmul(const BigInt_t &a, const BigInt_t &b) {
+        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
+            return raw_mul(a, b);
+        }
+        if ((a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) > NTT_MAX_SIZE) {
+            return raw_fastmul(a, b);
+        }
+        size_t len, lenmul = 1;
+        NTT_NS::get_wn();
+        NTT_NS::ntt_a.clear();
+        NTT_NS::ntt_b.clear();
+        for (size_t i = 0; i < a.size(); ++i) {
+            NTT_NS::ntt_a.push_back(a.v[i]);
+        }
+        for (size_t i = 0; i < b.size(); ++i) {
+            NTT_NS::ntt_b.push_back(b.v[i]);
+        }
+        NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
+        NTT_NS::mul_conv2(len);
+        len = (a.size() + b.size()) * lenmul;
+        while (len > 0 && NTT_NS::ntt_a[--len] == 0)
+            ;
+        v.clear();
+        int64_t add = 0;
+        for (size_t i = 0; i <= len; i++) {
+            int64_t s = add + NTT_NS::ntt_a[i];
+            v.push_back(s % base);
+            add = s / base;
+        }
+        for (; add; add /= base)
+            v.push_back(add % base);
+        trim();
+        return *this;
+    }
+    BigInt_t &raw_nttsqr(const BigInt_t &a) {
+        if (a.size() <= BIGINT_MUL_THRESHOLD) {
+            return raw_mul(a, a);
+        }
+        if (a.size() <= BIGINT_NTT_THRESHOLD || (a.size() + a.size()) > NTT_MAX_SIZE) {
+            return raw_fastmul(a, a);
+        }
+        size_t len, lenmul = 1;
+        NTT_NS::get_wn();
+        NTT_NS::ntt_a.clear();
+        NTT_NS::ntt_b.clear();
+        for (size_t i = 0; i < a.size(); ++i) {
+            NTT_NS::ntt_a.push_back(a.v[i]);
+        }
+        NTT_NS::ntt_prepare(a.size() * 2, 0, len, 2);
+        NTT_NS::sqr_conv2(len);
+        len = (a.size() + a.size()) * lenmul;
+        while (len > 0 && NTT_NS::ntt_a[--len] == 0)
+            ;
+        v.clear();
+        int64_t add = 0;
+        for (size_t i = 0; i <= len; i++) {
+            int64_t s = add + NTT_NS::ntt_a[i];
+            v.push_back(s % base);
+            add = s / base;
+        }
+        for (; add; add /= base)
+            v.push_back(add % base);
+        trim();
+        return *this;
+    }
 };
+} // namespace BigIntBaseNS
+
+using BigIntBaseNS::BigIntBase;

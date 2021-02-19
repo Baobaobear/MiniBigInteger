@@ -1,7 +1,7 @@
 // filename:    bigint_decmini.h
 // author:      baobaobear
 // create date: 2021-02-09
-// This library is compatible with C++11
+// This library is compatible with C++03
 // https://github.com/Baobaobear/MiniBigInteger
 #pragma once
 
@@ -403,10 +403,10 @@ public:
             d /= 10;
             j -= 1;
         }
-        while (out.size() > 1 && out.back() == '0')
-            out.pop_back();
+        while (out.size() > 1 && *out.rbegin() == '0')
+            out.erase(out.begin() + out.size() - 1);
         if (sign < 0 && !this->is_zero())
-            out.push_back('-');
+            out += '-';
         std::reverse(out.begin(), out.end());
         return out;
     }
