@@ -44,7 +44,7 @@ OutputIt copy_n(InputIt first, Size count, OutputIt result) {
     return result;
 }
 } // namespace std
-#define BIGINT_STD_MOVE
 #endif
+#define BIGINT_STD_MOVE
 
 #endif
