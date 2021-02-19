@@ -4,7 +4,7 @@
 
 [中文版本](README_cn.md)
 
-This is a C++11 port of large integer library. It allows you parsing of numbers as strings in any bases between 2 and 36 and converting them back to string.
+This is a C++03 port of large integer library. It allows you parsing of numbers as strings in any bases between 2 and 36 and converting them back to string.
 
 ## Code Example
 

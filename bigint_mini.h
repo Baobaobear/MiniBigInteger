@@ -5,10 +5,7 @@
 // https://github.com/Baobaobear/MiniBigInteger
 #pragma once
 
-#include <algorithm>
-#include <cstring>
-#include <string>
-#include <vector>
+#include "bigint_header.h"
 
 namespace BigIntDecMiniNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;

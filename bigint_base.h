@@ -5,46 +5,7 @@
 // https://github.com/Baobaobear/MiniBigInteger
 #pragma once
 
-#include <algorithm>
-#include <cstring>
-#include <string>
-#include <vector>
-
-#if __cplusplus >= 201103L || _MSC_VER >= 1600
-#include <cstdint>
-#else
-#ifdef _MSC_VER
-typedef unsigned __int64 uint64_t;
-typedef __int64 int64_t;
-#else
-typedef unsigned long long uint64_t;
-#if !defined(__linux__)
-typedef long long int64_t;
-#endif
-#endif
-typedef unsigned int uint32_t;
-typedef int int32_t;
-typedef unsigned short uint16_t;
-typedef short int16_t;
-#if !defined(__APPLE__)
-typedef uint64_t uintmax_t;
-typedef int64_t intmax_t;
-
-namespace std {
-template <class InputIt, class Size, class OutputIt>
-OutputIt copy_n(InputIt first, Size count, OutputIt result) {
-    if (count > 0) {
-        *result++ = *first;
-        for (Size i = 1; i < count; ++i) {
-            *result++ = *++first;
-        }
-    }
-    return result;
-}
-} // namespace std
-#endif
-
-#endif
+#include "bigint_header.h"
 
 #if !defined(NTT_MODE) || NTT_MODE == 0
 #define NTT_DOUBLE_MOD
@@ -188,16 +149,12 @@ void NTT2(int64_t a[], size_t len, int on) {
     }
 }
 
-void Conv(size_t n) {
+void mul_conv(size_t n) {
     NTT(&*ntt_a.begin(), n, 1);
     NTT(&*ntt_b.begin(), n, 1);
     for (size_t i = 0; i < n; i++)
         ntt_a[i] = ntt_a[i] * ntt_b[i] % NTT_P;
     NTT(&*ntt_a.begin(), n, 0);
-
-    int64_t inv = quick_pow_mod(n, NTT_P - 2);
-    for (size_t i = 0; i < n; i++)
-        ntt_a[i] = ntt_a[i] * inv % NTT_P;
 }
 
 void double_mod_rev(size_t n) {
