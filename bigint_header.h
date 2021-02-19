@@ -12,6 +12,8 @@
 
 #if __cplusplus >= 201103L || _MSC_VER >= 1600
 #include <cstdint>
+#include <utility>
+#define BIGINT_STD_MOVE std::move
 #else
 #ifdef _MSC_VER
 typedef unsigned __int64 uint64_t;
@@ -42,6 +44,7 @@ OutputIt copy_n(InputIt first, Size count, OutputIt result) {
     return result;
 }
 } // namespace std
+#define BIGINT_STD_MOVE
 #endif
 
 #endif

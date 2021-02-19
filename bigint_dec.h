@@ -10,10 +10,10 @@ namespace BigIntDecNS {
 const int32_t COMPRESS_MOD = 10000;
 const int32_t COMPRESS_DIGITS = 4;
 
-const int32_t BIGINT_NTT_THRESHOLD = 300;
+const int32_t BIGINT_NTT_THRESHOLD = 256;
 const int32_t BIGINT_MUL_THRESHOLD = 48;
 const int32_t BIGINT_DIV_THRESHOLD = 2000;
-const int32_t BIGINT_DIVIDEDIV_THRESHOLD = 128;
+const int32_t BIGINT_DIVIDEDIV_THRESHOLD = 1024;
 
 #ifdef NTT_DOUBLE_MOD
 const int32_t NTT_MAX_SIZE = 1 << 24;
@@ -615,7 +615,7 @@ public:
         } else {
             r.raw_sub(b);
         }
-        return r;
+        return BIGINT_STD_MOVE(r);
     }
     BigInt_t &operator+=(const BigInt_t &b) {
         if (this == &b) {
@@ -638,7 +638,7 @@ public:
         } else {
             r.raw_sub(b);
         }
-        return r;
+        return BIGINT_STD_MOVE(r);
     }
     BigInt_t &operator-=(const BigInt_t &b) {
         if (this == &b) {
@@ -656,7 +656,7 @@ public:
     BigInt_t operator-() const {
         BigInt_t r = *this;
         r.sign = -r.sign;
-        return r;
+        return BIGINT_STD_MOVE(r);
     }
 
     BigInt_t operator*(const BigInt_t &b) const {
@@ -664,17 +664,17 @@ public:
             BigInt_t r = *this;
             r.raw_mul_int((uint32_t)b.v[0]);
             r.sign *= b.sign;
-            return r;
+            return BIGINT_STD_MOVE(r);
         } else if (v.size() == 1) {
             BigInt_t r = b;
             r.raw_mul_int((uint32_t)v[0]);
             r.sign *= sign;
-            return r;
+            return BIGINT_STD_MOVE(r);
         } else {
             BigInt_t r;
             r.raw_nttmul(*this, b);
             r.sign = sign * b.sign;
-            return r;
+            return BIGINT_STD_MOVE(r);
         }
     }
     BigInt_t &operator*=(const BigInt_t &b) {
@@ -697,7 +697,7 @@ public:
         }
     }
     BigInt_t operator*(int32_t b) const {
-        return *this * BigInt_t().set(b);
+        return BIGINT_STD_MOVE(*this * BigInt_t().set(b));
     }
     BigInt_t &operator*=(int32_t b) {
         if (b < 0x7fff && -0x7fff < b) {
@@ -717,7 +717,7 @@ public:
         //d.raw_fastdiv(*this, b);
         d.raw_dividediv(*this, b, r);
         d.sign = sign * b.sign;
-        return d;
+        return BIGINT_STD_MOVE(d);
     }
     BigInt_t &operator/=(const BigInt_t &b) {
         if (this == &b) {
@@ -730,7 +730,7 @@ public:
         return *this;
     }
     BigInt_t operator%(const BigInt_t &b) const {
-        return *this - *this / b * b;
+        return BIGINT_STD_MOVE(*this - *this / b * b);
     }
     BigInt_t &operator%=(const BigInt_t &b) {
         if (this == &b) {
@@ -747,7 +747,7 @@ public:
         BigInt_t d;
         d.raw_dividediv(*this, b, r);
         d.sign = sign * b.sign;
-        return d;
+        return BIGINT_STD_MOVE(d);
     }
 
     std::string out_dec() const {
@@ -794,7 +794,7 @@ public:
                 mul.raw_mul_int(v[i]);
                 sum.raw_add(mul);
             }
-            return sum;
+            return BIGINT_STD_MOVE(sum);
         } else {
             static BigIntBase pow_list[32];
             static int32_t last_base = 0, pow_list_cnt;
@@ -820,7 +820,7 @@ public:
             sum.raw_nttmul(r, base);
             r = l.transbase(out_base);
             sum.raw_add(r);
-            return sum;
+            return BIGINT_STD_MOVE(sum);
         }
     }
 
