@@ -16,9 +16,11 @@
 #ifdef _MSC_VER
 typedef unsigned __int64 uint64_t;
 typedef __int64 int64_t;
-#elif !defined(__linux__)
+#else
 typedef unsigned __int64 uint64_t;
+#if !defined(__linux__)
 typedef __int64 int64_t;
+#endif
 #endif
 typedef unsigned int uint32_t;
 typedef int int32_t;
@@ -121,7 +123,7 @@ void ntt_prepare(size_t size_a, size_t size_b, size_t &len, int flag = 1) {
     if (flag & 4)
         ntt_d = ntt_b;
     int32_t id = 0;
-    while ((1ULL << id) < len)
+    while (((uint64_t)1 << id) < len)
         ++id;
     if (ntt_ra[id].empty()) {
         std::vector<size_t> &r = ntt_ra[id];
