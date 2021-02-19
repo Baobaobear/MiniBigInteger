@@ -882,8 +882,6 @@ public:
     }
 
     std::string to_str(int32_t out_base = 10, int32_t pack = 0) const {
-        static BigInt_t pow_list[32];
-        static int32_t last_base = 0, pow_list_cnt;
         if ((out_base & (out_base - 1)) == 0) {
             if (out_base == 16) {
                 return out_hex();
