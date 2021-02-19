@@ -131,6 +131,25 @@ protected:
         } else if (m == COMPRESS_MOD) {
             return raw_shl(1);
         }
+#if BIGINT_INT64_OPTIMIZE
+        int64_t add = 0;
+        size_t i = 0, s = v.size() & ~1;
+        for (; i < s; i += 2) {
+            add += (int64_t)((v[i + 1] << COMPRESS_BIT) | v[i]) * m;
+            v[i] = low_digit(add);
+            v[i + 1] = low_digit(high_digit(add));
+            add = high_digit(high_digit(add));
+        }
+        for (; i < v.size(); i++) {
+            v[i] = add + v[i] * m;
+            add = high_digit(v[i]);
+            v[i] = low_digit(v[i]);
+        }
+        while (add) {
+            v.push_back(low_digit(add));
+            add = high_digit(add);
+        }
+#else
         int32_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = add + v[i] * m;
@@ -141,20 +160,63 @@ protected:
             v.push_back(low_digit(add));
             add = high_digit(add);
         }
+#endif
         return *this;
     }
     BigInt_t &raw_mul(const BigInt_t &a, const BigInt_t &b) {
         v.clear();
         v.resize(a.size() + b.size());
+#if BIGINT_INT64_OPTIMIZE
+        size_t i = 0, as = a.size() & ~1;
+        //for (; i < as; i += 2) {
+        //    int64_t add = 0;
+        //    int64_t av = (a.v[i + 1] << COMPRESS_BIT) | a.v[i];
+        //    size_t j = 0, bs = b.size() & ~1;
+        //    for (; j < bs; j += 2) {
+        //        add += v[i + j] + av * (int64_t)((b.v[j + 1] << COMPRESS_BIT) | b.v[j]);
+        //        v[i + j] = low_digit(add);
+        //        add = high_digit(add) + v[i + j + 1];
+        //        v[i + j + 1] = low_digit(add);
+        //        add = high_digit(add);
+        //    }
+        //    for (; j < b.size(); j++) {
+        //        add += av * b.v[j];
+        //        v[i + j] += low_digit(add);
+        //        add = high_digit(add);
+        //    }
+        //    for (j = i + b.size(); add; add = high_digit(add), ++j) {
+        //        v[j] += low_digit(add);
+        //    }
+        //}
+        for (; i < a.size(); i += 1) {
+            int64_t add = 0;
+            int64_t av = a.v[i];
+            size_t j = 0, bs = b.size() & ~1;
+            for (; j < bs; j += 2) {
+                add += v[i + j] + av * (int64_t)((b.v[j + 1] << COMPRESS_BIT) | b.v[j]);
+                v[i + j] = low_digit(add);
+                add = high_digit(add) + v[i + j + 1];
+                v[i + j + 1] = low_digit(add);
+                add = high_digit(add);
+            }
+            for (; j < b.size(); j++) {
+                add += av * b.v[j];
+                v[i + j] += low_digit(add);
+                add = high_digit(add);
+            }
+            v[i + b.size()] += add;
+        }
+#else
         for (size_t i = 0; i < a.size(); i++) {
-            int32_t add = 0;
+            int32_t add = 0, av = a.v[i];
             for (size_t j = 0; j < b.size(); j++) {
-                v[i + j] += add + a.v[i] * b.v[j];
+                v[i + j] += add + av * b.v[j];
                 add = high_digit(v[i + j]);
                 v[i + j] = low_digit(v[i + j]);
             }
             v[i + b.size()] += add;
         }
+#endif
         trim();
         return *this;
     }

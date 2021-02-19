@@ -1,10 +1,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define NTT_MODE 0
 
-#include "bigint_dec.h"
-#include "bigint_hex.h"
 #include "bigint_mini.h"
 #include "bigint_tiny.h"
+
+#include "bigint_dec.h"
+#include "bigint_hex.h"
 
 #include <iostream>
 
@@ -464,21 +465,32 @@ bool test8_rnd_div(int ncase, int len) {
     return true;
 }
 
+template <typename T>
+T calc_factorial(int fac) {
+    T n, t;
+    n = 1;
+    for (int i = 1, step = 12; i <= step; i += 1) {
+        t = 1;
+        for (int j = i; j <= fac; j += step) {
+            t = t * T(j);
+        }
+        n = n * t;
+    }
+    return n;
+}
+
 bool test_factorial() {
     BigIntHex ha;
     BigIntDec hb;
     BigIntMini hc;
     BigIntTiny hd;
     string s;
-    int fac = 10000;
+    int fac = 30000;
 
     time_point t_beg, t_end, t_out;
 
     t_beg = get_time();
-    ha = 1;
-    for (int i = 2; i <= fac; ++i) {
-        ha *= i;
-    }
+    ha = calc_factorial<BigIntHex>(fac);
     t_end = get_time();
     s = ha.to_str();
     t_out = get_time();
@@ -489,10 +501,7 @@ bool test_factorial() {
     cout << "        total " << ha.to_str(16).size() << " hex digits" << endl;
 
     t_beg = get_time();
-    hb = 1;
-    for (int i = 2; i <= fac; ++i) {
-        hb *= i;
-    }
+    hb = calc_factorial<BigIntDec>(fac);
     t_end = get_time();
     s = hb.to_str(16);
     t_out = get_time();
@@ -503,10 +512,7 @@ bool test_factorial() {
     cout << "        total " << hb.to_str().size() << " dec digits" << endl;
 
     t_beg = get_time();
-    hc = 1;
-    for (int i = 2; i <= fac; ++i) {
-        hc *= i;
-    }
+    hc = calc_factorial<BigIntMini>(fac);
     t_end = get_time();
     s = hc.to_str();
     t_out = get_time();
@@ -515,10 +521,7 @@ bool test_factorial() {
     cout << "        total " << s.size() << " dec digits" << endl;
 
     t_beg = get_time();
-    hd = 1;
-    for (int i = 2; i <= fac; ++i) {
-        hd = hd * i;
-    }
+    hd = calc_factorial<BigIntTiny>(fac);
     t_end = get_time();
     s = hd.to_str();
     t_out = get_time();

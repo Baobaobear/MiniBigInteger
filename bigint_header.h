@@ -48,3 +48,7 @@ OutputIt copy_n(InputIt first, Size count, OutputIt result) {
 #define BIGINT_STD_MOVE
 
 #endif
+
+#if defined(_WIN64) //&& defined(_MSC_VER)
+#define BIGINT_INT64_OPTIMIZE 1
+#endif
