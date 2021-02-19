@@ -16,7 +16,7 @@
 #ifdef _MSC_VER
 typedef unsigned __int64 uint64_t;
 typedef __int64 int64_t;
-#else
+#elif !defined(__linux__)
 typedef unsigned __int64 uint64_t;
 typedef __int64 int64_t;
 #endif
