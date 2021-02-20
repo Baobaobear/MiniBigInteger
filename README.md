@@ -1,6 +1,6 @@
 # MiniBigInteger
 
-[![Build Status]][Travis CI][![Appveyor status]][Appveyor] [![Language]](https://isocpp.org/)[![Standard]][Standard Cpp][![License]][MIT]
+![Github Actions] [![Build Status]][Travis CI] [![Appveyor status]][Appveyor] [![Language]](https://isocpp.org/) [![Standard]][Standard Cpp] [![License]][MIT]
 
 [中文版本](README_cn.md)
 
@@ -178,8 +178,9 @@ cout << b.to_str() << endl;
 
 This project is licensed under the MIT License.
 
+[Github Actions]:   https://github.com/baobaobear/minibiginteger/actions/workflows/c-cpp.yml/badge.svg
 [Build Status]:     https://travis-ci.com/Baobaobear/MiniBigInteger.svg?branch=main
-[Travis CI]:        https://travis-ci.com/Baobaobear/MiniBigInteger
+[Travis CI]:        https://travis-ci.org/Baobaobear/MiniBigInteger
 [Appveyor status]:  https://ci.appveyor.com/api/projects/status/yeu4tqao2ri3bc07?svg=true
 [Appveyor]:         https://ci.appveyor.com/project/Baobaobear/minibiginteger
 [Language]:         https://img.shields.io/badge/language-C++-blue.svg
