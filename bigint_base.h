@@ -202,9 +202,15 @@ const int32_t BIGINT_NTT_THRESHOLD = 300;
 const int32_t NTT_MAX_SIZE = 1 << 24;
 
 struct BigIntBase {
-    int32_t base;
+    typedef uint32_t base_t;
+#if BIGINT_LARGE_BASE
+    typedef int64_t carry_t;
+#else
+    typedef int32_t carry_t;
+#endif
+    base_t base;
     int32_t digits;
-    std::vector<int32_t> v;
+    std::vector<base_t> v;
     typedef BigIntBase BigInt_t;
 
     BigIntBase() {}
@@ -240,35 +246,37 @@ struct BigIntBase {
         if (v.size() < b.size()) {
             v.resize(b.size());
         }
-        int32_t add = 0;
+        carry_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++) {
-            v[i] += add + b.v[i];
-            add = v[i] / base;
-            v[i] %= base;
+            add += v[i];
+            add += b.v[i];
+            v[i] = add % base;
+            add /= base;
         }
         for (size_t i = b.v.size(); add && i < v.size(); i++) {
-            v[i] += add;
-            add = v[i] / base;
-            v[i] %= base;
+            add += v[i];
+            v[i] = add % base;
+            add /= base;
         }
         if (add) {
-            v.push_back(add);
+            v.push_back((base_t)add);
         } else {
             trim();
         }
         return *this;
     }
     BigInt_t &raw_offset_add(const BigInt_t &b, size_t offset) {
-        int32_t add = 0;
+        carry_t add = 0;
         for (size_t i = 0; i < b.size(); ++i) {
-            v[i + offset] += add + b.v[i];
-            add = v[i + offset] / base;
-            v[i + offset] %= base;
+            add += v[i + offset];
+            add += b.v[i];
+            v[i + offset] = add % base;
+            add /= base;
         }
         for (size_t i = b.size() + offset; add; ++i) {
-            v[i] += add;
-            add = v[i] / base;
-            v[i] %= base;
+            add += v[i];
+            v[i] = add % base;
+            add /= base;
         }
         return *this;
     }
@@ -276,20 +284,27 @@ struct BigIntBase {
         if (v.size() < b.v.size()) {
             v.resize(b.v.size());
         }
-        int32_t add = 0;
+        carry_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++) {
-            v[i] += add - b.v[i];
-            add = v[i] / base;
-            v[i] %= base;
-            if (v[i] < 0)
-                v[i] += base, add -= 1;
+            add += v[i];
+            add -= b.v[i];
+            v[i] = add % base;
+            if (v[i] < base) { // v[i] >= 0
+                add /= base;
+            } else {
+                v[i] += (base_t)base;
+                add = add / (carry_t)base - 1;
+            }
         }
         for (size_t i = b.v.size(); add && i < v.size(); i++) {
-            v[i] += add;
-            add = v[i] / base;
-            v[i] %= base;
-            if (v[i] < 0)
-                v[i] += base, add -= 1;
+            add += v[i];
+            v[i] = add % base;
+            if (v[i] < base) { // v[i] >= 0
+                add /= base;
+            } else {
+                v[i] += (base_t)base;
+                add = add / (carry_t)base - 1;
+            }
         }
         if (add) {
             v[0] = base - v[0];
@@ -301,16 +316,15 @@ struct BigIntBase {
         return *this;
     }
     BigInt_t &raw_mul_int(uint32_t m) {
-        int32_t add = 0;
+        carry_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
-            v[i] = add + v[i] * m;
-            add = v[i] / base;
-            v[i] %= base;
+            add += v[i] * (carry_t)m;
+            v[i] = add % base;
+            add /= base;
         }
         while (add) {
-            v.push_back(add);
-            add = v.back() / base;
-            v.back() %= base;
+            v.push_back((base_t)(add % base));
+            add /= base;
         }
         return *this;
     }
@@ -318,13 +332,14 @@ struct BigIntBase {
         v.clear();
         v.resize(a.size() + b.size());
         for (size_t i = 0; i < a.size(); i++) {
-            int32_t add = 0;
+            carry_t add = 0, av = a.v[i];
             for (size_t j = 0; j < b.size(); j++) {
-                v[i + j] += add + a.v[i] * b.v[j];
-                add = v[i + j] / base;
-                v[i + j] %= base;
+                add += v[i + j];
+                add += av * b.v[j];
+                v[i + j] = add % base;
+                add /= base;
             }
-            v[i + b.size()] += add;
+            v[i + b.size()] += (base_t)add;
         }
         trim();
         return *this;

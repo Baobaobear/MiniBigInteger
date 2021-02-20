@@ -234,9 +234,6 @@ bool test4_mul() {
         ha1.from_str(in[i].p1, in[i].base);
         ha2.from_str(in[i].p2, in[i].base);
         ha1 *= ha2;
-        std::string s = ha1.to_str(in[i].base);
-        std::string s16 = ha1.to_str(16);
-        std::string sa = ha2.from_str(in[i].pa, in[i].base).to_str(16);
         if (ha1.to_str(in[i].base) != in[i].pa) {
             return false;
         }
