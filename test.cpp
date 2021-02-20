@@ -33,8 +33,88 @@ double get_time_diff(time_point from, time_point to) {
     return (double)(to - from);
 }
 
+template <typename _res_type, uint64_t ret_max = ((uint64_t)0 - 1)>
+struct RNG_base {
+    typedef _res_type result_type;
+    static result_type min() {
+        return 0;
+    }
+    static result_type max() {
+        return (result_type)ret_max;
+    }
+    static const uint64_t seed_mul = ((uint64_t)0x5851F42D << 32) | 0x4C957F2D;
+    static const int init_iter = 16;
+    uint64_t new_seed() {
+        return time(0);
+    }
+    uint64_t def_seed() {
+        static uint64_t seed = new_seed();
+        seed *= ((uint64_t)0x369DEA0F << 32) | 0x31A53F85;
+        return ++seed;
+    }
+    static inline uint64_t rotl64(const uint64_t x, int k) {
+        return (x << k) | (x >> (64 - k));
+    }
+    static inline uint64_t rotr64(const uint64_t x, int k) {
+        return (x >> k) | (x << (64 - k));
+    }
+    static inline uint32_t rotl32(const uint32_t x, int k) {
+        return (x << k) | (x >> (32 - k));
+    }
+    static inline uint32_t rotr32(const uint32_t x, int k) {
+        return (x >> k) | (x << (32 - k));
+    }
+    static inline uint16_t rotl16(const uint16_t x, int k) {
+        return (x << k) | (x >> (16 - k));
+    }
+    static inline uint16_t rotr16(const uint16_t x, int k) {
+        return (x >> k) | (x << (16 - k));
+    }
+};
+
+struct PCG32 : public RNG_base<uint32_t> // XSH RR
+{
+    static const int init_iter = 1; // min 1
+    uint64_t s;
+    PCG32() {
+        seed();
+    }
+    PCG32(uint64_t seed1) {
+        seed(seed1);
+    }
+    void seed() {
+        seed(def_seed());
+    }
+    void seed(uint64_t seed1) {
+        s = seed1;
+        for (int i = 0; i < init_iter; ++i) (*this)();
+    }
+    result_type operator()() {
+        uint64_t x = s;
+        s = s * (((uint64_t)0x5851F42D << 32) | 0x4C957F2D) + (((uint64_t)0x14057B7E << 32) | 0xF767814F);
+        return rotr32((uint32_t)((x ^ (x >> 18)) >> 27), x >> 59);
+    }
+};
+
+template<class _Eg>
+static uint64_t i64_distribution(_Eg& eg, uint64_t n) {
+    ++n;
+    if ((n & (uint64_t)-(int64_t)n) == n)
+        return (int64_t)eg() & (n - 1);
+    uint64_t m = n;
+    while (m & (m - 1)) m += m & (uint64_t)-(int64_t)m;
+    --m;
+    for (;;) {
+        uint64_t r = (uint64_t)eg() & m;
+        if (r < n)
+            return r;
+    }
+}
+
 int randint(int a, int b) {
-    return rand() % (b - a + 1) + a;
+    static PCG32 engine;
+    return (int)i64_distribution(engine, b - a) + a;
+    //return rand() % (b - a + 1) + a;
 }
 
 bool test1_parse() {
@@ -716,7 +796,7 @@ bool test_bigdivrnd(int len1, int len2 = 0) {
 }
 
 int main() {
-    srand(time(0));
+    //srand((unsigned)time(0));
     bool pass = true;
     cout << "test1_parse : " << ((pass = test1_parse()) ? "pass" : "FAIL") << endl;
     if (!pass)

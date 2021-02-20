@@ -568,37 +568,117 @@ protected:
         while (v.back() == 0 && v.size() > 1)
             v.pop_back();
     }
-
-public:
-    BigIntHex() {
-        set(0);
-    }
-    explicit BigIntHex(intmax_t n) {
-        set(n);
-    }
-    explicit BigIntHex(const char *s, int base = 10) {
-        from_str(s, base);
-    }
-    explicit BigIntHex(const std::string &s, int base = 10) {
-        from_str(s, base);
-    }
-    BigInt_t &set(intmax_t n) {
-        v.resize(1);
-        v[0] = 0;
-        uintmax_t s;
-        if (n < 0) {
-            sign = -1;
-            s = -n;
+    BigIntBase transbase(int32_t out_base) const {
+        if (size() <= 8) {
+            BigIntBase sum(out_base);
+            BigIntBase base(out_base);
+            {
+                base.set(1);
+                BigIntBase mul(out_base);
+                mul = base;
+                mul.raw_mul_int(v[0]);
+                sum.raw_add(mul);
+            }
+            for (size_t i = 1; i < v.size(); i++) {
+                base.raw_mul_int(COMPRESS_MOD);
+                BigIntBase mul(out_base);
+                mul = base;
+                mul.raw_mul_int(v[i]);
+                sum.raw_add(mul);
+            }
+            return BIGINT_STD_MOVE(sum);
         } else {
-            sign = 1;
-            s = n;
+            static BigIntBase pow_list[32];
+            static int32_t last_base = 0, pow_list_cnt;
+            BigIntBase base(out_base);
+            if (out_base != last_base) {
+                pow_list[0] = base.set(COMPRESS_MOD);
+                pow_list_cnt = 0;
+                last_base = out_base;
+            }
+            size_t s = 1, id = 0;
+            for (; s < size() / 2; s *= 2, ++id) {
+                if (s >= (size_t)1 << pow_list_cnt) {
+                    pow_list[pow_list_cnt + 1].setbase(out_base);
+                    pow_list[pow_list_cnt + 1].raw_nttsqr(pow_list[pow_list_cnt]);
+                    ++pow_list_cnt;
+                }
+            }
+            base = pow_list[id];
+            BigInt_t h = raw_shr_to(s), l = *this;
+            l.v.resize(s);
+            BigIntBase r = h.transbase(out_base);
+            BigIntBase sum(out_base);
+            sum.raw_nttmul(r, base);
+            r = l.transbase(out_base);
+            sum.raw_add(r);
+            return BIGINT_STD_MOVE(sum);
         }
-        for (int i = 0; s; i++) {
-            v.resize(i + 1);
-            v[i] = low_digit(s);
-            s = high_digit(s);
+    }
+    std::string out_base2(size_t bits) const {
+        if (is_zero())
+            return "0";
+        const char *digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        std::string out;
+        carry_t d = 0;
+        for (size_t i = 0, j = 0;;) {
+            if (j < bits) {
+                if (i < v.size())
+                    d += v[i] << j;
+                else if (d == 0)
+                    break;
+                j += COMPRESS_BIT;
+                ++i;
+            }
+            out.push_back(digits[d & ((1 << bits) - 1)]);
+            d >>= bits;
+            j -= bits;
         }
-        return *this;
+        while (out.size() > 1 && *out.rbegin() == '0')
+            out.erase(out.begin() + out.size() - 1);
+        if (sign < 0 && !this->is_zero())
+            out.push_back('-');
+        std::reverse(out.begin(), out.end());
+        return out;
+    }
+    std::string out_hex() const {
+        return out_base2(4);
+    }
+    std::string out_mul(int32_t out_base = 10, int32_t pack = 0) const {
+        BigIntBase sum = transbase(out_base);
+        std::string out;
+        int32_t d = 0;
+        for (size_t i = 0, j = 0;;) {
+            if (j < 1) {
+                if (i < sum.size())
+                    d += sum.v[i];
+                else if (d == 0)
+                    break;
+                j += sum.digits;
+                ++i;
+            }
+            if (out_base <= 10 || d % out_base < 10) {
+                out.push_back((d % out_base) + '0');
+            } else {
+                out.push_back((d % out_base) + 'A' - 10);
+            }
+            d /= out_base;
+            j -= 1;
+        }
+        if (pack == 0)
+            while (out.size() > 1 && *out.rbegin() == '0')
+                out.erase(out.begin() + out.size() - 1);
+        else
+            while ((int32_t)out.size() > pack && *out.rbegin() == '0')
+                out.erase(out.begin() + out.size() - 1);
+        while ((int32_t)out.size() < pack)
+            out.push_back('0');
+        if (out.empty())
+            out.push_back('0');
+        if (sign < 0 && !this->is_zero())
+            out.push_back('-');
+        std::reverse(out.begin(), out.end());
+        return out;
     }
     BigInt_t &from_str_base2(const char *s, int bits) {
         v.clear();
@@ -632,6 +712,63 @@ public:
         this->sign = sign;
         return *this;
     }
+    BigInt_t &_from_str(const std::string &s, int base) {
+        if (s.size() <= 12) {
+            int64_t v = 0;
+            for (size_t i = 0; i < s.size(); ++i) {
+                int digit = -1;
+                if (s[i] >= '0' && s[i] <= '9')
+                    digit = s[i] - '0';
+                else if (s[i] >= 'A' && s[i] <= 'Z')
+                    digit = s[i] - 'A' + 10;
+                else if (s[i] >= 'a' && s[i] <= 'z')
+                    digit = s[i] - 'a' + 10;
+                v = v * base + digit;
+            }
+            return set(v);
+        }
+        BigInt_t m(base), h;
+        size_t len = 1;
+        for (; len * 2 < s.size(); len *= 2) {
+            m *= m;
+        }
+        h._from_str(s.substr(0, s.size() - len), base);
+        _from_str(s.substr(s.size() - len), base);
+        *this += m * h;
+        return *this;
+    }
+
+public:
+    BigIntHex() {
+        set(0);
+    }
+    explicit BigIntHex(intmax_t n) {
+        set(n);
+    }
+    explicit BigIntHex(const char *s, int base = 10) {
+        from_str(s, base);
+    }
+    explicit BigIntHex(const std::string &s, int base = 10) {
+        from_str(s, base);
+    }
+    BigInt_t &set(intmax_t n) {
+        v.resize(1);
+        v[0] = 0;
+        uintmax_t s;
+        if (n < 0) {
+            sign = -1;
+            s = -n;
+        } else {
+            sign = 1;
+            s = n;
+        }
+        for (int i = 0; s; i++) {
+            v.resize(i + 1);
+            v[i] = low_digit(s);
+            s = high_digit(s);
+        }
+        return *this;
+    }
     BigInt_t &from_str(const char *s, int base = 10) {
         if ((base & (base - 1)) == 0) {
             if (base == 16) {
@@ -646,46 +783,13 @@ public:
                 return from_str_base2(s, 5);
             }
         }
-        BigInt_t m;
-        m.set(1);
-        set(0);
-        const char *p = s + strlen(s) - 1;
-        int sign = 1, digits = 1, hbase = base;
-        while (*s == '-') {
-            sign *= -1;
-            ++s;
+        int vsign = 1, i = 0;
+        while (s[i] == '-') {
+            ++i;
+            vsign = -vsign;
         }
-        while (*s == '0') {
-            ++s;
-        }
-        for (; hbase <= 1 << 15; hbase *= base, ++digits)
-            ;
-
-        int d = --digits, hdigit = 0, hdigit_mul = 1;
-        for (hbase /= base; p >= s; p--) {
-            int digit = -1;
-            if (*p >= '0' && *p <= '9')
-                digit = *p - '0';
-            else if (*p >= 'A' && *p <= 'Z')
-                digit = *p - 'A' + 10;
-            else if (*p >= 'a' && *p <= 'z')
-                digit = *p - 'a' + 10;
-            hdigit += digit * hdigit_mul;
-            hdigit_mul *= base;
-            if (--d == 0) {
-                *this += m * hdigit;
-                if (p > s) {
-                    m.raw_mul_int((uint32_t)hbase);
-                }
-                d = digits;
-                hdigit = 0;
-                hdigit_mul = 1;
-            }
-        }
-        if (hdigit) {
-            *this += m * hdigit;
-        }
-        this->sign = sign;
+        _from_str(std::string(s + i), base);
+        sign = vsign;
         return *this;
     }
     BigInt_t &from_str(const std::string &s, int base = 10) {
@@ -879,122 +983,6 @@ public:
         d.raw_dividediv(*this, b, r);
         d.sign = sign * b.sign;
         return BIGINT_STD_MOVE(d);
-    }
-
-    std::string out_base2(size_t bits) const {
-        if (is_zero())
-            return "0";
-        const char *digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        std::string out;
-        carry_t d = 0;
-        for (size_t i = 0, j = 0;;) {
-            if (j < bits) {
-                if (i < v.size())
-                    d += v[i] << j;
-                else if (d == 0)
-                    break;
-                j += COMPRESS_BIT;
-                ++i;
-            }
-            out.push_back(digits[d & ((1 << bits) - 1)]);
-            d >>= bits;
-            j -= bits;
-        }
-        while (out.size() > 1 && *out.rbegin() == '0')
-            out.erase(out.begin() + out.size() - 1);
-        if (sign < 0 && !this->is_zero())
-            out.push_back('-');
-        std::reverse(out.begin(), out.end());
-        return out;
-    }
-
-    std::string out_hex() const {
-        return out_base2(4);
-    }
-
-    BigIntBase transbase(int32_t out_base) const {
-        if (size() <= 8) {
-            BigIntBase sum(out_base);
-            BigIntBase base(out_base);
-            {
-                base.set(1);
-                BigIntBase mul(out_base);
-                mul = base;
-                mul.raw_mul_int(v[0]);
-                sum.raw_add(mul);
-            }
-            for (size_t i = 1; i < v.size(); i++) {
-                base.raw_mul_int(COMPRESS_MOD);
-                BigIntBase mul(out_base);
-                mul = base;
-                mul.raw_mul_int(v[i]);
-                sum.raw_add(mul);
-            }
-            return BIGINT_STD_MOVE(sum);
-        } else {
-            static BigIntBase pow_list[32];
-            static int32_t last_base = 0, pow_list_cnt;
-            BigIntBase base(out_base);
-            if (out_base != last_base) {
-                pow_list[0] = base.set(COMPRESS_MOD);
-                pow_list_cnt = 0;
-                last_base = out_base;
-            }
-            size_t s = 1, id = 0;
-            for (; s < size() / 2; s *= 2, ++id) {
-                if (s >= (size_t)1 << pow_list_cnt) {
-                    pow_list[pow_list_cnt + 1].setbase(out_base);
-                    pow_list[pow_list_cnt + 1].raw_nttsqr(pow_list[pow_list_cnt]);
-                    ++pow_list_cnt;
-                }
-            }
-            base = pow_list[id];
-            BigInt_t h = raw_shr_to(s), l = *this;
-            l.v.resize(s);
-            BigIntBase r = h.transbase(out_base);
-            BigIntBase sum(out_base);
-            sum.raw_nttmul(r, base);
-            r = l.transbase(out_base);
-            sum.raw_add(r);
-            return BIGINT_STD_MOVE(sum);
-        }
-    }
-
-    std::string out_mul(int32_t out_base = 10, int32_t pack = 0) const {
-        BigIntBase sum = transbase(out_base);
-        std::string out;
-        int32_t d = 0;
-        for (size_t i = 0, j = 0;;) {
-            if (j < 1) {
-                if (i < sum.size())
-                    d += sum.v[i];
-                else if (d == 0)
-                    break;
-                j += sum.digits;
-                ++i;
-            }
-            if (out_base <= 10 || d % out_base < 10) {
-                out.push_back((d % out_base) + '0');
-            } else {
-                out.push_back((d % out_base) + 'A' - 10);
-            }
-            d /= out_base;
-            j -= 1;
-        }
-        if (pack == 0)
-            while (out.size() > 1 && *out.rbegin() == '0')
-                out.erase(out.begin() + out.size() - 1);
-        else
-            while ((int32_t)out.size() > pack && *out.rbegin() == '0')
-                out.erase(out.begin() + out.size() - 1);
-        while ((int32_t)out.size() < pack)
-            out.push_back('0');
-        if (out.empty())
-            out.push_back('0');
-        if (sign < 0 && !this->is_zero())
-            out.push_back('-');
-        std::reverse(out.begin(), out.end());
-        return out;
     }
 
     std::string to_str(int32_t out_base = 10, int32_t pack = 0) const {
