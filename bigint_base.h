@@ -197,8 +197,8 @@ void sqr_conv2(size_t n) {
 namespace BigIntBaseNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;
 
-const int32_t BIGINT_MUL_THRESHOLD = 48;
-const int32_t BIGINT_NTT_THRESHOLD = 300;
+const int32_t BIGINT_MUL_THRESHOLD = 40;
+const int32_t BIGINT_NTT_THRESHOLD = 256;
 const int32_t NTT_MAX_SIZE = 1 << 24;
 
 struct BigIntBase {

@@ -567,6 +567,9 @@ protected:
         while (v.back() == 0 && v.size() > 1)
             v.pop_back();
     }
+    size_t size() const {
+        return v.size();
+    }
     BigIntBase transbase(int32_t out_base) const {
         if (size() <= 8) {
             BigIntBase sum(out_base);
@@ -794,9 +797,6 @@ public:
     BigInt_t &from_str(const std::string &s, int base = 10) {
         return this->from_str(s.c_str(), base);
     }
-    size_t size() const {
-        return v.size();
-    }
     bool is_zero() const {
         if (v.size() == 1 && v[0] == 0)
             return true;
@@ -964,14 +964,22 @@ public:
         return *this;
     }
     BigInt_t operator%(const BigInt_t &b) const {
+        if (b.size() == 1 && COMPRESS_MOD % b.v[0] == 0) {
+            return BigInt_t(v[0] % b.v[0] * sign);
+        }
+        if (this == &b) {
+            return BigInt_t((intmax_t)0);
+        }
         return BIGINT_STD_MOVE(*this - *this / b * b);
     }
     BigInt_t &operator%=(const BigInt_t &b) {
+        if (b.size() == 1 && COMPRESS_MOD % b.v[0] == 0) {
+            return set(v[0] % b.v[0] * sign);
+        }
         if (this == &b) {
             return set(0);
         }
-        *this = *this - *this / b * b;
-        return *this;
+        return *this = *this - *this / b * b;
     }
     BigInt_t div(const BigInt_t &b, BigInt_t &r) {
         if (this == &b) {

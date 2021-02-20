@@ -542,18 +542,77 @@ bool test8_rnd_div(int ncase, int len) {
     return true;
 }
 
-template <typename T>
-T calc_factorial(int fac) {
-    T n, t;
-    n = 1;
-    for (int i = 1, step = 12; i <= step; i += 1) {
-        t = 1;
-        for (int j = i; j <= fac; j += step) {
-            t = t * T(j);
+template <typename BigIntT>
+BigIntT fast_pow(int base, int exp) {
+    BigIntT r(1), b(base);
+    for (; exp; exp >>= 1) {
+        if (exp & 1) {
+            r = r * b;
+            if (exp == 1)
+                break;
         }
-        n = n * t;
+        b = b * b;
     }
-    return n;
+    return r;
+}
+
+template <typename BigIntT>
+BigIntT Product(int n, BigIntT& currentN) {
+    int m = n / 2;
+    if (m == 0) return currentN = currentN + BigIntT(2);
+    if (n == 2) {
+        BigIntT t = currentN + BigIntT(2);
+        currentN = currentN + BigIntT(4);
+        return t * currentN;
+    }
+    return Product(n - m, currentN) * Product(m, currentN);
+}
+
+template <typename BigIntT>
+BigIntT split_factorial(int n) {
+    if (n < 2) return BigIntT(1);
+    BigIntT p(1), r(1), s(1), currentN(1);
+
+    int h = 0, shift = 0, high = 1, log2n;
+
+    for (int i = 0; i < 31; ++i) {
+        if ((1 << i) > n) {
+            log2n = i - 1;
+            break;
+        }
+    }
+
+    while (h != n) {
+        shift += h;
+        h = n >> log2n--;
+        int len = high;
+        high = (h - 1) | 1;
+        len = (high - len) / 2;
+        if (len > 0) {
+            p = p * Product(len, currentN);
+            r = r * p;
+        }
+    }
+    return r * fast_pow<BigIntT>(2, shift);
+}
+
+template <typename BigIntT>
+BigIntT product(int start, int n) {
+    int i;
+    if (n < 8) {
+        BigIntT r(start);
+        for (i = start + 1; i < start + n; i++)
+            r = r * BigIntT(i);
+        return r;
+    }
+    i = n / 2;
+    return product<BigIntT>(start, i) * product<BigIntT>(start + i, n - i);
+}
+
+template <typename BigIntT>
+BigIntT calc_factorial(int fac) {
+    return split_factorial<BigIntT>(fac);
+    //return product<BigIntT>(1, fac);
 }
 
 bool test_factorial() {
@@ -819,7 +878,7 @@ int main() {
     cout << "test7_sqrt  : " << ((pass = test7_sqrt()) ? "pass" : "FAIL") << endl;
     if (!pass)
         return -1;
-    cout << "test8_rnddiv: " << ((pass = test8_rnd_div(10, 128)) ? "pass" : "FAIL") << endl;
+    cout << "test8_rnddiv: " << ((pass = test8_rnd_div(10000, 128)) ? "pass" : "FAIL") << endl;
     if (!pass)
         return -1;
 #ifndef _DEBUG

@@ -25,11 +25,9 @@ struct BigIntTiny {
         if (unzip == 0) {
             for (int i = 0; i < (int)v.size(); i++)
                 v[i] = get_pos(i * 4) + get_pos(i * 4 + 1) * 10 + get_pos(i * 4 + 2) * 100 + get_pos(i * 4 + 3) * 1000;
-        } else {
-            v.resize(v.size() * 4);
-            for (int i = (int)v.size() - 1, a; i >= 0; i--)
+        } else
+            for (int i = (v.resize(v.size() * 4), (int)v.size() - 1), a; i >= 0; i--)
                 a = (i % 4 >= 2) ? v[i / 4] / 100 : v[i / 4] % 100, v[i] = (i & 1) ? a / 10 : a % 10;
-        }
         setsign(1, 1);
     }
     int get_pos(int pos) const { return pos >= (int)v.size() ? 0 : v[pos]; }
@@ -42,8 +40,7 @@ struct BigIntTiny {
     std::string to_str() const {
         BigIntTiny b = *this;
         std::string s;
-        b.zip(1);
-        for (int i = 0; i < (int)b.v.size(); ++i)
+        for (int i = (b.zip(1), 0); i < (int)b.v.size(); ++i)
             s += (*(b.v.rbegin() + i) + '0');
         return (sign < 0 ? "-" : "") + (s.empty() ? std::string("0") : s);
     }
@@ -71,9 +68,7 @@ struct BigIntTiny {
         return setsign(s[0] == '-' ? -1 : 1, sign = 1);
     }
     bool operator<(const BigIntTiny &b) const {
-        if (sign != b.sign)
-            return sign < b.sign;
-        return sign == 1 ? absless(b) : !absless(b);
+        return sign != b.sign ? sign < b.sign : (sign == 1 ? absless(b) : !absless(b));
     }
     bool operator==(const BigIntTiny &b) const { return v == b.v && sign == b.sign; }
     BigIntTiny &operator+=(const BigIntTiny &b) {
@@ -116,10 +111,8 @@ struct BigIntTiny {
         if (b < *this)
             return b * *this;
         BigIntTiny c, d = b;
-        for (int i = 0; i < (int)v.size(); i++) {
+        for (int i = 0; i < (int)v.size(); i++, d.v.insert(d.v.begin(), 0))
             c.add_mul(d, v[i]);
-            d.v.insert(d.v.begin(), 0);
-        }
         return c.setsign(sign * b.sign, 0);
     }
     BigIntTiny operator/(const BigIntTiny &b) const {
@@ -135,7 +128,5 @@ struct BigIntTiny {
         }
         return d.setsign(sign * b.sign, 0);
     }
-    BigIntTiny operator%(const BigIntTiny &b) const {
-        return *this - *this / b * b;
-    }
+    BigIntTiny operator%(const BigIntTiny &b) const { return *this - *this / b * b; }
 };

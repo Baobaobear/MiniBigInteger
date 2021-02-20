@@ -264,6 +264,9 @@ protected:
         while (v.back() == 0 && v.size() > 1)
             v.pop_back();
     }
+    size_t size() const {
+        return v.size();
+    }
 
 public:
     BigIntMini() {
@@ -321,9 +324,6 @@ public:
     }
     BigInt_t &from_str(const char *s, int base = 10) {
         return from_str_base10(s);
-    }
-    size_t size() const {
-        return v.size();
     }
     bool is_zero() const {
         if (v.size() == 1 && v[0] == 0)
