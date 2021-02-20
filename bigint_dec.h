@@ -575,7 +575,7 @@ protected:
                 last_base = out_base;
             }
             size_t s = 1, id = 0;
-            for (; s < size() / 2; s *= 2, ++id) {
+            for (; s < size() / 3; s *= 2, ++id) {
                 if (s >= (size_t)1 << pow_list_cnt) {
                     pow_list[pow_list_cnt + 1].setbase(out_base);
                     pow_list[pow_list_cnt + 1].raw_nttsqr(pow_list[pow_list_cnt]);
@@ -697,7 +697,7 @@ protected:
         }
         BigInt_t m(base), h;
         size_t len = 1;
-        for (; len * 2 < s.size(); len *= 2) {
+        for (; len * 3 < s.size(); len *= 2) {
             m *= m;
         }
         h._from_str(s.substr(0, s.size() - len), base);

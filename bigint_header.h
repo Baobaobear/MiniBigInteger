@@ -54,4 +54,3 @@ OutputIt copy_n(InputIt first, Size count, OutputIt result) {
 #if !BIGINT_LARGE_BASE && defined(_WIN64) //&& defined(_MSC_VER)
 #define BIGINT_INT64_OPTIMIZE 1
 #endif
-
