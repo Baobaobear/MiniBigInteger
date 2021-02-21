@@ -19,7 +19,7 @@ const uint32_t COMPRESS_DIGITS = 4;
 
 const uint32_t BIGINT_NTT_THRESHOLD = 256;
 const uint32_t BIGINT_MUL_THRESHOLD = 40;
-const uint32_t BIGINT_DIV_THRESHOLD = 2000;
+const uint32_t BIGINT_DIV_THRESHOLD = 1024;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 1000;
 
 #ifdef NTT_DOUBLE_MOD
@@ -376,7 +376,6 @@ protected:
             r.raw_sub(b);
             v[0]++;
         }
-        r.trim();
 
         carry_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
@@ -445,41 +444,74 @@ protected:
             tb.raw_shr(r);
             return raw_fastdiv(ta, tb);
         }
-        size_t ans_len = a.size() - b.size() + 2;
-        BigInt_t b2, b2r, x0, x1, t;
-        b2.v.resize(ans_len);
-        b2.v.push_back(2);
+        size_t ans_len = a.size() - b.size() + 2, s_len = ans_len + ans_len / 4;
+        std::vector<size_t> len_seq;
+        BigInt_t b2, x0, x1, t;
         x1.v.resize(1);
-        x1.v.back() = (int32_t)(COMPRESS_MOD / (b.v.back() + (b.v[b.size() - 2] + 1.0) / COMPRESS_MOD));
+        x1.v.back() = (base_t)(COMPRESS_MOD / (b.v.back() + (double)(b.v[b.size() - 2]) / COMPRESS_MOD));
         x0.v.push_back(x1.v.back() + 1);
         size_t keep_size = 1;
+        while (s_len > 32) {
+            len_seq.push_back(std::min(s_len, ans_len));
+            s_len = s_len / 2 + 1;
+        }
         while (x0.v[0] != x1.v[0] || x1 != x0) {
             // x1 = x0(2 - x0 * b)
             x0 = x1;
-            b2r = b2;
-            t = x0 * b;
-            t.keep(keep_size);
-            size_t offset = t.size();
-            if (t.v.back() != 1)
-                offset++;
-            x1 *= b2r.keep(offset) - t;
-            keep_size = std::min(keep_size * 2, ans_len);
+            b2 = b;
+            size_t tsize = std::min(keep_size + keep_size, ans_len);
+            b2.keep(tsize);
+            t = x0 * b2;
+            t.keep(tsize);
+            for (size_t i = t.size() - 2; i < t.size(); --i)
+                t.v[i] = COMPRESS_MOD - 1 - t.v[i];
+            if (t.v.back() != 1) {
+                t.v.back() = COMPRESS_MOD - 1 - t.v.back();
+                t.v.push_back(1);
+            } else {
+                t.v.pop_back();
+                t.trim();
+            }
+            x1 *= t;
+            keep_size = std::min(keep_size * 2, s_len);
             x1.keep(keep_size);
         }
-        x0 *= a;
-        if (x0.v[a.size()] >= COMPRESS_MOD >> 1)
-            *this = x0.raw_shr(a.size() + 1).raw_add(BigInt_t(1));
+        //for (x1.v.push_back(x0.v.back() + 1); x0.v[0] != x1.v[0] || x1 != x0; len_seq.size() > 1 && (len_seq.pop_back(), 0)) {
+        for (; !len_seq.empty(); len_seq.pop_back()) {
+            // x1 = x0(2 - x0 * b)
+            x0 = x1;
+            b2 = b;
+            size_t tsize = std::min(keep_size + keep_size, ans_len);
+            b2.keep(tsize);
+            t = x0 * b2;
+            t.keep(tsize);
+            for (size_t i = t.size() - 2; i < t.size(); --i)
+                t.v[i] = COMPRESS_MOD - 1 - t.v[i];
+            if (t.v.back() != 1) {
+                t.v.back() = COMPRESS_MOD - 1 - t.v.back();
+                t.v.push_back(1);
+            } else {
+                t.v.pop_back();
+                t.trim();
+            }
+            x1 *= t;
+            keep_size = len_seq.back();
+            x1.keep(keep_size);
+        }
+        x1 *= a;
+        if (x1.v[a.size()] >= COMPRESS_MOD >> 1)
+            *this = x1.raw_shr(a.size() + 1).raw_add(BigInt_t(1));
         else
-            *this = x0.raw_shr(a.size() + 1);
+            *this = x1.raw_shr(a.size() + 1);
         return *this;
     }
-    BigInt_t &raw_dividediv_recursion(const BigInt_t &a, const BigInt_t &b, BigInt_t &d) {
+    BigInt_t &raw_dividediv_recursion(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
         if (a < b) {
-            d = a;
+            r = a;
             return set(0);
         }
         if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) {
-            return raw_div(a, b, d);
+            return raw_div(a, b, r);
         }
         BigInt_t ma = a, mb = b, e;
         if (b.size() & 1) {
@@ -490,34 +522,58 @@ protected:
         BigInt_t ha = ma.raw_shr_to(base);
         if ((int32_t)ma.size() <= base * 3) {
             BigInt_t hb = mb.raw_shr_to(base);
-            raw_dividediv(ha, hb, d);
+            raw_dividediv_basecase(ha, hb, r);
             ha = *this * b;
             while (ha > a) {
                 ha -= b;
                 *this -= BigInt_t(1);
             }
-            d = a - ha;
+            r = a - ha;
             return *this;
         }
-        e.raw_dividediv(ha, mb, d);
-        ma.v.resize(base + d.size());
-        for (size_t i = 0; i < d.size(); ++i) {
-            ma.v[base + i] = d.v[i];
+        e.raw_dividediv_basecase(ha, mb, r);
+        ma.v.resize(base + r.size());
+        for (size_t i = 0; i < r.size(); ++i) {
+            ma.v[base + i] = r.v[i];
         }
         ma.trim();
 
         e.raw_shl(base);
-        raw_dividediv_recursion(ma, mb, d);
+        raw_dividediv_recursion(ma, mb, r);
         if (b.size() & 1)
-            d.raw_shr(1);
+            r.raw_shr(1);
         return *this += e;
+    }
+    BigInt_t &raw_dividediv_basecase(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
+        if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) {
+            raw_div(a, b, r);
+            return *this;
+        }
+        BigInt_t ha = a.raw_shr_to(b.size());
+        BigInt_t c, d, m;
+        if (ha.size() > b.size() * 2) {
+            raw_dividediv_basecase(ha, b, d);
+        } else {
+            raw_dividediv_recursion(ha, b, d);
+        }
+        raw_shl(b.size());
+        m.v.resize(b.size() + d.size());
+        for (size_t i = 0; i < b.size(); ++i) {
+            m.v[i] = a.v[i];
+        }
+        for (size_t i = 0; i < d.size(); ++i) {
+            m.v[b.size() + i] = d.v[i];
+        }
+        c.raw_dividediv_recursion(m, b, r);
+        raw_add(c);
+        return *this;
     }
     BigInt_t &raw_dividediv(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
         if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) {
             raw_div(a, b, r);
             return *this;
         }
-        carry_t mul = ((carry_t)COMPRESS_MOD * COMPRESS_MOD - 1) / (*(b.v.begin() + b.v.size() - 1) * (carry_t)COMPRESS_MOD + *(b.v.begin() + b.v.size() - 2) + 1);
+        int32_t mul = (int32_t)(((int64_t)COMPRESS_MOD * COMPRESS_MOD - 1) / (*(b.v.begin() + b.v.size() - 1) * (int64_t)COMPRESS_MOD + *(b.v.begin() + b.v.size() - 2) + 1));
         BigInt_t ma = a * mul;
         BigInt_t mb = b * mul;
         while (mb.v.back() < COMPRESS_MOD >> 1) {
@@ -526,23 +582,9 @@ protected:
             mb *= m;
             mul *= m;
         }
-        BigInt_t ha = ma.raw_shr_to(b.size());
-        BigInt_t c, d;
-        if (ha.size() > mb.size() * 2) {
-            raw_dividediv(ha, mb, d);
-        } else {
-            raw_dividediv_recursion(ha, mb, d);
-        }
-        raw_shl(b.size());
-        ma.v.resize(b.size() + d.size());
-        for (size_t i = 0; i < d.size(); ++i) {
-            ma.v[b.size() + i] = d.v[i];
-        }
-        ma.trim();
-        c.raw_dividediv_recursion(ma, mb, d);
+        BigInt_t d;
+        raw_dividediv_basecase(ma, mb, d);
         r.raw_div(d, BigInt_t(mul), ma);
-        raw_add(c);
-        d /= BigInt_t(mul);
         return *this;
     }
     void trim() {
@@ -910,8 +952,8 @@ public:
 
     BigInt_t operator/(const BigInt_t &b) const {
         BigInt_t r, d;
-        //d.raw_fastdiv(*this, b);
-        d.raw_dividediv(*this, b, r);
+        d.raw_fastdiv(*this, b);
+        //d.raw_dividediv(*this, b, r);
         d.sign = sign * b.sign;
         return BIGINT_STD_MOVE(d);
     }
@@ -920,8 +962,8 @@ public:
             return set(1);
         }
         BigInt_t a = *this, r;
-        //raw_fastdiv(a, b);
-        raw_dividediv(a, b, r);
+        raw_fastdiv(a, b);
+        //raw_dividediv(a, b, r);
         sign = a.sign * b.sign;
         return *this;
     }
