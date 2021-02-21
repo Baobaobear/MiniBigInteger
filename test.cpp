@@ -623,16 +623,19 @@ bool test_factorial() {
     string s;
     int fac = 30000;
 
-    time_point t_beg, t_end, t_out;
+    time_point t_beg, t_end, t_out, t_load;
 
     t_beg = get_time();
     ha = calc_factorial<BigIntHex>(fac);
     t_end = get_time();
     s = ha.to_str();
     t_out = get_time();
+    ha.from_str(s);
+    t_load = get_time();
     cout << "calc " << fac << "!" << endl;
     cout << "    by hex: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "        trans to dec: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "        read from dec: " << (int32_t)(get_time_diff(t_out, t_load) / 1000) << " ms" << endl;
     cout << "        total " << s.size() << " dec digits" << endl;
     cout << "        total " << ha.to_str(16).size() << " hex digits" << endl;
 
@@ -641,9 +644,12 @@ bool test_factorial() {
     t_end = get_time();
     s = hb.to_str(16);
     t_out = get_time();
+    hb.from_str(s, 16);
+    t_load = get_time();
     //cout << "calc " << fac << "!" << endl;
     cout << "    by dec: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "        trans to hex: " << (int32_t)(get_time_diff(t_end, t_out) / 1000) << " ms" << endl;
+    cout << "        read from hex: " << (int32_t)(get_time_diff(t_out, t_load) / 1000) << " ms" << endl;
     cout << "        total " << s.size() << " hex digits" << endl;
     cout << "        total " << hb.to_str().size() << " dec digits" << endl;
 
