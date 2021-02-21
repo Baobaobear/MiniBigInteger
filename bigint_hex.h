@@ -463,7 +463,8 @@ protected:
             tb.raw_shr(r);
             return raw_fastdiv(ta, tb);
         }
-        size_t ans_len = a.size() - b.size() + 2, s_len = ans_len + ans_len / 4;
+        size_t extand_digs = 2;
+        size_t ans_len = a.size() - b.size() + extand_digs + 1, s_len = ans_len + ans_len / 8;
         std::vector<size_t> len_seq;
         BigInt_t b2, x0, x1, t;
         x1.v.resize(1);
@@ -474,7 +475,7 @@ protected:
             len_seq.push_back(std::min(s_len, ans_len));
             s_len = s_len / 2 + 1;
         }
-        while (x0.v[0] != x1.v[0] || x1 != x0) {
+        while (x1 != x0) {
             // x1 = x0(2 - x0 * b)
             x0 = x1;
             b2 = b;
@@ -495,7 +496,7 @@ protected:
             keep_size = std::min(keep_size * 2, s_len);
             x1.keep(keep_size);
         }
-        //for (x1.v.push_back(x0.v.back() + 1); x0.v[0] != x1.v[0] || x1 != x0; len_seq.size() > 1 && (len_seq.pop_back(), 0)) {
+        //for (x1.v.push_back(x0.v.back() + 1); x1 != x0; len_seq.size() > 1 && (len_seq.pop_back(), 0)) {
         for (; !len_seq.empty(); len_seq.pop_back()) {
             // x1 = x0(2 - x0 * b)
             x0 = x1;
@@ -518,10 +519,10 @@ protected:
             x1.keep(keep_size);
         }
         x1 *= a;
-        if (x1.v[a.size()] >= COMPRESS_MOD >> 1)
-            *this = x1.raw_shr(a.size() + 1).raw_add(BigInt_t(1));
+        if (x1.v[a.size() + extand_digs - 1] >= COMPRESS_MOD - 1)
+            *this = x1.raw_shr(a.size() + extand_digs).raw_add(BigInt_t(1));
         else
-            *this = x1.raw_shr(a.size() + 1);
+            *this = x1.raw_shr(a.size() + extand_digs);
         return *this;
     }
     BigInt_t &raw_dividediv_recursion(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
