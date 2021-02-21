@@ -573,7 +573,7 @@ BigIntT split_factorial(int n) {
     if (n < 2) return BigIntT(1);
     BigIntT p(1), r(1), s(1), currentN(1);
 
-    int h = 0, shift = 0, high = 1, log2n;
+    int h = 0, shift = 0, high = 1, log2n = 0;
 
     for (int i = 0; i < 31; ++i) {
         if ((1 << i) > n) {

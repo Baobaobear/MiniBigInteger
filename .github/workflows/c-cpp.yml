@@ -15,3 +15,12 @@ jobs:
     - uses: actions/checkout@v2
     - name: make
       run: make
+
+  macOS-build:
+
+    runs-on: macOS-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+      run: make
