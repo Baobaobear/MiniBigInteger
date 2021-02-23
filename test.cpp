@@ -836,7 +836,7 @@ bool test_bigdivrnd(int len1, int len2 = 0) {
         }
         {
             BigIntDec hb1, hb2, hb3;
-            sa = chars[randint(0, 9)];
+            sa = chars[randint(1, 9)];
             for (int j = 1; j < len1 * 4; ++j)
                 sa += chars[randint(0, 9)];
             sb = chars[randint(1, 9)];
@@ -884,7 +884,7 @@ int main() {
     cout << "test7_sqrt  : " << ((pass = test7_sqrt()) ? "pass" : "FAIL") << endl;
     if (!pass)
         return -1;
-    cout << "test8_rnddiv: " << ((pass = test8_rnd_div(10000, 128)) ? "pass" : "FAIL") << endl;
+    cout << "test8_rnddiv: " << ((pass = test8_rnd_div(10, 256)) ? "pass" : "FAIL") << endl;
     if (!pass)
         return -1;
 #ifndef _DEBUG
