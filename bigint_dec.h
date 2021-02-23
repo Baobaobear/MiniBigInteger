@@ -19,9 +19,10 @@ const uint32_t COMPRESS_DIGITS = 4;
 #endif
 
 const uint32_t BIGINT_NTT_THRESHOLD = 512;
+const uint32_t BIGINT_SIMPLEMUL_THRESHOLD = 8;
 const uint32_t BIGINT_MUL_THRESHOLD = 150;
 const uint32_t BIGINT_DIV_THRESHOLD = 1024;
-const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 1000;
+const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 300;
 
 #ifdef NTT_DOUBLE_MOD
 const uint32_t NTT_MAX_SIZE = 1 << 24;
@@ -164,9 +165,8 @@ protected:
         for (; i < s; i += 2) {
             add += (int64_t)((v[i + 1] * COMPRESS_MOD) + v[i]) * m;
             v[i] = low_digit(add);
-            add = high_digit(add);
-            v[i + 1] = low_digit(add);
-            add = high_digit(add);
+            v[i + 1] = low_digit(high_digit(add));
+            add = high_digit(high_digit(add));
         }
         for (; i < v.size(); i++) {
             add += v[i] * (carry_t)m;
@@ -231,44 +231,33 @@ protected:
     }
     // Karatsuba algorithm
     BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
-        if (a.is_zero() || b.is_zero()) {
-            return set(0);
-        } else if (a.size() <= 1 || b.size() <= 1) {
-            if (a.size() >= b.size()) {
-                *this = a;
-                return raw_mul_int(b.v[0]);
-            } else {
-                *this = b;
-                return raw_mul_int(a.v[0]);
-            }
+        if (a.size() <= BIGINT_SIMPLEMUL_THRESHOLD || b.size() <= BIGINT_SIMPLEMUL_THRESHOLD) {
+            return raw_mul(a, b);
         }
-        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
-            if (a.raw_less(b))
-                return raw_mul(a, b);
-            else
-                return raw_mul(b, a);
-        }
-        if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
-            BigInt_t t;
-            if (a.size() * 2 < b.size()) {
-                size_t split = b.size() / 2;
-                t.raw_nttmul(a, b.raw_shr_to(split));
-                t.raw_shl(split);
-                raw_nttmul(a, b.raw_lowdigits_to(split));
-                raw_add(t);
-            } else {
-                size_t split = a.size() / 2;
-                t.raw_nttmul(b, a.raw_shr_to(split));
-                t.raw_shl(split);
-                raw_nttmul(b, a.raw_lowdigits_to(split));
-                raw_add(t);
-            }
-            return *this;
+        if (a.size() <= BIGINT_MUL_THRESHOLD && b.size() <= BIGINT_MUL_THRESHOLD) {
+            return raw_mul(a, b);
         }
         if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD)
             ;
         else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
             return raw_nttmul(a, b);
+        if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
+            BigInt_t t;
+            if (a.size() * 2 < b.size()) {
+                size_t split = a.size();
+                t.raw_fastmul(a, b.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_fastmul(a, b.raw_lowdigits_to(split));
+                raw_add(t);
+            } else {
+                size_t split = b.size();
+                t.raw_fastmul(b, a.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_fastmul(b, a.raw_lowdigits_to(split));
+                raw_add(t);
+            }
+            return *this;
+        }
         BigInt_t ah, al, bh, bl, h, m;
         size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
         al.v.resize(split);
@@ -293,28 +282,11 @@ protected:
         return *this;
     }
     BigInt_t &raw_nttmul(const BigInt_t &a, const BigInt_t &b) {
-        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
-            if (a.raw_less(b))
-                return raw_mul(a, b);
-            else
-                return raw_mul(b, a);
+        if (a.size() <= BIGINT_SIMPLEMUL_THRESHOLD || b.size() <= BIGINT_SIMPLEMUL_THRESHOLD) {
+            return raw_mul(a, b);
         }
-        if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
-            BigInt_t t;
-            if (a.size() * 2 < b.size()) {
-                size_t split = b.size() / 2;
-                t.raw_nttmul(a, b.raw_shr_to(split));
-                t.raw_shl(split);
-                raw_nttmul(a, b.raw_lowdigits_to(split));
-                raw_add(t);
-            } else {
-                size_t split = a.size() / 2;
-                t.raw_nttmul(b, a.raw_shr_to(split));
-                t.raw_shl(split);
-                raw_nttmul(b, a.raw_lowdigits_to(split));
-                raw_add(t);
-            }
-            return *this;
+        if (a.size() <= BIGINT_MUL_THRESHOLD && b.size() <= BIGINT_MUL_THRESHOLD) {
+            return raw_mul(a, b);
         }
         if ((a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) > NTT_MAX_SIZE) {
             return raw_fastmul(a, b);
@@ -490,6 +462,9 @@ protected:
         } else if (b.size() < BIGINT_DIV_THRESHOLD) {
             BigInt_t r;
             return raw_div(a, b, r);
+        } else if (b.size() < BIGINT_DIVIDEDIV_THRESHOLD) {
+            BigInt_t r;
+            return raw_dividediv(a, b, r);
         }
         if (b.size() * 2 - 2 > a.size()) {
             BigInt_t ta = a, tb = b;
