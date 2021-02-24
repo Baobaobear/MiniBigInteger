@@ -356,14 +356,10 @@ struct BigIntBase {
             return raw_nttmul(a, b);
         BigInt_t ah(base), al(base), bh(base), bl(base), h(base), m(base);
         size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
-        al.v.resize(split);
-        std::copy_n(a.v.begin(), al.v.size(), al.v.begin());
-        ah.v.resize(a.size() - split);
-        std::copy_n(a.v.begin() + split, ah.v.size(), ah.v.begin());
-        bl.v.resize(split);
-        std::copy_n(b.v.begin(), bl.v.size(), bl.v.begin());
-        bh.v.resize(b.size() - split);
-        std::copy_n(b.v.begin() + split, bh.v.size(), bh.v.begin());
+        al = a.raw_lowdigits_to(split);
+        ah = a.raw_shr_to(split);
+        bl = b.raw_lowdigits_to(split);
+        bh = b.raw_shr_to(split);
 
         raw_fastmul(al, bl);
         h.raw_fastmul(ah, bh);
