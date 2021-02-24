@@ -346,10 +346,6 @@ struct BigIntBase {
         trim();
         return *this;
     }
-    void trim() {
-        while (v.back() == 0 && v.size() > 1)
-            v.pop_back();
-    }
     BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
@@ -445,6 +441,32 @@ struct BigIntBase {
             v.push_back(add % base);
         trim();
         return *this;
+    }
+    BigInt_t raw_shr_to(size_t n) const {
+        BigInt_t r;
+        if (n >= size()) {
+            return r;
+        }
+        r.v.clear();
+        size_t s = n;
+        for (; s < v.size(); ++s)
+            r.v.push_back(v[s]);
+        return r;
+    }
+    BigInt_t raw_lowdigits_to(size_t n) const {
+        BigInt_t r;
+        if (n >= size()) {
+            return r = *this;
+        }
+        r.v.resize(n);
+        size_t s = 0;
+        for (; s < n; ++s)
+            r.v[s] = v[s];
+        return r;
+    }
+    void trim() {
+        while (v.back() == 0 && v.size() > 1)
+            v.pop_back();
     }
 };
 } // namespace BigIntBaseNS
