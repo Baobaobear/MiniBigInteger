@@ -385,7 +385,7 @@ struct BigIntBase {
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if ((a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) > NTT_MAX_SIZE) {
+        if ((a.size() + b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) > NTT_MAX_SIZE) {
             return raw_fastmul(a, b);
         }
         size_t len, lenmul = 1;
