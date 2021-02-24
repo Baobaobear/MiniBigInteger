@@ -31,27 +31,14 @@ typedef short int16_t;
 #if !defined(__APPLE__)
 typedef uint64_t uintmax_t;
 typedef int64_t intmax_t;
-
-namespace std {
-template <class InputIt, class Size, class OutputIt>
-OutputIt copy_n(InputIt first, Size count, OutputIt result) {
-    if (count > 0) {
-        *result++ = *first;
-        for (Size i = 1; i < count; ++i) {
-            *result++ = *++first;
-        }
-    }
-    return result;
-}
-} // namespace std
 #endif
 #define BIGINT_STD_MOVE
 
 #endif
 
-#ifndef BIGINT_LARGE_BASE
+#if !defined(BIGINT_LARGE_BASE) && (defined(_WIN64) || defined(_M_X64))
 #define BIGINT_LARGE_BASE 1
 #endif
-#if !BIGINT_LARGE_BASE && defined(_WIN64) //&& defined(_MSC_VER)
+#if !BIGINT_LARGE_BASE && (defined(_WIN64) || defined(_M_X64)) //&& defined(_MSC_VER)
 #define BIGINT_INT64_OPTIMIZE 1
 #endif

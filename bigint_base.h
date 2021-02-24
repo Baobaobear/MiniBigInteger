@@ -113,7 +113,7 @@ void NTT(int64_t a[], size_t len, int on) {
             for (size_t k = j; k < e; k++, w = w * wn % NTT_P) {
                 int32_t t = (int32_t)(w * a[k + h] % NTT_P);
                 a[k + h] = ((int32_t)a[k] - t + NTT_P) % NTT_P;
-                a[k] = (int32_t)(a[k] + t) % NTT_P;
+                a[k] = ((int32_t)a[k] + t) % NTT_P;
             }
         }
     }
@@ -138,7 +138,7 @@ void NTT2(int64_t a[], size_t len, int on) {
             for (size_t k = j; k < e; k++, w = w * wn % NTT_P2) {
                 int32_t t = (int32_t)(w * a[k + h] % NTT_P2);
                 a[k + h] = ((int32_t)a[k] - t + NTT_P2) % NTT_P2;
-                a[k] = (int32_t)(a[k] + t) % NTT_P2;
+                a[k] = ((int32_t)a[k] + t) % NTT_P2;
             }
         }
     }
@@ -198,8 +198,8 @@ namespace BigIntBaseNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;
 
 const int32_t BIGINT_MUL_THRESHOLD = 150;
-const int32_t BIGINT_NTT_THRESHOLD = 256;
-const int32_t NTT_MAX_SIZE = 1 << 24;
+const int32_t BIGINT_NTT_THRESHOLD = 512;
+const int32_t NTT_MAX_SIZE = 1 << 20;
 
 struct BigIntBase {
     typedef uint32_t base_t;
@@ -354,7 +354,7 @@ struct BigIntBase {
         if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if (a.size() <= BIGINT_NTT_THRESHOLD && b.size() <= BIGINT_NTT_THRESHOLD)
+        if (a.size() + b.size() <= BIGINT_NTT_THRESHOLD)
             ;
         else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
             return raw_nttmul(a, b);

@@ -11,7 +11,8 @@ namespace BigIntMiniNS {
 const int32_t COMPRESS_MOD = 10000;
 const uint32_t COMPRESS_DIGITS = 4;
 
-const uint32_t BIGINT_MUL_THRESHOLD = 40;
+const uint32_t BIGINT_SIMPLEMUL_THRESHOLD = 32;
+const uint32_t BIGINT_MUL_THRESHOLD = 200;
 
 template <typename T>
 inline T high_digit(T digit) {
@@ -99,29 +100,33 @@ protected:
         for (size_t i = 0; i < b.v.size(); i++) {
             add += v[i];
             add -= b.v[i];
-            v[i] = low_digit(add);
-            if (v[i] < COMPRESS_MOD) { // v[i] >= 0
+            if (add >= 0) {
+                v[i] = low_digit(add);
                 add = high_digit(add);
             } else {
-                v[i] += (base_t)COMPRESS_MOD;
+                v[i] = low_digit(add) + COMPRESS_MOD;
                 add = high_digit(add) - 1;
             }
         }
         for (size_t i = b.v.size(); add && i < v.size(); i++) {
             add += v[i];
-            v[i] = low_digit(add);
-            if (v[i] < COMPRESS_MOD) { // v[i] >= 0
+            if (add >= 0) {
+                v[i] = low_digit(add);
                 add = high_digit(add);
             } else {
-                v[i] += (base_t)COMPRESS_MOD;
+                v[i] = low_digit(add) + COMPRESS_MOD;
                 add = high_digit(add) - 1;
             }
         }
         if (add) {
             sign = -sign;
-            v[0] = COMPRESS_MOD - v[0];
+            add = 1 + (COMPRESS_MOD - 1 - v[0]);
+            v[0] = low_digit(add);
+            add = high_digit(add);
             for (size_t i = 1; i < v.size(); i++) {
-                v[i] = COMPRESS_MOD - v[i] - 1;
+                add += COMPRESS_MOD - 1 - v[i];
+                v[i] = low_digit(add);
+                add = high_digit(add);
             }
         }
         trim();
@@ -164,30 +169,19 @@ protected:
     }
     // Karatsuba algorithm
     BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
-        if (a.is_zero() || b.is_zero()) {
-            return set(0);
-        } else if (a.size() <= 1 || b.size() <= 1) {
-            if (a.size() >= b.size()) {
-                *this = a;
-                return raw_mul_int(b.v[0]);
-            } else {
-                *this = b;
-                return raw_mul_int(a.v[0]);
-            }
+        if (a.size() <= BIGINT_SIMPLEMUL_THRESHOLD || b.size() <= BIGINT_SIMPLEMUL_THRESHOLD) {
+            return raw_mul(a, b);
         }
-        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
+        if (a.size() + b.size() <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
         BigInt_t ah, al, bh, bl, h, m;
-        size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
-        al.v.resize(split);
-        std::copy_n(a.v.begin(), al.v.size(), al.v.begin());
-        ah.v.resize(a.size() - split);
-        std::copy_n(a.v.begin() + split, ah.v.size(), ah.v.begin());
-        bl.v.resize(split);
-        std::copy_n(b.v.begin(), bl.v.size(), bl.v.begin());
-        bh.v.resize(b.size() - split);
-        std::copy_n(b.v.begin() + split, bh.v.size(), bh.v.begin());
+        size_t split = std::max(std::min((a.size() + 1) / 2, (b.size() * 2) / 3), std::min((a.size() * 2) / 3, (b.size() + 1) / 2));
+        size_t split2 = split * 2;
+        al = a.raw_lowdigits_to(split);
+        ah = a.raw_shr_to(split);
+        bl = b.raw_lowdigits_to(split);
+        bh = b.raw_shr_to(split);
 
         raw_fastmul(al, bl);
         h.raw_fastmul(ah, bh);
@@ -259,6 +253,28 @@ protected:
         }
         trim();
         return *this;
+    }
+    BigInt_t raw_shr_to(size_t n) const {
+        BigInt_t r;
+        if (n >= size()) {
+            return r;
+        }
+        r.v.clear();
+        size_t s = n;
+        for (; s < v.size(); ++s)
+            r.v.push_back(v[s]);
+        return r;
+    }
+    BigInt_t raw_lowdigits_to(size_t n) const {
+        BigInt_t r;
+        if (n >= size()) {
+            return r = *this;
+        }
+        r.v.resize(n);
+        size_t s = 0;
+        for (; s < n; ++s)
+            r.v[s] = v[s];
+        return r;
     }
     void trim() {
         while (v.back() == 0 && v.size() > 1)
