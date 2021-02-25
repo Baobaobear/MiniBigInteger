@@ -197,9 +197,9 @@ void sqr_conv2(size_t n) {
 namespace BigIntBaseNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;
 
-const int32_t BIGINT_MUL_THRESHOLD = 150;
-const int32_t BIGINT_NTT_THRESHOLD = 512;
-const int32_t NTT_MAX_SIZE = 1 << 22;
+const uint32_t BIGINT_MUL_THRESHOLD = 512;
+const uint32_t BIGINT_NTT_THRESHOLD = 1024;
+const uint32_t NTT_MAX_SIZE = 1 << 22;
 
 struct BigIntBase {
     typedef uint32_t base_t;
@@ -347,10 +347,10 @@ struct BigIntBase {
         return *this;
     }
     BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
-        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
+        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if (a.size() + b.size() <= BIGINT_NTT_THRESHOLD)
+        if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD)
             ;
         else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
             return raw_nttmul(a, b);
@@ -374,10 +374,10 @@ struct BigIntBase {
         return *this;
     }
     BigInt_t &raw_nttmul(const BigInt_t &a, const BigInt_t &b) {
-        if (a.size() <= BIGINT_MUL_THRESHOLD || b.size() <= BIGINT_MUL_THRESHOLD) {
+        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if ((a.size() + b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) > NTT_MAX_SIZE) {
+        if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE) {
             return raw_fastmul(a, b);
         }
         size_t len, lenmul = 1;
@@ -439,7 +439,7 @@ struct BigIntBase {
         return *this;
     }
     BigInt_t raw_shr_to(size_t n) const {
-        BigInt_t r;
+        BigInt_t r(base);
         if (n >= size()) {
             return r;
         }
@@ -450,7 +450,7 @@ struct BigIntBase {
         return r;
     }
     BigInt_t raw_lowdigits_to(size_t n) const {
-        BigInt_t r;
+        BigInt_t r(base);
         if (n >= size()) {
             return r = *this;
         }

@@ -11,8 +11,7 @@ namespace BigIntMiniNS {
 const int32_t COMPRESS_MOD = 10000;
 const uint32_t COMPRESS_DIGITS = 4;
 
-const uint32_t BIGINT_SIMPLEMUL_THRESHOLD = 32;
-const uint32_t BIGINT_MUL_THRESHOLD = 200;
+const uint32_t BIGINT_MUL_THRESHOLD = 512;
 
 template <typename T>
 inline T high_digit(T digit) {
@@ -169,10 +168,7 @@ protected:
     }
     // Karatsuba algorithm
     BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
-        if (a.size() <= BIGINT_SIMPLEMUL_THRESHOLD || b.size() <= BIGINT_SIMPLEMUL_THRESHOLD) {
-            return raw_mul(a, b);
-        }
-        if (a.size() + b.size() <= BIGINT_MUL_THRESHOLD) {
+        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
         BigInt_t ah, al, bh, bl, h, m;

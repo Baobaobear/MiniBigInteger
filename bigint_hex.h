@@ -28,11 +28,10 @@ const uint32_t COMPRESS_HALF_MASK = COMPRESS_HALF_MOD - 1;
 const uint64_t COMPRESS_MOD = (uint64_t)1 << COMPRESS_BIT;
 const uint32_t COMPRESS_MASK = COMPRESS_MOD - 1;
 
-const uint32_t BIGINT_NTT_THRESHOLD = 1024;
-const uint32_t BIGINT_SIMPLEMUL_THRESHOLD = 32;
-const uint32_t BIGINT_MUL_THRESHOLD = 200;
+const uint32_t BIGINT_NTT_THRESHOLD = 2048;
+const uint32_t BIGINT_MUL_THRESHOLD = 512;
 const uint32_t BIGINT_DIV_THRESHOLD = 1024;
-const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 300;
+const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 1024;
 
 #if BIGINTHEX_DIV_DOUBLE
 const uint32_t NTT_MAX_SIZE = 1 << 22;
@@ -175,8 +174,6 @@ protected:
             return *this;
         } else if (m == 1) {
             return *this;
-        } else if (m == COMPRESS_MOD) {
-            return raw_shl(1);
         }
 #if BIGINT_INT64_OPTIMIZE
         int64_t add = 0;
@@ -270,13 +267,27 @@ protected:
     }
     // Karatsuba algorithm
     BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
-        if (a.size() <= BIGINT_SIMPLEMUL_THRESHOLD || b.size() <= BIGINT_SIMPLEMUL_THRESHOLD) {
+        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if (a.size() + b.size() <= BIGINT_MUL_THRESHOLD) {
-            return raw_mul(a, b);
+        if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
+            BigInt_t t;
+            if (a.size() * 2 < b.size()) {
+                size_t split = b.size() / 2;
+                t.raw_fastmul(a, b.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_fastmul(a, b.raw_lowdigits_to(split));
+                raw_add(t);
+            } else {
+                size_t split = a.size() / 2;
+                t.raw_fastmul(b, a.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_fastmul(b, a.raw_lowdigits_to(split));
+                raw_add(t);
+            }
+            return *this;
         }
-        if (a.size() + b.size() <= BIGINT_NTT_THRESHOLD)
+        if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD)
             ;
         else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
             return raw_nttmul(a, b);
@@ -301,14 +312,28 @@ protected:
         return *this;
     }
     BigInt_t &raw_nttmul(const BigInt_t &a, const BigInt_t &b) {
-        if (a.size() <= BIGINT_SIMPLEMUL_THRESHOLD || b.size() <= BIGINT_SIMPLEMUL_THRESHOLD) {
+        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
-        if (a.size() + b.size() <= BIGINT_MUL_THRESHOLD) {
-            return raw_mul(a, b);
-        }
-        if ((a.size() + b.size() <= BIGINT_NTT_THRESHOLD) || (a.size() + b.size()) > NTT_MAX_SIZE) {
+        if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE) {
             return raw_fastmul(a, b);
+        }
+        if (a.size() * 3 < b.size() || b.size() * 3 < a.size()) { // split
+            BigInt_t t;
+            if (a.size() * 2 < b.size()) {
+                size_t split = b.size() / 2;
+                t.raw_nttmul(a, b.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_nttmul(a, b.raw_lowdigits_to(split));
+                raw_add(t);
+            } else {
+                size_t split = a.size() / 2;
+                t.raw_nttmul(b, a.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_nttmul(b, a.raw_lowdigits_to(split));
+                raw_add(t);
+            }
+            return *this;
         }
         size_t len, lenmul = 1;
         NTT_NS::ntt_a.clear();
@@ -517,12 +542,6 @@ protected:
         if (a.raw_less(b)) {
             set(0);
             return *this;
-        } else if (b.size() < BIGINT_DIV_THRESHOLD) {
-            BigInt_t r;
-            return raw_div(a, b, r);
-        } else if (b.size() < BIGINT_DIVIDEDIV_THRESHOLD) {
-            BigInt_t r;
-            return raw_dividediv(a, b, r);
         }
         if (b.size() * 2 - 2 > a.size()) {
             BigInt_t ta = a, tb = b;
@@ -531,6 +550,13 @@ protected:
             ta.raw_shr(r);
             tb.raw_shr(r);
             return raw_fastdiv(ta, tb);
+        }
+        if (b.size() < BIGINT_DIV_THRESHOLD) {
+            BigInt_t r;
+            return raw_div(a, b, r);
+        } else if (b.size() < BIGINT_DIVIDEDIV_THRESHOLD) {
+            BigInt_t r;
+            return raw_dividediv(a, b, r);
         }
         size_t extand_digs = 2;
         size_t ans_len = a.size() - b.size() + extand_digs + 1, s_len = ans_len + ans_len / 8;
