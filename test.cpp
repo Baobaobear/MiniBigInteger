@@ -621,7 +621,7 @@ bool test_factorial() {
     BigIntMini hc;
     BigIntTiny hd;
     string s;
-    int fac = 30000;
+    int fac = 100000;
 
     time_point t_beg, t_end, t_out, t_load;
 
@@ -653,12 +653,13 @@ bool test_factorial() {
     cout << "        total " << s.size() << " hex digits" << endl;
     cout << "        total " << hb.to_str().size() << " dec digits" << endl;
 
+    fac = 20000;
     t_beg = get_time();
     hc = calc_factorial<BigIntMini>(fac);
     t_end = get_time();
     s = hc.to_str();
     t_out = get_time();
-    //cout << "calc " << fac << "!" << endl;
+    cout << "calc " << fac << "!" << endl;
     cout << "    by mini: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
     cout << "        total " << s.size() << " dec digits" << endl;
 

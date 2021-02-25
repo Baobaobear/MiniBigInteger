@@ -6,8 +6,7 @@
 #pragma once
 #include "bigint_base.h"
 
-namespace BigIntDecNS
-{
+namespace BigIntDecNS {
 #if BIGINT_LARGE_BASE
 const int32_t COMPRESS_MOD = 100000000;
 const uint32_t COMPRESS_DIGITS = 8;
@@ -19,9 +18,9 @@ const uint32_t COMPRESS_DIGITS = 4;
 #endif
 
 const uint32_t BIGINT_NTT_THRESHOLD = 2048;
-const uint32_t BIGINT_MUL_THRESHOLD = 512;
+const uint32_t BIGINT_MUL_THRESHOLD = 400;
 const uint32_t BIGINT_DIV_THRESHOLD = 1024;
-const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 1024;
+const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 1200;
 
 const uint32_t NTT_MAX_SIZE = 1 << 22;
 
@@ -50,25 +49,19 @@ protected:
     typedef BigIntDec BigInt_t;
 
     bool raw_less(const BigInt_t &b) const {
-        if (v.size() != b.size()) {
+        if (v.size() != b.size())
             return v.size() < b.size();
-        }
-        for (size_t i = v.size() - 1; i < v.size(); i--) {
-            if (v[i] != b.v[i]) {
+        for (size_t i = v.size() - 1; i < v.size(); i--)
+            if (v[i] != b.v[i])
                 return v[i] < b.v[i];
-            }
-        }
         return false; //eq
     }
     bool raw_eq(const BigInt_t &b) const {
-        if (v.size() != b.size()) {
+        if (v.size() != b.size())
             return false;
-        }
-        for (size_t i = 0; i < v.size(); ++i) {
-            if (v[i] != b.v[i]) {
+        for (size_t i = 0; i < v.size(); ++i)
+            if (v[i] != b.v[i])
                 return false;
-            }
-        }
         return true;
     }
     BigInt_t &raw_add(const BigInt_t &b) {
@@ -208,10 +201,6 @@ protected:
         }
         if (add)
             v.push_back((base_t)add);
-        //while (add) {
-        //    v.push_back(low_digit(add));
-        //    add = high_digit(add);
-        //}
 #endif
         return *this;
     }
@@ -291,22 +280,20 @@ protected:
         else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
             return raw_nttmul(a, b);
         BigInt_t ah, al, bh, bl, h, m;
-        size_t split = std::max(std::min((a.size() + 1) / 2, (b.size() * 2) / 3), std::min((a.size() * 2) / 3, (b.size() + 1) / 2));
-        size_t split2 = split * 2;
-        al = a.raw_lowdigits_to(split);
-        ah = a.raw_shr_to(split);
-        bl = b.raw_lowdigits_to(split);
-        bh = b.raw_shr_to(split);
+        size_t split = std::max(std::min((a.size() + 1) / 2, b.size() - 1), std::min(a.size() - 1, (b.size() + 1) / 2));
+        al.v.assign(a.v.begin(), a.v.begin() + split);
+        ah.v.assign(a.v.begin() + split, a.v.end());
+        bl.v.assign(b.v.begin(), b.v.begin() + split);
+        bh.v.assign(b.v.begin() + split, b.v.end());
 
         raw_fastmul(al, bl);
         h.raw_fastmul(ah, bh);
         m.raw_fastmul(al + ah, bl + bh);
-        m.raw_sub(*this);
-        m.raw_sub(h);
+        m.raw_sub(*this + h);
         v.resize(a.size() + b.size());
 
         raw_offset_add(m, split);
-        raw_offset_add(h, split2);
+        raw_offset_add(h, split * 2);
         trim();
         return *this;
     }
@@ -317,7 +304,7 @@ protected:
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE) {
             return raw_fastmul(a, b);
         }
-        if (a.size() * 3 < b.size() || b.size() * 3 < a.size()) { // split
+        if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
             BigInt_t t;
             if (a.size() * 2 < b.size()) {
                 size_t split = b.size() / 2;
@@ -414,7 +401,7 @@ protected:
             v[i] = (base_t)m;
             if (m) {
                 BigInt_t bm = b;
-                bm.raw_mul_int(m);
+                bm.raw_mul_int((base_t)m);
                 r.raw_offsetsub(bm, i);
             }
         }
@@ -440,51 +427,34 @@ protected:
             set(0);
             return *this;
         }
-        size_t t = 0, s = n;
-        for (; s < v.size(); ++t, ++s)
-            v[t] = v[s];
-        v.resize(t);
+        v.erase(v.begin(), v.begin() + n);
         return *this;
     }
     BigInt_t raw_shr_to(size_t n) const {
         BigInt_t r;
-        if (n >= size()) {
+        if (n >= size())
             return r;
-        }
-        r.v.clear();
-        size_t s = n;
-        for (; s < v.size(); ++s)
-            r.v.push_back(v[s]);
-        return r;
+        r.v.assign(v.begin() + n, v.end());
+        return BIGINT_STD_MOVE(r);
     }
     BigInt_t raw_lowdigits_to(size_t n) const {
+        if (n >= size())
+            return *this;
         BigInt_t r;
-        if (n >= size()) {
-            return r = *this;
-        }
-        r.v.resize(n);
-        size_t s = 0;
-        for (; s < n; ++s)
-            r.v[s] = v[s];
+        r.v.assign(v.begin(), v.begin() + n);
         r.trim();
-        return r;
+        return BIGINT_STD_MOVE(r);
     }
     BigInt_t &raw_shl(size_t n) {
         if (n == 0 || is_zero())
             return *this;
-        v.resize(v.size() + n);
-        size_t t = v.size() - 1, s = t - n;
-        for (; s < v.size(); --t, --s)
-            v[t] = v[s];
-        for (; t < v.size(); --t)
-            v[t] = 0;
+        v.insert(v.begin(), n, 0);
         return *this;
     }
     BigInt_t &keep(size_t n) {
         size_t s = n < v.size() ? v.size() - n : (size_t)0;
-        if (s && v[s - 1] >= COMPRESS_MOD >> 1) {
+        if (s && v[s - 1] >= COMPRESS_MOD >> 1)
             ++v[s];
-        }
         return raw_shr(s);
     }
     BigInt_t &raw_fastdiv(const BigInt_t &a, const BigInt_t &b) {

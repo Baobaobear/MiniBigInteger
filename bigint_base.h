@@ -197,8 +197,8 @@ void sqr_conv2(size_t n) {
 namespace BigIntBaseNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;
 
-const uint32_t BIGINT_MUL_THRESHOLD = 512;
 const uint32_t BIGINT_NTT_THRESHOLD = 1024;
+const uint32_t BIGINT_MUL_THRESHOLD = 400;
 const uint32_t NTT_MAX_SIZE = 1 << 22;
 
 struct BigIntBase {
@@ -355,11 +355,11 @@ struct BigIntBase {
         else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
             return raw_nttmul(a, b);
         BigInt_t ah(base), al(base), bh(base), bl(base), h(base), m(base);
-        size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2)), split2 = split * 2;
-        al = a.raw_lowdigits_to(split);
-        ah = a.raw_shr_to(split);
-        bl = b.raw_lowdigits_to(split);
-        bh = b.raw_shr_to(split);
+        size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2));
+        al.v.assign(a.v.begin(), a.v.begin() + split);
+        ah.v.assign(a.v.begin() + split, a.v.end());
+        bl.v.assign(b.v.begin(), b.v.begin() + split);
+        bh.v.assign(b.v.begin() + split, b.v.end());
 
         raw_fastmul(al, bl);
         h.raw_fastmul(ah, bh);
@@ -369,7 +369,7 @@ struct BigIntBase {
         v.resize(a.size() + b.size());
 
         raw_offset_add(m, split);
-        raw_offset_add(h, split2);
+        raw_offset_add(h, split * 2);
         trim();
         return *this;
     }
@@ -437,29 +437,6 @@ struct BigIntBase {
             v.push_back(add % base);
         trim();
         return *this;
-    }
-    BigInt_t raw_shr_to(size_t n) const {
-        BigInt_t r(base);
-        if (n >= size()) {
-            return r;
-        }
-        r.v.clear();
-        size_t s = n;
-        for (; s < v.size(); ++s)
-            r.v.push_back(v[s]);
-        return r;
-    }
-    BigInt_t raw_lowdigits_to(size_t n) const {
-        BigInt_t r(base);
-        if (n >= size()) {
-            return r = *this;
-        }
-        r.v.resize(n);
-        size_t s = 0;
-        for (; s < n; ++s)
-            r.v[s] = v[s];
-        r.trim();
-        return r;
     }
     void trim() {
         while (v.back() == 0 && v.size() > 1)

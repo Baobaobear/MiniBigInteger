@@ -33,7 +33,6 @@ typedef uint64_t uintmax_t;
 typedef int64_t intmax_t;
 #endif
 #define BIGINT_STD_MOVE
-
 #endif
 
 #if !defined(BIGINT_LARGE_BASE) && (defined(_WIN64) || defined(_M_X64))
