@@ -24,7 +24,7 @@ const uint32_t BIGINT_MUL_THRESHOLD = 200;
 const uint32_t BIGINT_DIV_THRESHOLD = 1024;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 300;
 
-const uint32_t NTT_MAX_SIZE = 1 << 20;
+const uint32_t NTT_MAX_SIZE = 1 << 22;
 
 template <typename T>
 inline T high_digit(T digit) {
@@ -122,7 +122,7 @@ protected:
                 v[i] = low_digit(add);
                 add = high_digit(add);
             } else {
-                v[i] = low_digit(add) + COMPRESS_MOD;
+                v[i] = low_digit(++add) + COMPRESS_MOD - 1;
                 add = high_digit(add) - 1;
             }
         }
@@ -132,7 +132,7 @@ protected:
                 v[i] = low_digit(add);
                 add = high_digit(add);
             } else {
-                v[i] = low_digit(add) + COMPRESS_MOD;
+                v[i] = low_digit(++add) + COMPRESS_MOD - 1;
                 add = high_digit(add) - 1;
             }
         }
@@ -159,7 +159,7 @@ protected:
                 v[i + offset] = low_digit(add);
                 add = high_digit(add);
             } else {
-                v[i + offset] = low_digit(add) + COMPRESS_MOD;
+                v[i + offset] = low_digit(++add) + COMPRESS_MOD - 1;
                 add = high_digit(add) - 1;
             }
         }
@@ -169,7 +169,7 @@ protected:
                 v[i] = low_digit(add);
                 add = high_digit(add);
             } else {
-                v[i] = low_digit(add) + COMPRESS_MOD;
+                v[i] = low_digit(++add) + COMPRESS_MOD - 1;
                 add = high_digit(add) - 1;
             }
         }
@@ -219,6 +219,17 @@ protected:
         return *this;
     }
     BigInt_t &raw_mul(const BigInt_t &a, const BigInt_t &b) {
+        if (a.is_zero() || b.is_zero()) {
+            return set(0);
+        }
+        if (a.size() == 2 && a.v[1] == 1 && a.v[0] == 0) {
+            *this = a;
+            return raw_shl(1);
+        }
+        if (b.size() == 2 && b.v[1] == 1 && b.v[0] == 0) {
+            *this = a;
+            return raw_shl(1);
+        }
         v.clear();
         v.resize(a.size() + b.size());
 #if BIGINT_INT64_OPTIMIZE
@@ -350,20 +361,27 @@ protected:
             r = a;
             return set(0);
         } else if (b.size() == 2 && b.v[1] == 1 && b.v[0] == 0) {
+            *this = a;
             r.set(a.v[0]);
             return raw_shr(1);
         }
-        //v.clear();
+        v.clear();
         v.resize(a.size() - b.size() + 1);
         r = a;
         r.v.resize(a.size() + 1);
-        int32_t offset = (int32_t)b.size();
+        size_t offset = b.size();
         double db = b.v.back();
+#if BIGINT_LARGE_BASE
+        if (b.size() > 1) {
+            db += (b.v.back() / COMPRESS_HALF_MOD + b.v[b.size() - 2] + 1) / (double)COMPRESS_MOD;
+        }
+#else
         if (b.size() > 2) {
-            db += b.v[b.size() - 2] / (double)COMPRESS_MOD + (b.v[b.size() - 3] + 1) / (double)COMPRESS_MOD / COMPRESS_MOD;
+            db += (b.v[b.size() - 2] + (b.v[b.size() - 3] + 1) / (double)COMPRESS_MOD) / COMPRESS_MOD;
         } else if (b.size() > 1) {
             db += b.v[b.size() - 2] / (double)COMPRESS_MOD;
         }
+#endif
         db = 1 / db;
         for (size_t i = a.size() - offset; i <= a.size(); i--) {
             carry_t rm = (carry_t)r.v[i + offset] * COMPRESS_MOD + r.v[i + offset - 1], m;
@@ -423,6 +441,7 @@ protected:
         size_t s = 0;
         for (; s < n; ++s)
             r.v[s] = v[s];
+        r.trim();
         return r;
     }
     BigInt_t &raw_shl(size_t n) {
@@ -950,7 +969,7 @@ public:
         return BIGINT_STD_MOVE(*this * BigInt_t().set(b));
     }
     BigInt_t &operator*=(intmax_t b) {
-        if (b < COMPRESS_MOD && -(intmax_t)COMPRESS_MOD < b) {
+        if (b < (intmax_t)COMPRESS_MOD && -(intmax_t)COMPRESS_MOD < b) {
             if (b >= 0)
                 raw_mul_int((uint32_t)b);
             else {

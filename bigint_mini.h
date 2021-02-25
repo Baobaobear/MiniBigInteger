@@ -104,7 +104,7 @@ protected:
                 v[i] = low_digit(add);
                 add = high_digit(add);
             } else {
-                v[i] = low_digit(add) + COMPRESS_MOD;
+                v[i] = low_digit(++add) + COMPRESS_MOD - 1;
                 add = high_digit(add) - 1;
             }
         }
@@ -114,7 +114,7 @@ protected:
                 v[i] = low_digit(add);
                 add = high_digit(add);
             } else {
-                v[i] = low_digit(add) + COMPRESS_MOD;
+                v[i] = low_digit(++add) + COMPRESS_MOD - 1;
                 add = high_digit(add) - 1;
             }
         }
@@ -274,6 +274,7 @@ protected:
         size_t s = 0;
         for (; s < n; ++s)
             r.v[s] = v[s];
+        r.trim();
         return r;
     }
     void trim() {

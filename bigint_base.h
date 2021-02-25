@@ -199,7 +199,7 @@ const int32_t BIGINT_MAXBASE = 1 << 15;
 
 const int32_t BIGINT_MUL_THRESHOLD = 150;
 const int32_t BIGINT_NTT_THRESHOLD = 512;
-const int32_t NTT_MAX_SIZE = 1 << 20;
+const int32_t NTT_MAX_SIZE = 1 << 22;
 
 struct BigIntBase {
     typedef uint32_t base_t;
@@ -458,6 +458,7 @@ struct BigIntBase {
         size_t s = 0;
         for (; s < n; ++s)
             r.v[s] = v[s];
+        r.trim();
         return r;
     }
     void trim() {
