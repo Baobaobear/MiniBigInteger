@@ -188,52 +188,54 @@ protected:
             r = a;
             return set(0);
         }
+        v.clear();
         v.resize(a.size() - b.size() + 1);
         r = a;
         r.v.resize(a.size() + 1);
-        int32_t offset = (int32_t)b.size();
+        size_t offset = b.size();
         double db = b.v.back();
         if (b.size() > 2) {
-            db += b.v[b.size() - 2] / (double)COMPRESS_MOD + (b.v[b.size() - 3]) / (double)COMPRESS_MOD / COMPRESS_MOD;
+            db += (b.v[b.size() - 2] + (b.v[b.size() - 3] + 1) / (double)COMPRESS_MOD) / COMPRESS_MOD;
         } else if (b.size() > 1) {
             db += b.v[b.size() - 2] / (double)COMPRESS_MOD;
         }
         db = 1 / db;
         for (size_t i = a.size() - offset; i <= a.size(); i--) {
-            carry_t rm = (carry_t)r.v[i + offset] * COMPRESS_MOD + r.v[i + offset - 1] - 1, m;
+            carry_t rm = (carry_t)r.v[i + offset] * COMPRESS_MOD + r.v[i + offset - 1], m;
             m = (carry_t)(rm * db);
             v[i] = (base_t)m;
-            carry_t add = 0;
-            for (size_t j = 0; j < b.size(); j++) {
-                add += r.v[i + j];
-                add -= b.v[j] * m;
-                r.v[i + j] = low_digit(add);
-                if (r.v[i + j] < COMPRESS_MOD) { // r.v[i + j] >= 0
-                    add = high_digit(add);
-                } else {
-                    r.v[i + j] += (base_t)COMPRESS_MOD;
-                    add = high_digit(add) - 1;
+            if (m) {
+                carry_t add = 0;
+                for (size_t j = 0; j < b.size(); j++) {
+                    add += r.v[i + j];
+                    add -= b.v[j] * m;
+                    if (add >= 0) {
+                        r.v[i + j] = low_digit(add);
+                        add = high_digit(add);
+                    } else {
+                        r.v[i + j] = low_digit(++add) + COMPRESS_MOD - 1;
+                        add = high_digit(add) - 1;
+                    }
                 }
-            }
-            for (size_t j = i + b.size(); add && j < r.size(); ++j) {
-                add += r.v[j];
-                r.v[j] = low_digit(add);
-                if (r.v[j] < COMPRESS_MOD) { // r.v[j] >= 0
-                    add = high_digit(add);
-                } else {
-                    r.v[j] += (base_t)COMPRESS_MOD;
-                    add = high_digit(add) - 1;
+                for (size_t j = i + b.size(); add && j < r.size(); ++j) {
+                    add += r.v[j];
+                    if (add >= 0) {
+                        r.v[j] = low_digit(add);
+                        add = high_digit(add);
+                    } else {
+                        r.v[j] = low_digit(++add) + COMPRESS_MOD - 1;
+                        add = high_digit(add) - 1;
+                    }
                 }
             }
         }
         r.trim();
+        carry_t add = 0;
         while (!r.raw_less(b)) {
             r.raw_sub(b);
-            v[0]++;
+            ++add;
         }
-        r.trim();
 
-        carry_t add = 0;
         for (size_t i = 0; i < v.size(); i++) {
             add += v[i];
             v[i] = low_digit(add);

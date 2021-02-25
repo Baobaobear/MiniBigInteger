@@ -67,9 +67,7 @@ struct BigIntTiny {
         }
         return setsign(s[0] == '-' ? -1 : 1, sign = 1);
     }
-    bool operator<(const BigIntTiny &b) const {
-        return sign != b.sign ? sign < b.sign : (sign == 1 ? absless(b) : !absless(b));
-    }
+    bool operator<(const BigIntTiny &b) const { return sign != b.sign ? sign < b.sign : (sign == 1 ? absless(b) : !absless(b)); }
     bool operator==(const BigIntTiny &b) const { return v == b.v && sign == b.sign; }
     BigIntTiny &operator+=(const BigIntTiny &b) {
         if (sign != b.sign)
@@ -77,8 +75,7 @@ struct BigIntTiny {
         v.resize(std::max(v.size(), b.v.size()) + 1);
         for (int i = 0, carry = 0; i < (int)b.v.size() || carry; i++) {
             carry += v[i] + b.get_pos(i);
-            v[i] = carry % 10000;
-            carry /= 10000;
+            v[i] = carry % 10000, carry /= 10000;
         }
         return setsign(sign, 0);
     }
@@ -90,8 +87,7 @@ struct BigIntTiny {
         v.resize(std::max(v.size(), b.v.size()) + 2);
         for (int i = 0, carry = 0; i < (int)b.v.size() || carry; i++) {
             carry += v[i] + b.get_pos(i) * mul;
-            v[i] = carry % 10000;
-            carry /= 10000;
+            v[i] = carry % 10000, carry /= 10000;
         }
     }
     BigIntTiny operator-(const BigIntTiny &b) const {
@@ -118,7 +114,7 @@ struct BigIntTiny {
     BigIntTiny operator/(const BigIntTiny &b) const {
         BigIntTiny c, d;
         d.v.resize(v.size());
-        double db = 1.0 / (b.v.back() + (b.v.size() > 1 ? b.v[b.v.size() - 2] / 1e4 : 0) + (b.v.size() > 2 ? (b.v[b.v.size() - 3] + 1) / 1e8 : 0));
+        double db = 1.0 / (b.v.back() + (b.get_pos(b.v.size() - 2) / 1e4) + (b.get_pos(b.v.size() - 3) + 1) / 1e8);
         for (int i = (int)v.size() - 1; i >= 0; i--) {
             c.v.insert(c.v.begin(), v[i]);
             int m = (int)((c.get_pos((int)b.v.size()) * 10000 + c.get_pos((int)b.v.size() - 1)) * db);

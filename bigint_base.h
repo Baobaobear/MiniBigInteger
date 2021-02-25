@@ -16,28 +16,15 @@ namespace NTT_NS {
 const int32_t NTT_POW = 32;
 const int32_t NTT_G = 3;
 const int32_t NTT_P = (479 << 21) + 1;
+const int32_t NTT_P_INV = 332747959;
 const int32_t NTT_P2 = 998244353;
-const int64_t NTT_LCM = NTT_P * (int64_t)NTT_P2;
-const int64_t MOD_M1 = 668514958533372747;
-const int64_t MOD_M2 = 334257240187163831;
+const int32_t NTT_P2_INV = 669690699;
 
 int32_t ntt_wn[2][NTT_POW];
 int32_t ntt_wn2[2][NTT_POW];
 std::vector<int64_t> ntt_a, ntt_b, ntt_c, ntt_d;
 std::vector<size_t> ntt_ra[32];
 size_t *ntt_r;
-
-int64_t quick_mul_mod(int64_t a, int64_t b) {
-    a %= NTT_LCM;
-    b %= NTT_LCM;
-    int64_t c = (int64_t)((long double)a * b / NTT_LCM);
-    int64_t ans = a * b - c * NTT_LCM;
-    if (ans < 0)
-        ans += NTT_LCM;
-    else if (ans >= NTT_LCM)
-        ans -= NTT_LCM;
-    return ans;
-}
 
 int64_t quick_pow_mod(int64_t a, int64_t b) {
     int64_t ans = 1;
@@ -160,7 +147,9 @@ void mul_conv(size_t n) {
 void double_mod_rev(size_t n) {
     for (size_t i = 0; i < n; i++) {
         if (ntt_c[i] != ntt_a[i]) {
-            ntt_a[i] = (quick_mul_mod(ntt_a[i], MOD_M1) + quick_mul_mod(ntt_c[i], MOD_M2)) % NTT_LCM;
+            // s * p1 + a1 = val = t * p2 + a2 's solution is t = (a1 - a2) / p2 (mod p1)
+            int64_t t = (ntt_a[i] - ntt_c[i]) % NTT_P + NTT_P;
+            ntt_a[i] = t * NTT_P2_INV % NTT_P * NTT_P2 + ntt_c[i];
         }
     }
 }
@@ -199,7 +188,7 @@ const int32_t BIGINT_MAXBASE = 1 << 15;
 
 const uint32_t BIGINT_NTT_THRESHOLD = 1024;
 const uint32_t BIGINT_MUL_THRESHOLD = 400;
-const uint32_t NTT_MAX_SIZE = 1 << 22;
+const uint32_t NTT_MAX_SIZE = 1 << 24;
 
 struct BigIntBase {
     typedef uint32_t base_t;
@@ -294,7 +283,7 @@ struct BigIntBase {
                 v[i] = add % (carry_t)base;
                 add /= (carry_t)base;
             } else {
-                v[i] = add % (carry_t)base + (base_t)base;
+                v[i] = ++add % (carry_t)base + (base_t)base - 1;
                 add = add / (carry_t)base - 1;
             }
         }
@@ -304,14 +293,18 @@ struct BigIntBase {
                 v[i] = add % (carry_t)base;
                 add /= (carry_t)base;
             } else {
-                v[i] = add % (carry_t)base + (base_t)base;
+                v[i] = ++add % (carry_t)base + (base_t)base - 1;
                 add = add / (carry_t)base - 1;
             }
         }
         if (add) {
-            v[0] = base - v[0];
+            add = base - v[0];
+            v[0] = add % base;
+            add /= base;
             for (size_t i = 1; i < v.size(); i++) {
-                v[i] = base - v[i] - 1;
+                add += base - v[i] - 1;
+                v[i] = add % base;
+                add /= base;
             }
         }
         trim();

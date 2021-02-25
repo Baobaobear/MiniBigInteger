@@ -33,11 +33,7 @@ const uint32_t BIGINT_MUL_THRESHOLD = 550;
 const uint32_t BIGINT_DIV_THRESHOLD = 1024;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 1500;
 
-#if BIGINTHEX_DIV_DOUBLE
-const uint32_t NTT_MAX_SIZE = 1 << 22;
-#else
-const uint32_t NTT_MAX_SIZE = 1 << 20;
-#endif
+const uint32_t NTT_MAX_SIZE = 1 << 24;
 
 template <typename T>
 inline T high_digit(T digit) {
@@ -352,13 +348,9 @@ protected:
             ;
         v.clear();
         uint64_t add = 0;
-        uint64_t err = 0;
 #if BIGINT_LARGE_BASE
         for (size_t i = 0; i <= len; i += 2) {
             add += NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] << COMPRESS_HALF_BIT);
-            if (NTT_NS::ntt_a[i] >= NTT_NS::NTT_LCM) {
-                ++err;
-            }
             v.push_back(low_digit(add));
             add = high_digit(add);
         }
@@ -371,7 +363,6 @@ protected:
 #endif
         for (; add; add = high_digit(add))
             v.push_back(low_digit(add));
-        add += err;
         trim();
         return *this;
     }
@@ -609,7 +600,7 @@ protected:
             BigInt_t hb = mb.raw_shr_to(base);
             raw_dividediv_basecase(ha, hb, r);
             ha = *this * b;
-            while (ha > a) {
+            while (a < ha) {
                 ha -= b;
                 *this -= BigInt_t(1);
             }

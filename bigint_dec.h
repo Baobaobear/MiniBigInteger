@@ -22,7 +22,7 @@ const uint32_t BIGINT_MUL_THRESHOLD = 400;
 const uint32_t BIGINT_DIV_THRESHOLD = 1024;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 1200;
 
-const uint32_t NTT_MAX_SIZE = 1 << 22;
+const uint32_t NTT_MAX_SIZE = 1 << 24;
 
 template <typename T>
 inline T high_digit(T digit) {
@@ -558,7 +558,7 @@ protected:
             BigInt_t hb = mb.raw_shr_to(base);
             raw_dividediv_basecase(ha, hb, r);
             ha = *this * b;
-            while (ha > a) {
+            while (a < ha) {
                 ha -= b;
                 *this -= BigInt_t(1);
             }
