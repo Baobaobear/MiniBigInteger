@@ -38,6 +38,6 @@ typedef int64_t intmax_t;
 #if !defined(BIGINT_LARGE_BASE) && (defined(_WIN64) || defined(_M_X64))
 #define BIGINT_LARGE_BASE 1
 #endif
-#if !BIGINT_LARGE_BASE && (defined(_WIN64) || defined(_M_X64)) //&& defined(_MSC_VER)
+#if !BIGINT_LARGE_BASE && (defined(_WIN64) || defined(_M_X64)) // || defined(_MSC_VER)
 #define BIGINT_INT64_OPTIMIZE 1
 #endif

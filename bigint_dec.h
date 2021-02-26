@@ -47,6 +47,23 @@ protected:
     int sign;
     std::vector<base_t> v;
     typedef BigIntDec BigInt_t;
+    template<typename _Tx, typename Ty>
+    void carry(_Tx& add, Ty& baseval, _Tx newval) {
+        add += newval;
+        baseval = low_digit(add);
+        add = high_digit(add);
+    }
+    template<typename _Tx, typename Ty>
+    void borrow(_Tx& add, Ty& baseval, _Tx newval) {
+        add += newval;
+        if (add >= 0) {
+            baseval = low_digit(add);
+            add = high_digit(add);
+        } else {
+            baseval = low_digit(++add) + COMPRESS_MOD - 1;
+            add = high_digit(add) - 1;
+        }
+    }
 
     bool raw_less(const BigInt_t &b) const {
         if (v.size() != b.size())
@@ -65,126 +82,66 @@ protected:
         return true;
     }
     BigInt_t &raw_add(const BigInt_t &b) {
-        if (v.size() < b.size()) {
+        if (v.size() < b.size())
             v.resize(b.size());
-        }
-        carry_t add = 0;
-        for (size_t i = 0; i < b.v.size(); i++) {
-            add += v[i];
-            add += b.v[i];
-            v[i] = low_digit(add);
-            add = high_digit(add);
-        }
-        for (size_t i = b.v.size(); add && i < v.size(); i++) {
-            add += v[i];
-            v[i] = low_digit(add);
-            add = high_digit(add);
-        }
-        if (add) {
-            v.push_back((base_t)add);
-        } else {
-            trim();
-        }
+        ucarry_t add = 0;
+        for (size_t i = 0; i < b.v.size(); i++)
+            carry(add, v[i], (ucarry_t)(v[i] + b.v[i]));
+        for (size_t i = b.v.size(); add && i < v.size(); i++)
+            carry(add, v[i], (ucarry_t)v[i]);
+        add ? v.push_back((base_t)add) : trim();
         return *this;
     }
     BigInt_t &raw_offset_add(const BigInt_t &b, size_t offset) {
-        carry_t add = 0;
-        for (size_t i = 0; i < b.size(); ++i) {
-            add += b.v[i];
-            add += v[i + offset];
-            v[i + offset] = low_digit(add);
-            add = high_digit(add);
-        }
-        for (size_t i = b.size() + offset; add; ++i) {
-            add += v[i];
-            v[i] = low_digit(add);
-            add = high_digit(add);
-        }
+        ucarry_t add = 0;
+        for (size_t i = 0; i < b.size(); ++i)
+            carry(add, v[i + offset], (ucarry_t)(v[i + offset] + b.v[i]));
+        for (size_t i = b.size() + offset; add; ++i)
+            carry(add, v[i], (ucarry_t)v[i]);
         return *this;
     }
     BigInt_t &raw_sub(const BigInt_t &b) {
-        if (v.size() < b.v.size()) {
+        if (v.size() < b.v.size())
             v.resize(b.v.size());
-        }
         carry_t add = 0;
-        for (size_t i = 0; i < b.v.size(); i++) {
-            add += v[i];
-            add -= b.v[i];
-            if (add >= 0) {
-                v[i] = low_digit(add);
-                add = high_digit(add);
-            } else {
-                v[i] = low_digit(++add) + COMPRESS_MOD - 1;
-                add = high_digit(add) - 1;
-            }
-        }
-        for (size_t i = b.v.size(); add && i < v.size(); i++) {
-            add += v[i];
-            if (add >= 0) {
-                v[i] = low_digit(add);
-                add = high_digit(add);
-            } else {
-                v[i] = low_digit(++add) + COMPRESS_MOD - 1;
-                add = high_digit(add) - 1;
-            }
-        }
+        for (size_t i = 0; i < b.v.size(); i++)
+            borrow(add, v[i], (carry_t)v[i] - (carry_t)b.v[i]);
+        for (size_t i = b.v.size(); add && i < v.size(); i++)
+            borrow(add, v[i], (carry_t)v[i]);
         if (add) {
             sign = -sign;
-            add = 1 + (COMPRESS_MOD - 1 - v[0]);
-            v[0] = low_digit(add);
-            add = high_digit(add);
-            for (size_t i = 1; i < v.size(); i++) {
-                add += COMPRESS_MOD - 1 - v[i];
-                v[i] = low_digit(add);
-                add = high_digit(add);
-            }
+            add = 1;
+            for (size_t i = 0; i < v.size(); i++)
+                carry(add, v[i], (carry_t)(COMPRESS_MOD - v[i] - 1));
         }
         trim();
         return *this;
     }
     BigInt_t &raw_offsetsub(const BigInt_t &b, size_t offset) {
         carry_t add = 0;
-        for (size_t i = 0; i < b.v.size(); i++) {
-            add += v[i + offset];
-            add -= b.v[i];
-            if (add >= 0) {
-                v[i + offset] = low_digit(add);
-                add = high_digit(add);
-            } else {
-                v[i + offset] = low_digit(++add) + COMPRESS_MOD - 1;
-                add = high_digit(add) - 1;
-            }
-        }
-        for (size_t i = offset + b.v.size(); add && i < v.size(); i++) {
-            add += v[i];
-            if (add >= 0) {
-                v[i] = low_digit(add);
-                add = high_digit(add);
-            } else {
-                v[i] = low_digit(++add) + COMPRESS_MOD - 1;
-                add = high_digit(add) - 1;
-            }
-        }
+        for (size_t i = 0; i < b.v.size(); i++)
+            borrow(add, v[i + offset], (carry_t)v[i + offset] - (carry_t)b.v[i]);
+        for (size_t i = offset + b.v.size(); add && i < v.size(); i++)
+            borrow(add, v[i], (carry_t)v[i]);
         return *this;
     }
     BigInt_t &raw_mul_int(uint32_t m) {
         if (m == 0) {
             set(0);
             return *this;
-        } else if (m == 1) {
+        } else if (m == 1)
             return *this;
-        }
 #if BIGINT_INT64_OPTIMIZE
-        int64_t add = 0;
+        uint64_t add = 0;
         size_t i = 0, s = v.size() & ~1;
         for (; i < s; i += 2) {
-            add += (int64_t)((v[i + 1] * COMPRESS_MOD) + v[i]) * m;
+            add += (uint64_t)((v[i + 1] * COMPRESS_MOD) + v[i]) * m;
             v[i] = low_digit(add);
             v[i + 1] = low_digit(high_digit(add));
             add = high_digit(high_digit(add));
         }
         for (; i < v.size(); i++) {
-            add += v[i] * (carry_t)m;
+            add += v[i] * (uint64_t)m;
             v[i] = low_digit(add);
             add = high_digit(add);
         }
@@ -194,11 +151,8 @@ protected:
         }
 #else
         ucarry_t add = 0;
-        for (size_t i = 0; i < v.size(); i++) {
-            add += v[i] * (ucarry_t)m;
-            v[i] = low_digit(add);
-            add = high_digit(add);
-        }
+        for (size_t i = 0; i < v.size(); i++)
+            carry(add, v[i], v[i] * (ucarry_t)m);
         if (add)
             v.push_back((base_t)add);
 #endif
@@ -241,12 +195,8 @@ protected:
 #else
         for (size_t i = 0; i < a.size(); i++) {
             ucarry_t add = 0, av = a.v[i];
-            for (size_t j = 0; j < b.size(); j++) {
-                add += v[i + j];
-                add += av * b.v[j];
-                v[i + j] = low_digit(add);
-                add = high_digit((ucarry_t)add);
-            }
+            for (size_t j = 0; j < b.size(); j++)
+                carry(add, v[i + j], v[i + j] + av * b.v[j]);
             v[i + b.size()] += (base_t)add;
         }
 #endif
@@ -412,11 +362,8 @@ protected:
             ++add;
         }
 
-        for (size_t i = 0; i < v.size(); i++) {
-            add += v[i];
-            v[i] = low_digit(add);
-            add = high_digit(add);
-        }
+        for (size_t i = 0; i < v.size(); i++)
+            carry(add, v[i], (carry_t)v[i]);
         trim();
         return *this;
     }
@@ -632,6 +579,8 @@ protected:
         if (size() <= 8) {
             BigIntBase sum(out_base);
             BigIntBase base(out_base);
+            BigIntBase ownbase(out_base);
+            ownbase.set(COMPRESS_MOD);
             {
                 base.set(1);
                 BigIntBase mul(out_base);
@@ -640,7 +589,8 @@ protected:
                 sum.raw_add(mul);
             }
             for (size_t i = 1; i < v.size(); i++) {
-                base.raw_mul_int(COMPRESS_MOD);
+                //base.raw_mul_int(COMPRESS_MOD);
+                base.raw_mul(ownbase, BigIntBase(base));
                 BigIntBase mul(out_base);
                 mul = base;
                 mul.raw_mul_int(v[i]);

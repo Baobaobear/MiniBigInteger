@@ -203,6 +203,23 @@ struct BigIntBase {
     int32_t digits;
     std::vector<base_t> v;
     typedef BigIntBase BigInt_t;
+    template<typename _Tx, typename Ty>
+    void carry(_Tx& add, Ty& baseval, _Tx newval) {
+        add += newval;
+        baseval = add % (_Tx)base;
+        add /= base;
+    }
+    template<typename _Tx, typename Ty>
+    void borrow(_Tx& add, Ty& baseval, _Tx newval) {
+        add += newval;
+        if (add >= 0) {
+            baseval = add % (_Tx)base;
+            add /= (_Tx)base;
+        } else {
+            baseval = ++add % (_Tx)base + (_Tx)base - 1;
+            add = add / (_Tx)base - 1;
+        }
+    }
 
     BigIntBase() {}
     BigIntBase(int b) { setbase(b); }
@@ -218,11 +235,10 @@ struct BigIntBase {
         v.resize(1);
         v[0] = 0;
         uintmax_t s;
-        if (n < 0) {
+        if (n < 0)
             s = -n;
-        } else {
+        else
             s = n;
-        }
         for (int i = 0; s; i++) {
             v.resize(i + 1);
             v[i] = s % base;
@@ -234,41 +250,22 @@ struct BigIntBase {
         return v.size();
     }
     BigInt_t &raw_add(const BigInt_t &b) {
-        if (v.size() < b.size()) {
+        if (v.size() < b.size())
             v.resize(b.size());
-        }
         ucarry_t add = 0;
-        for (size_t i = 0; i < b.v.size(); i++) {
-            add += v[i];
-            add += b.v[i];
-            v[i] = add % base;
-            add /= base;
-        }
-        for (size_t i = b.v.size(); add && i < v.size(); i++) {
-            add += v[i];
-            v[i] = add % base;
-            add /= base;
-        }
-        if (add) {
-            v.push_back((base_t)add);
-        } else {
-            trim();
-        }
+        for (size_t i = 0; i < b.v.size(); i++)
+            carry(add, v[i], (ucarry_t)(v[i] + b.v[i]));
+        for (size_t i = b.v.size(); add && i < v.size(); i++)
+            carry(add, v[i], (ucarry_t)v[i]);
+        add ? v.push_back((base_t)add) : trim();
         return *this;
     }
     BigInt_t &raw_offset_add(const BigInt_t &b, size_t offset) {
         ucarry_t add = 0;
-        for (size_t i = 0; i < b.size(); ++i) {
-            add += v[i + offset];
-            add += b.v[i];
-            v[i + offset] = add % base;
-            add /= base;
-        }
-        for (size_t i = b.size() + offset; add; ++i) {
-            add += v[i];
-            v[i] = add % base;
-            add /= base;
-        }
+        for (size_t i = 0; i < b.size(); ++i)
+            carry(add, v[i + offset], (ucarry_t)(v[i + offset] + b.v[i]));
+        for (size_t i = b.size() + offset; add; ++i)
+            carry(add, v[i], (ucarry_t)v[i]);
         return *this;
     }
     BigInt_t &raw_sub(const BigInt_t &b) {
@@ -276,47 +273,22 @@ struct BigIntBase {
             v.resize(b.v.size());
         }
         carry_t add = 0;
-        for (size_t i = 0; i < b.v.size(); i++) {
-            add += v[i];
-            add -= b.v[i];
-            if (add >= 0) {
-                v[i] = add % (carry_t)base;
-                add /= (carry_t)base;
-            } else {
-                v[i] = ++add % (carry_t)base + (base_t)base - 1;
-                add = add / (carry_t)base - 1;
-            }
-        }
-        for (size_t i = b.v.size(); add && i < v.size(); i++) {
-            add += v[i];
-            if (add >= 0) {
-                v[i] = add % (carry_t)base;
-                add /= (carry_t)base;
-            } else {
-                v[i] = ++add % (carry_t)base + (base_t)base - 1;
-                add = add / (carry_t)base - 1;
-            }
-        }
+        for (size_t i = 0; i < b.v.size(); i++)
+            borrow(add, v[i], (carry_t)v[i] - (carry_t)b.v[i]);
+        for (size_t i = b.v.size(); add && i < v.size(); i++)
+            borrow(add, v[i], (carry_t)v[i]);
         if (add) {
-            add = base - v[0];
-            v[0] = add % base;
-            add /= base;
-            for (size_t i = 1; i < v.size(); i++) {
-                add += base - v[i] - 1;
-                v[i] = add % base;
-                add /= base;
-            }
+            add = 1;
+            for (size_t i = 0; i < v.size(); i++)
+                carry(add, v[i], (carry_t)(base - v[i] - 1));
         }
         trim();
         return *this;
     }
     BigInt_t &raw_mul_int(uint32_t m) {
         ucarry_t add = 0;
-        for (size_t i = 0; i < v.size(); i++) {
-            add += v[i] * (ucarry_t)m;
-            v[i] = add % base;
-            add /= base;
-        }
+        for (size_t i = 0; i < v.size(); i++)
+            carry(add, v[i], v[i] * (ucarry_t)m);
         while (add) {
             v.push_back((base_t)(add % base));
             add /= base;
@@ -328,21 +300,16 @@ struct BigIntBase {
         v.resize(a.size() + b.size());
         for (size_t i = 0; i < a.size(); i++) {
             ucarry_t add = 0, av = a.v[i];
-            for (size_t j = 0; j < b.size(); j++) {
-                add += v[i + j];
-                add += av * b.v[j];
-                v[i + j] = add % base;
-                add /= base;
-            }
+            for (size_t j = 0; j < b.size(); j++)
+                carry(add, v[i + j], v[i + j] + av * b.v[j]);
             v[i + b.size()] += (base_t)add;
         }
         trim();
         return *this;
     }
     BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
-        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) {
+        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD)
             return raw_mul(a, b);
-        }
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD)
             ;
         else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
@@ -367,22 +334,18 @@ struct BigIntBase {
         return *this;
     }
     BigInt_t &raw_nttmul(const BigInt_t &a, const BigInt_t &b) {
-        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) {
+        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD)
             return raw_mul(a, b);
-        }
-        if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE) {
+        if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE)
             return raw_fastmul(a, b);
-        }
         size_t len, lenmul = 1;
         NTT_NS::get_wn();
         NTT_NS::ntt_a.clear();
         NTT_NS::ntt_b.clear();
-        for (size_t i = 0; i < a.size(); ++i) {
+        for (size_t i = 0; i < a.size(); ++i)
             NTT_NS::ntt_a.push_back(a.v[i]);
-        }
-        for (size_t i = 0; i < b.size(); ++i) {
+        for (size_t i = 0; i < b.size(); ++i)
             NTT_NS::ntt_b.push_back(b.v[i]);
-        }
         NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
         NTT_NS::mul_conv2(len);
         len = (a.size() + b.size()) * lenmul;
@@ -391,9 +354,9 @@ struct BigIntBase {
         v.clear();
         int64_t add = 0;
         for (size_t i = 0; i <= len; i++) {
-            int64_t s = add + NTT_NS::ntt_a[i];
-            v.push_back(s % base);
-            add = s / base;
+            add += NTT_NS::ntt_a[i];
+            v.push_back(add % base);
+            add /= base;
         }
         for (; add; add /= base)
             v.push_back(add % base);
@@ -401,19 +364,16 @@ struct BigIntBase {
         return *this;
     }
     BigInt_t &raw_nttsqr(const BigInt_t &a) {
-        if (a.size() <= BIGINT_MUL_THRESHOLD) {
+        if (a.size() <= BIGINT_MUL_THRESHOLD)
             return raw_mul(a, a);
-        }
-        if (a.size() <= BIGINT_NTT_THRESHOLD || (a.size() + a.size()) > NTT_MAX_SIZE) {
+        if (a.size() <= BIGINT_NTT_THRESHOLD || (a.size() + a.size()) > NTT_MAX_SIZE)
             return raw_fastmul(a, a);
-        }
         size_t len, lenmul = 1;
         NTT_NS::get_wn();
         NTT_NS::ntt_a.clear();
         NTT_NS::ntt_b.clear();
-        for (size_t i = 0; i < a.size(); ++i) {
+        for (size_t i = 0; i < a.size(); ++i)
             NTT_NS::ntt_a.push_back(a.v[i]);
-        }
         NTT_NS::ntt_prepare(a.size() * 2, 0, len, 2);
         NTT_NS::sqr_conv2(len);
         len = (a.size() + a.size()) * lenmul;
@@ -422,9 +382,9 @@ struct BigIntBase {
         v.clear();
         int64_t add = 0;
         for (size_t i = 0; i <= len; i++) {
-            int64_t s = add + NTT_NS::ntt_a[i];
-            v.push_back(s % base);
-            add = s / base;
+            add += NTT_NS::ntt_a[i];
+            v.push_back(add % base);
+            add /= base;
         }
         for (; add; add /= base)
             v.push_back(add % base);

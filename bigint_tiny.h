@@ -30,7 +30,7 @@ struct BigIntTiny {
                 a = (i % 4 >= 2) ? v[i / 4] / 100 : v[i / 4] % 100, v[i] = (i & 1) ? a / 10 : a % 10;
         setsign(1, 1);
     }
-    int get_pos(int pos) const { return pos >= (int)v.size() ? 0 : v[pos]; }
+    int get_pos(unsigned pos) const { return pos >= v.size() ? 0 : v[pos]; }
     BigIntTiny &setsign(int newsign, int rev) {
         for (int i = (int)v.size() - 1; i > 0 && v[i] == 0; i--)
             v.erase(v.begin() + i);
@@ -114,7 +114,7 @@ struct BigIntTiny {
     BigIntTiny operator/(const BigIntTiny &b) const {
         BigIntTiny c, d;
         d.v.resize(v.size());
-        double db = 1.0 / (b.v.back() + (b.get_pos(b.v.size() - 2) / 1e4) + (b.get_pos(b.v.size() - 3) + 1) / 1e8);
+        double db = 1.0 / (b.v.back() + (b.get_pos((unsigned)b.v.size() - 2) / 1e4) + (b.get_pos((unsigned)b.v.size() - 3) + 1) / 1e8);
         for (int i = (int)v.size() - 1; i >= 0; i--) {
             c.v.insert(c.v.begin(), v[i]);
             int m = (int)((c.get_pos((int)b.v.size()) * 10000 + c.get_pos((int)b.v.size() - 1)) * db);
