@@ -86,7 +86,7 @@ protected:
             v.resize(b.size());
         ucarry_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++)
-            carry(add, v[i], (ucarry_t)(v[i] + b.v[i]));
+            carry(add, v[i], (ucarry_t)v[i] + b.v[i]);
         for (size_t i = b.v.size(); add && i < v.size(); i++)
             carry(add, v[i], (ucarry_t)v[i]);
         add ? v.push_back((base_t)add) : trim();
@@ -95,7 +95,7 @@ protected:
     BigInt_t &raw_offset_add(const BigInt_t &b, size_t offset) {
         ucarry_t add = 0;
         for (size_t i = 0; i < b.size(); ++i)
-            carry(add, v[i + offset], (ucarry_t)(v[i + offset] + b.v[i]));
+            carry(add, v[i + offset], (ucarry_t)v[i + offset] + b.v[i]);
         for (size_t i = b.size() + offset; add; ++i)
             carry(add, v[i], (ucarry_t)v[i]);
         return *this;
