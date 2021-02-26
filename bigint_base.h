@@ -15,64 +15,91 @@ namespace NTT_NS {
 
 const int32_t NTT_POW = 32;
 const int32_t NTT_G = 3;
-const int32_t NTT_P = (479 << 21) + 1;
-const int32_t NTT_P_INV = 332747959;
+const int32_t NTT_P1 = (479 << 21) + 1;
+const int32_t NTT_P1_INV = 332747959;
 const int32_t NTT_P2 = 998244353;
 const int32_t NTT_P2_INV = 669690699;
 
-int32_t ntt_wn[2][NTT_POW];
-int32_t ntt_wn2[2][NTT_POW];
-std::vector<int64_t> ntt_a, ntt_b, ntt_c, ntt_d;
-std::vector<size_t> ntt_ra[32];
-size_t *ntt_r;
+static std::vector<size_t> ntt_ra[NTT_POW];
+static size_t *ntt_r;
 
-int64_t quick_pow_mod(int64_t a, int64_t b) {
-    int64_t ans = 1;
-    a %= NTT_P;
-    while (b) {
-        if (b & 1)
-            ans = ans * a % NTT_P;
-        b >>= 1;
-        a = a * a % NTT_P;
+template<int32_t NTT_MOD>
+struct NTT {
+    int32_t ntt_wn[2][NTT_POW];
+    std::vector<int64_t> ntt_a, ntt_b;
+    int64_t quick_pow_mod(int64_t a, int64_t b) {
+        int64_t ans = 1;
+        a %= NTT_MOD;
+        while (b) {
+            if (b & 1)
+                ans = ans * a % NTT_MOD;
+            b >>= 1;
+            a = a * a % NTT_MOD;
+        }
+        return ans;
     }
-    return ans;
-}
-
-int64_t quick_pow_mod2(int64_t a, int64_t b) {
-    int64_t ans = 1;
-    a %= NTT_P2;
-    while (b) {
-        if (b & 1)
-            ans = ans * a % NTT_P2;
-        b >>= 1;
-        a = a * a % NTT_P2;
-    }
-    return ans;
-}
-
-void get_wn() {
-    if (ntt_wn[1][0] == 0) {
-        for (int i = 0; i < NTT_POW; i++) {
-            ntt_wn[1][i] = (int32_t)quick_pow_mod(NTT_G, (NTT_P - 1) / ((int64_t)1 << i));
-            ntt_wn[0][i] = (int32_t)quick_pow_mod(ntt_wn[1][i], NTT_P - 2);
-            ntt_wn2[1][i] = (int32_t)quick_pow_mod2(NTT_G, (NTT_P2 - 1) / ((int64_t)1 << i));
-            ntt_wn2[0][i] = (int32_t)quick_pow_mod2(ntt_wn2[1][i], NTT_P2 - 2);
+    NTT() {
+        if (ntt_wn[1][0] == 0) {
+            for (int i = 0; i < NTT_POW; i++) {
+                ntt_wn[1][i] = (int32_t)quick_pow_mod(NTT_G, (NTT_MOD - 1) / ((int64_t)1 << i));
+                ntt_wn[0][i] = (int32_t)quick_pow_mod(ntt_wn[1][i], NTT_MOD - 2);
+            }
         }
     }
-}
+    void transform(int64_t a[], size_t len, int on) {
+        for (size_t i = 0; i < len; i++) {
+            if (i < ntt_r[i])
+                std::swap(a[i], a[ntt_r[i]]);
+        }
+        size_t id = 0;
+        for (size_t h = 1; h < len; h <<= 1) {
+            int32_t wn = ntt_wn[on][++id];
+            for (size_t j = 0; j < len; j += h << 1) {
+                int64_t w = 1;
+                size_t e = j + h;
+                for (size_t k = j; k < e; k++, w = w * wn % NTT_MOD) {
+                    int32_t t = (int32_t)(w * a[k + h] % NTT_MOD);
+                    a[k + h] = ((int32_t)a[k] - t + NTT_MOD) % NTT_MOD;
+                    a[k] = ((int32_t)a[k] + t) % NTT_MOD;
+                }
+            }
+        }
+        if (on == 0) {
+            int64_t inv = quick_pow_mod(len, NTT_MOD - 2);
+            for (size_t i = 0; i < len; i++)
+                a[i] = a[i] * inv % NTT_MOD;
+        }
+    }
+    void mul_conv(size_t n) {
+        transform(&*ntt_a.begin(), n, 1);
+        transform(&*ntt_b.begin(), n, 1);
+        for (size_t i = 0; i < n; i++)
+            ntt_a[i] = ntt_a[i] * ntt_b[i] % NTT_MOD;
+        transform(&*ntt_a.begin(), n, 0);
+    }
+    void sqr_conv(size_t n) {
+        transform(&*ntt_a.begin(), n, 1);
+        for (size_t i = 0; i < n; i++)
+            ntt_a[i] = ntt_a[i] * ntt_a[i] % NTT_MOD;
+        transform(&*ntt_a.begin(), n, 0);
+    }
+};
+
+static NTT<NTT_P1> ntt1;
+static NTT<NTT_P2> ntt2;
 
 void ntt_prepare(size_t size_a, size_t size_b, size_t &len, int flag = 1) {
     len = 1;
     size_t L1 = size_a, L2 = size_b;
     while (len < L1 + L2)
         len <<= 1;
-    ntt_a.resize(len);
+    ntt1.ntt_a.resize(len);
     if (flag & 1)
-        ntt_b.resize(len);
+        ntt1.ntt_b.resize(len);
     if (flag & 2)
-        ntt_c = ntt_a;
+        ntt2.ntt_a = ntt1.ntt_a;
     if (flag & 4)
-        ntt_d = ntt_b;
+        ntt2.ntt_b = ntt1.ntt_b;
     int32_t id = 0;
     while (((uint64_t)1 << id) < len)
         ++id;
@@ -83,102 +110,26 @@ void ntt_prepare(size_t size_a, size_t size_b, size_t &len, int flag = 1) {
             r[i] = (r[i >> 1] >> 1) | ((i & 1) * (len >> 1));
     }
     ntt_r = &*ntt_ra[id].begin();
-    get_wn();
 }
 
-void NTT(int64_t a[], size_t len, int on) {
-    for (size_t i = 0; i < len; i++) {
-        if (i < ntt_r[i])
-            std::swap(a[i], a[ntt_r[i]]);
-    }
-    size_t id = 0;
-    for (size_t h = 1; h < len; h <<= 1) {
-        int32_t wn = ntt_wn[on][++id];
-        for (size_t j = 0; j < len; j += h << 1) {
-            int64_t w = 1;
-            size_t e = j + h;
-            for (size_t k = j; k < e; k++, w = w * wn % NTT_P) {
-                int32_t t = (int32_t)(w * a[k + h] % NTT_P);
-                a[k + h] = ((int32_t)a[k] - t + NTT_P) % NTT_P;
-                a[k] = ((int32_t)a[k] + t) % NTT_P;
-            }
-        }
-    }
-    if (on == 0) {
-        int64_t inv = quick_pow_mod(len, NTT_P - 2);
-        for (size_t i = 0; i < len; i++)
-            a[i] = a[i] * inv % NTT_P;
-    }
-}
 
-void NTT2(int64_t a[], size_t len, int on) {
-    for (size_t i = 0; i < len; i++) {
-        if (i < ntt_r[i])
-            std::swap(a[i], a[ntt_r[i]]);
-    }
-    size_t id = 0;
-    for (size_t h = 1; h < len; h <<= 1) {
-        int32_t wn = ntt_wn2[on][++id];
-        for (size_t j = 0; j < len; j += h << 1) {
-            int64_t w = 1;
-            size_t e = j + h;
-            for (size_t k = j; k < e; k++, w = w * wn % NTT_P2) {
-                int32_t t = (int32_t)(w * a[k + h] % NTT_P2);
-                a[k + h] = ((int32_t)a[k] - t + NTT_P2) % NTT_P2;
-                a[k] = ((int32_t)a[k] + t) % NTT_P2;
-            }
-        }
-    }
-    if (on == 0) {
-        int64_t inv = quick_pow_mod2(len, NTT_P2 - 2);
-        for (size_t i = 0; i < len; i++)
-            a[i] = a[i] * inv % NTT_P2;
-    }
-}
-
-void mul_conv(size_t n) {
-    NTT(&*ntt_a.begin(), n, 1);
-    NTT(&*ntt_b.begin(), n, 1);
-    for (size_t i = 0; i < n; i++)
-        ntt_a[i] = ntt_a[i] * ntt_b[i] % NTT_P;
-    NTT(&*ntt_a.begin(), n, 0);
-}
-
-void double_mod_rev(size_t n) {
+static void double_mod_rev(size_t n) {
     for (size_t i = 0; i < n; i++) {
-        if (ntt_c[i] != ntt_a[i]) {
-            // s * p1 + a1 = val = t * p2 + a2 's solution is t = (a1 - a2) / p2 (mod p1)
-            int64_t t = (ntt_a[i] - ntt_c[i]) % NTT_P + NTT_P;
-            ntt_a[i] = t * NTT_P2_INV % NTT_P * NTT_P2 + ntt_c[i];
-        }
+        // s * p1 + a1 = val = t * p2 + a2 's solution is t = (a1 - a2) / p2 (mod p1)
+        int64_t t = (ntt1.ntt_a[i] - ntt2.ntt_a[i]) % NTT_P1 + NTT_P1;
+        ntt1.ntt_a[i] = t * NTT_P2_INV % NTT_P1 * NTT_P2 + ntt2.ntt_a[i];
     }
 }
 
 void mul_conv2(size_t n) {
-    NTT(&*ntt_a.begin(), n, 1);
-    NTT(&*ntt_b.begin(), n, 1);
-    for (size_t i = 0; i < n; i++)
-        ntt_a[i] = ntt_a[i] * ntt_b[i] % NTT_P;
-    NTT(&*ntt_a.begin(), n, 0);
-
-    NTT2(&*ntt_c.begin(), n, 1);
-    NTT2(&*ntt_d.begin(), n, 1);
-    for (size_t i = 0; i < n; i++)
-        ntt_c[i] = ntt_c[i] * ntt_d[i] % NTT_P2;
-    NTT2(&*ntt_c.begin(), n, 0);
+    ntt1.mul_conv(n);
+    ntt2.mul_conv(n);
     double_mod_rev(n);
 }
 
 void sqr_conv2(size_t n) {
-    NTT(&*ntt_a.begin(), n, 1);
-    for (size_t i = 0; i < n; i++)
-        ntt_a[i] = ntt_a[i] * ntt_a[i] % NTT_P;
-    NTT(&*ntt_a.begin(), n, 0);
-
-    NTT2(&*ntt_c.begin(), n, 1);
-    for (size_t i = 0; i < n; i++)
-        ntt_c[i] = ntt_c[i] * ntt_c[i] % NTT_P2;
-    NTT2(&*ntt_c.begin(), n, 0);
+    ntt1.sqr_conv(n);
+    ntt2.sqr_conv(n);
     double_mod_rev(n);
 }
 } // namespace NTT_NS
@@ -339,22 +290,22 @@ struct BigIntBase {
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE)
             return raw_fastmul(a, b);
         size_t len, lenmul = 1;
-        NTT_NS::get_wn();
-        NTT_NS::ntt_a.clear();
-        NTT_NS::ntt_b.clear();
+        std::vector<int64_t> &ntt_a = NTT_NS::ntt1.ntt_a, &ntt_b = NTT_NS::ntt1.ntt_b;
+        ntt_a.resize(a.size());
+        ntt_b.resize(b.size());
         for (size_t i = 0; i < a.size(); ++i)
-            NTT_NS::ntt_a.push_back(a.v[i]);
+            ntt_a[i] = a.v[i];
         for (size_t i = 0; i < b.size(); ++i)
-            NTT_NS::ntt_b.push_back(b.v[i]);
+            ntt_b[i] = b.v[i];
         NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
         NTT_NS::mul_conv2(len);
         len = (a.size() + b.size()) * lenmul;
-        while (len > 0 && NTT_NS::ntt_a[--len] == 0)
+        while (len > 0 && ntt_a[--len] == 0)
             ;
         v.clear();
         int64_t add = 0;
         for (size_t i = 0; i <= len; i++) {
-            add += NTT_NS::ntt_a[i];
+            add += ntt_a[i];
             v.push_back(add % base);
             add /= base;
         }
@@ -369,20 +320,19 @@ struct BigIntBase {
         if (a.size() <= BIGINT_NTT_THRESHOLD || (a.size() + a.size()) > NTT_MAX_SIZE)
             return raw_fastmul(a, a);
         size_t len, lenmul = 1;
-        NTT_NS::get_wn();
-        NTT_NS::ntt_a.clear();
-        NTT_NS::ntt_b.clear();
+        std::vector<int64_t> &ntt_a = NTT_NS::ntt1.ntt_a;
+        ntt_a.resize(a.size());
         for (size_t i = 0; i < a.size(); ++i)
-            NTT_NS::ntt_a.push_back(a.v[i]);
+            ntt_a[i] = a.v[i];
         NTT_NS::ntt_prepare(a.size() * 2, 0, len, 2);
         NTT_NS::sqr_conv2(len);
         len = (a.size() + a.size()) * lenmul;
-        while (len > 0 && NTT_NS::ntt_a[--len] == 0)
+        while (len > 0 && ntt_a[--len] == 0)
             ;
         v.clear();
         int64_t add = 0;
         for (size_t i = 0; i <= len; i++) {
-            add += NTT_NS::ntt_a[i];
+            add += ntt_a[i];
             v.push_back(add % base);
             add /= base;
         }

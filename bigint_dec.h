@@ -272,43 +272,48 @@ protected:
             return *this;
         }
         size_t len, lenmul = 1;
-        NTT_NS::ntt_a.clear();
-        NTT_NS::ntt_b.clear();
+        std::vector<int64_t> &ntt_a = NTT_NS::ntt1.ntt_a, &ntt_b = NTT_NS::ntt1.ntt_b;
 #if BIGINT_LARGE_BASE
-        for (size_t i = 0; i < a.size(); ++i) {
-            NTT_NS::ntt_a.push_back(a.v[i] % COMPRESS_HALF_MOD);
-            NTT_NS::ntt_a.push_back(a.v[i] / COMPRESS_HALF_MOD);
+        ntt_a.resize(a.size() * 2);
+        ntt_b.resize(b.size() * 2);
+        for (size_t i = 0, j = 0; i < a.size(); ++i, ++j) {
+            ntt_a[j] = a.v[i] % COMPRESS_HALF_MOD;
+            ntt_a[++j] = a.v[i] / COMPRESS_HALF_MOD;
         }
-        for (size_t i = 0; i < b.size(); ++i) {
-            NTT_NS::ntt_b.push_back(b.v[i] % COMPRESS_HALF_MOD);
-            NTT_NS::ntt_b.push_back(b.v[i] / COMPRESS_HALF_MOD);
+        for (size_t i = 0, j = 0; i < b.size(); ++i, ++j) {
+            ntt_b[j] = b.v[i] % COMPRESS_HALF_MOD;
+            ntt_b[++j] = b.v[i] / COMPRESS_HALF_MOD;
         }
         NTT_NS::ntt_prepare(a.size() * 2, b.size() * 2, len, 7);
         lenmul = 2;
 #else
+        ntt_a.resize(a.size());
+        ntt_b.resize(b.size());
         for (size_t i = 0; i < a.size(); ++i) {
-            NTT_NS::ntt_a.push_back(a.v[i]);
+            ntt_a[i] = a.v[i];
         }
         for (size_t i = 0; i < b.size(); ++i) {
-            NTT_NS::ntt_b.push_back(b.v[i]);
+            ntt_b[i] = b.v[i];
         }
         NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
 #endif
         NTT_NS::mul_conv2(len);
         len = (a.size() + b.size()) * lenmul;
-        while (len > 0 && NTT_NS::ntt_a[--len] == 0)
+        while (len > 0 && ntt_a[--len] == 0)
             ;
         v.clear();
         uint64_t add = 0;
 #if BIGINT_LARGE_BASE
+        v.reserve(len / 2 + 3);
         for (size_t i = 0; i <= len; i += 2) {
-            add += NTT_NS::ntt_a[i] + (NTT_NS::ntt_a[i + 1] * COMPRESS_HALF_MOD);
+            add += ntt_a[i] + (ntt_a[i + 1] * COMPRESS_HALF_MOD);
             v.push_back(low_digit(add));
             add = high_digit(add);
         }
 #else
+        v.reserve(len + 3);
         for (size_t i = 0; i <= len; i++) {
-            add += NTT_NS::ntt_a[i];
+            add += ntt_a[i];
             v.push_back(low_digit(add));
             add = high_digit(add);
         }
@@ -457,7 +462,6 @@ protected:
             keep_size = std::min(keep_size * 2, s_len);
             x1.keep(keep_size);
         }
-        //for (x1.v.push_back(x0.v.back() + 1); x1 != x0; len_seq.size() > 1 && (len_seq.pop_back(), 0)) {
         for (; !len_seq.empty(); len_seq.pop_back()) {
             // x1 = x0(2 - x0 * b)
             x0 = x1;
