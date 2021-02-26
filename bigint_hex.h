@@ -59,13 +59,13 @@ protected:
     std::vector<base_t> v;
     typedef BigIntHex BigInt_t;
     template<typename _Tx, typename Ty>
-    void carry(_Tx& add, Ty& baseval, _Tx newval) {
+    static inline void carry(_Tx& add, Ty& baseval, _Tx newval) {
         add += newval;
         baseval = low_digit(add);
         add = high_digit(add);
     }
     template<typename _Tx, typename Ty>
-    void borrow(_Tx& add, Ty& baseval, _Tx newval) {
+    static inline void borrow(_Tx& add, Ty& baseval, _Tx newval) {
         add += newval;
         baseval = low_digit(add);
         add = high_digit(add);
@@ -207,7 +207,7 @@ protected:
             v[i + b.size()] += (base_t)add;
 #else
             for (size_t j = i + b.size(); add; ++j)
-                carry(add, v[j], v[j]);
+                carry(add, v[j], (ucarry_t)v[j]);
 #endif
         }
 #endif

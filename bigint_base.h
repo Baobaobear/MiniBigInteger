@@ -204,13 +204,13 @@ struct BigIntBase {
     std::vector<base_t> v;
     typedef BigIntBase BigInt_t;
     template<typename _Tx, typename Ty>
-    void carry(_Tx& add, Ty& baseval, _Tx newval) {
+    inline void carry(_Tx& add, Ty& baseval, _Tx newval) {
         add += newval;
         baseval = add % (_Tx)base;
         add /= base;
     }
     template<typename _Tx, typename Ty>
-    void borrow(_Tx& add, Ty& baseval, _Tx newval) {
+    inline void borrow(_Tx& add, Ty& baseval, _Tx newval) {
         add += newval;
         if (add >= 0) {
             baseval = add % (_Tx)base;

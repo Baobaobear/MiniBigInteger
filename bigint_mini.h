@@ -32,13 +32,13 @@ protected:
     std::vector<base_t> v;
     typedef BigIntMini BigInt_t;
     template<typename _Tx, typename Ty>
-    void carry(_Tx& add, Ty& baseval, _Tx newval) {
+    static inline void carry(_Tx& add, Ty& baseval, _Tx newval) {
         add += newval;
         baseval = low_digit(add);
         add = high_digit(add);
     }
     template<typename _Tx, typename Ty>
-    void borrow(_Tx& add, Ty& baseval, _Tx newval) {
+    static inline void borrow(_Tx& add, Ty& baseval, _Tx newval) {
         add += newval;
         if (add >= 0) {
             baseval = low_digit(add);
