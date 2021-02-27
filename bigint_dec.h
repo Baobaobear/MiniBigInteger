@@ -18,9 +18,13 @@ const uint32_t COMPRESS_DIGITS = 4;
 #endif
 
 const uint32_t BIGINT_NTT_THRESHOLD = 2048;
+#if BIGINT_X64 || BIGINT_LARGE_BASE
+const uint32_t BIGINT_MUL_THRESHOLD = 300;
+#else
 const uint32_t BIGINT_MUL_THRESHOLD = 400;
-const uint32_t BIGINT_DIV_THRESHOLD = 1024;
-const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 1200;
+#endif
+const uint32_t BIGINT_DIV_THRESHOLD = 2048;
+const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 2000;
 
 const uint32_t NTT_MAX_SIZE = 1 << 24;
 
@@ -425,9 +429,6 @@ protected:
         if (b.size() < BIGINT_DIV_THRESHOLD) {
             BigInt_t r;
             return raw_div(a, b, r);
-        } else if (b.size() < BIGINT_DIVIDEDIV_THRESHOLD) {
-            BigInt_t r;
-            return raw_dividediv(a, b, r);
         }
         size_t extand_digs = 2;
         size_t ans_len = a.size() - b.size() + extand_digs + 1, s_len = ans_len + ans_len / 8;
@@ -510,7 +511,7 @@ protected:
             raw_dividediv_basecase(ha, hb, r);
             ha = *this * b;
             while (a < ha) {
-                ha -= b;
+                ha.raw_sub(b);
                 *this -= BigInt_t(1);
             }
             r = a - ha;

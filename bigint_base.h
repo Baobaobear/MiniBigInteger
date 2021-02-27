@@ -138,7 +138,7 @@ namespace BigIntBaseNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;
 
 const uint32_t BIGINT_NTT_THRESHOLD = 1024;
-const uint32_t BIGINT_MUL_THRESHOLD = 400;
+const uint32_t BIGINT_MUL_THRESHOLD = 350;
 const uint32_t NTT_MAX_SIZE = 1 << 24;
 
 struct BigIntBase {

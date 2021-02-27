@@ -12,7 +12,7 @@ const int32_t COMPRESS_MOD = 10000;
 const uint32_t COMPRESS_DIGITS = 4;
 
 const uint32_t BIGINT_MUL_THRESHOLD = 400;
-const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 1200;
+const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 2000;
 
 template <typename T>
 inline T high_digit(T digit) {
@@ -231,7 +231,7 @@ protected:
             raw_dividediv_basecase(ha, hb, r);
             ha = *this * b;
             while (a < ha) {
-                ha = ha - b;
+                ha.raw_sub(b);
                 *this = *this - BigInt_t(1);
             }
             r = a - ha;
