@@ -6,6 +6,8 @@
 
 This is a C++03 port of large integer library. It allows you parsing of numbers as strings in any bases between 2 and 36 and converting them back to string.
 
+The BigIntMini & BigIntTiny is designed for online contest that enought for most of case.
+
 ## Code Example
 
 Here is an example for calculate 2^100
@@ -66,6 +68,10 @@ int main() {
 ```
 
 The output is `1267650600228229401496703205376`
+
+## Usage
+
+Copy all files to your project's path then include them.
 
 ## Operators
 

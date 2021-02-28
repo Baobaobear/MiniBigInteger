@@ -28,14 +28,14 @@ const uint32_t COMPRESS_HALF_MASK = COMPRESS_HALF_MOD - 1;
 const uint64_t COMPRESS_MOD = (uint64_t)1 << COMPRESS_BIT;
 const uint32_t COMPRESS_MASK = COMPRESS_MOD - 1;
 
-const uint32_t BIGINT_NTT_THRESHOLD = 2048;
+const uint32_t BIGINT_NTT_THRESHOLD = 1500;
 #if BIGINT_X64 || BIGINT_LARGE_BASE
 const uint32_t BIGINT_MUL_THRESHOLD = 300;
 #else
 const uint32_t BIGINT_MUL_THRESHOLD = 550;
 #endif
 const uint32_t BIGINT_DIV_THRESHOLD = 2048;
-const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 2500;
+const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
 
 const uint32_t NTT_MAX_SIZE = 1 << 24;
 
@@ -135,7 +135,17 @@ protected:
             borrow(add, v[i], (carry_t)v[i]);
         return *this;
     }
-    BigInt_t &raw_mul_int(uint32_t m) {
+    BigInt_t &raw_muloffsetsub(const BigInt_t &b, base_t mul, size_t offset) {
+        if (mul == 0)
+            return *this;
+        carry_t add = 0;
+        for (size_t i = 0; i < b.v.size(); i++)
+            borrow(add, v[i + offset], (carry_t)v[i + offset] - (carry_t)b.v[i] * (carry_t)mul);
+        for (size_t i = offset + b.v.size(); add && i < v.size(); i++)
+            borrow(add, v[i], (carry_t)v[i]);
+        return *this;
+    }
+    BigInt_t &raw_mul_int(base_t m) {
         if (m == 0) {
             set(0);
             return *this;
@@ -339,8 +349,8 @@ protected:
         return *this;
     }
     BigInt_t &raw_div(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
+        r = a;
         if (a.raw_less(b)) {
-            r = a;
             return set(0);
         } else if (b.size() == 2 && b.v[1] == 1 && b.v[0] == 0) {
             *this = a;
@@ -349,7 +359,6 @@ protected:
         }
         v.clear();
         v.resize(a.size() - b.size() + 1);
-        r = a;
         r.v.resize(a.size() + 1);
         size_t offset = b.size();
 #if BIGINTHEX_DIV_DOUBLE
@@ -395,12 +404,14 @@ protected:
                 }
             }
 #endif
+#if BIGINTHEX_DIV_DOUBLE
+            r.raw_muloffsetsub(b, m, i);
+#else
             if (m) {
                 v[i] += (base_t)m;
                 BigInt_t bm = b;
                 bm.raw_mul_int((base_t)m);
                 r.raw_offsetsub(bm, i);
-#if !BIGINTHEX_DIV_DOUBLE
                 if (r.v[i + offset])
                     ++i;
 #endif
@@ -1044,8 +1055,11 @@ public:
             return set(1);
         }
         BigInt_t d;
-        d.raw_dividediv(*this, b, r);
+        d.raw_fastdiv(*this, b);
         d.sign = sign * b.sign;
+        r = *this - d * b;
+        //d.raw_dividediv(*this, b, r);
+        //d.sign = sign * b.sign;
         return BIGINT_STD_MOVE(d);
     }
 

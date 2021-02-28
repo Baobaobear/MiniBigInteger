@@ -12,7 +12,7 @@ const int32_t COMPRESS_MOD = 10000;
 const uint32_t COMPRESS_DIGITS = 4;
 
 const uint32_t BIGINT_MUL_THRESHOLD = 400;
-const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 2000;
+const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
 
 template <typename T>
 inline T high_digit(T digit) {
@@ -150,13 +150,12 @@ protected:
         return *this;
     }
     BigInt_t &raw_div(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
+        r = a;
         if (a.raw_less(b)) {
-            r = a;
             return set(0);
         }
         v.clear();
         v.resize(a.size() - b.size() + 1);
-        r = a;
         r.v.resize(a.size() + 1);
         size_t offset = b.size();
         double db = b.v.back();

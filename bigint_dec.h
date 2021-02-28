@@ -17,14 +17,14 @@ const int32_t COMPRESS_MOD = 10000;
 const uint32_t COMPRESS_DIGITS = 4;
 #endif
 
-const uint32_t BIGINT_NTT_THRESHOLD = 2048;
+const uint32_t BIGINT_NTT_THRESHOLD = 1500;
 #if BIGINT_X64 || BIGINT_LARGE_BASE
 const uint32_t BIGINT_MUL_THRESHOLD = 300;
 #else
 const uint32_t BIGINT_MUL_THRESHOLD = 400;
 #endif
 const uint32_t BIGINT_DIV_THRESHOLD = 2048;
-const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = 2000;
+const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
 
 const uint32_t NTT_MAX_SIZE = 1 << 24;
 
@@ -129,37 +129,27 @@ protected:
             borrow(add, v[i], (carry_t)v[i]);
         return *this;
     }
-    BigInt_t &raw_mul_int(uint32_t m) {
+    BigInt_t &raw_muloffsetsub(const BigInt_t &b, base_t mul, size_t offset) {
+        if (mul == 0)
+            return *this;
+        carry_t add = 0;
+        for (size_t i = 0; i < b.v.size(); i++)
+            borrow(add, v[i + offset], (carry_t)v[i + offset] - (carry_t)b.v[i] * (carry_t)mul);
+        for (size_t i = offset + b.v.size(); add && i < v.size(); i++)
+            borrow(add, v[i], (carry_t)v[i]);
+        return *this;
+    }
+    BigInt_t &raw_mul_int(base_t m) {
         if (m == 0) {
             set(0);
             return *this;
         } else if (m == 1)
             return *this;
-#if BIGINT_INT64_OPTIMIZE
-        uint64_t add = 0;
-        size_t i = 0, s = v.size() & ~1;
-        for (; i < s; i += 2) {
-            add += (uint64_t)((v[i + 1] * COMPRESS_MOD) + v[i]) * m;
-            v[i] = low_digit(add);
-            v[i + 1] = low_digit(high_digit(add));
-            add = high_digit(high_digit(add));
-        }
-        for (; i < v.size(); i++) {
-            add += v[i] * (uint64_t)m;
-            v[i] = low_digit(add);
-            add = high_digit(add);
-        }
-        while (add) {
-            v.push_back(low_digit(add));
-            add = high_digit(add);
-        }
-#else
         ucarry_t add = 0;
         for (size_t i = 0; i < v.size(); i++)
             carry(add, v[i], v[i] * (ucarry_t)m);
         if (add)
             v.push_back((base_t)add);
-#endif
         return *this;
     }
     BigInt_t &raw_mul(const BigInt_t &a, const BigInt_t &b) {
@@ -176,34 +166,12 @@ protected:
         }
         v.clear();
         v.resize(a.size() + b.size());
-#if BIGINT_INT64_OPTIMIZE
-        size_t i = 0, as = a.size() & ~1;
-        for (; i < a.size(); i += 1) {
-            uint64_t add = 0;
-            uint64_t av = a.v[i];
-            size_t j = 0, bs = b.size() & ~1;
-            for (; j < bs; j += 2) {
-                add += v[i + j] + av * (uint64_t)((b.v[j + 1] * COMPRESS_MOD) + b.v[j]);
-                v[i + j] = low_digit(add);
-                add = high_digit((uint64_t)add) + v[i + j + 1];
-                v[i + j + 1] = low_digit(add);
-                add = high_digit((uint64_t)add);
-            }
-            for (; j < b.size(); j++) {
-                add += av * b.v[j];
-                v[i + j] += low_digit(add);
-                add = high_digit((uint64_t)add);
-            }
-            v[i + b.size()] += (base_t)add;
-        }
-#else
         for (size_t i = 0; i < a.size(); i++) {
             ucarry_t add = 0, av = a.v[i];
             for (size_t j = 0; j < b.size(); j++)
                 carry(add, v[i + j], v[i + j] + av * b.v[j]);
             v[i + b.size()] += (base_t)add;
         }
-#endif
         trim();
         return *this;
     }
@@ -328,8 +296,8 @@ protected:
         return *this;
     }
     BigInt_t &raw_div(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
+        r = a;
         if (a.raw_less(b)) {
-            r = a;
             return set(0);
         } else if (b.size() == 2 && b.v[1] == 1 && b.v[0] == 0) {
             *this = a;
@@ -338,7 +306,6 @@ protected:
         }
         v.clear();
         v.resize(a.size() - b.size() + 1);
-        r = a;
         r.v.resize(a.size() + 1);
         size_t offset = b.size();
         double db = b.v.back();
@@ -354,15 +321,11 @@ protected:
         }
 #endif
         db = 1 / db;
-        for (size_t i = a.size() - offset; i <= a.size(); i--) {
-            carry_t rm = (carry_t)r.v[i + offset] * COMPRESS_MOD + r.v[i + offset - 1], m;
+        for (size_t i = a.size() - offset, j = a.size() - 1; i <= a.size(); --i, --j) {
+            carry_t rm = (carry_t)r.v[j + 1] * COMPRESS_MOD + r.v[j], m;
             m = (carry_t)(rm * db);
             v[i] = (base_t)m;
-            if (m) {
-                BigInt_t bm = b;
-                bm.raw_mul_int((base_t)m);
-                r.raw_offsetsub(bm, i);
-            }
+            r.raw_muloffsetsub(b, m, i);
         }
         r.trim();
         carry_t add = 0;
@@ -969,8 +932,11 @@ public:
             return set(1);
         }
         BigInt_t d;
-        d.raw_dividediv(*this, b, r);
+        d.raw_fastdiv(*this, b);
         d.sign = sign * b.sign;
+        r = *this - d * b;
+        //d.raw_dividediv(*this, b, r);
+        //d.sign = sign * b.sign;
         return BIGINT_STD_MOVE(d);
     }
 
