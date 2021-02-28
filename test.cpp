@@ -674,136 +674,6 @@ bool test_factorial() {
     return true;
 }
 
-bool test_bigmul() {
-    BigIntHex ha;
-    BigIntDec hb;
-    BigIntMini hc;
-    BigIntTiny hd;
-    string s;
-    int times = 20;
-
-    time_point t_beg, t_end;
-
-    t_beg = get_time();
-    ha = 3;
-    for (int i = 1; i <= times; ++i) {
-        ha *= ha;
-    }
-    t_end = get_time();
-    s = ha.to_str(16);
-    cout << "calc 3^2^" << times << endl;
-    cout << "    by hex : " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "        total " << s.size() << " hex digits" << endl;
-
-    t_beg = get_time();
-    hb = 3;
-    for (int i = 1; i <= times; ++i) {
-        hb *= hb;
-    }
-    t_end = get_time();
-    s = hb.to_str();
-    //cout << "calc 3^2^" << times << endl;
-    cout << "    by dec : " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "        total " << s.size() << " dec digits" << endl;
-
-    times = 18;
-    t_beg = get_time();
-    hc = 3;
-    for (int i = 1; i <= times; ++i) {
-        hc = hc * hc;
-    }
-    t_end = get_time();
-    s = hc.to_str();
-    cout << "calc 3^2^" << times << endl;
-    cout << "    by mini: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "        total " << s.size() << " dec digits" << endl;
-
-    t_beg = get_time();
-    hd = 3;
-    for (int i = 1; i <= times; ++i) {
-        hd = hd * hd;
-    }
-    t_end = get_time();
-    s = hc.to_str();
-    //cout << "calc 3^2^" << times << endl;
-    cout << "    by tiny: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-    cout << "        total " << s.size() << " dec digits" << endl;
-    return true;
-}
-
-bool test_bigdiv() {
-    BigIntHex ha1, ha2;
-    BigIntDec hb1, hb2;
-    BigIntMini hc1, hc2;
-    BigIntTiny hd1, hd2;
-    string s, sa, sb;
-    int times = 17;
-
-    time_point t_pre, t_beg, t_end;
-
-    ha2 = 3;
-    for (int i = 1; i <= times; ++i) {
-        ha2 *= ha2;
-    }
-    t_pre = get_time();
-    ha1 = ha2 * ha2;
-    t_beg = get_time();
-    ha1 /= ha2;
-    t_end = get_time();
-    if (ha1 != ha2) {
-        return false;
-    }
-    cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
-    cout << "    by hex : mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-
-    hb2 = 3;
-    for (int i = 1; i <= times; ++i) {
-        hb2 *= hb2;
-    }
-    t_pre = get_time();
-    hb1 = hb2 * hb2;
-    t_beg = get_time();
-    hb1 /= hb2;
-    t_end = get_time();
-    if (hb1 != hb2) {
-        return false;
-    }
-    //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
-    cout << "    by dec : mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-
-    hc2 = 3;
-    for (int i = 1; i <= times; ++i) {
-        hc2 = hc2 * hc2;
-    }
-    t_pre = get_time();
-    hc1 = hc2 * hc2;
-    t_beg = get_time();
-    hc1 = hc1 / hc2;
-    t_end = get_time();
-    if (!(hc1 == hc2)) {
-        return false;
-    }
-    //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
-    cout << "    by mini: mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-
-    hd2 = 3;
-    for (int i = 1; i <= times; ++i) {
-        hd2 = hd2 * hd2;
-    }
-    t_pre = get_time();
-    hd1 = hd2 * hd2;
-    t_beg = get_time();
-    hd1 = hd1 / hd2;
-    t_end = get_time();
-    if (!(hd1 == hd2)) {
-        return false;
-    }
-    //cout << "calc 3^2^" << times + 1 << " / 3^2^" << times << endl;
-    cout << "    by tiny: mul: " << (int32_t)(get_time_diff(t_pre, t_beg) / 1000) << " ms , div: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
-
-    return true;
-}
-
 bool test_bigdivrnd(int len1, int len2 = 0) {
     time_point t_pre, t_beg, t_end;
     string sa, sb;
@@ -861,6 +731,66 @@ bool test_bigdivrnd(int len1, int len2 = 0) {
     return true;
 }
 
+template<class BIG>
+void test_efficiency(string classname) {
+    char chars[] = "0123456789ABCDEF";
+    string sa, sb;
+    int firststep = 1024;
+    double timelimit = 4e5;
+    cout << classname << ":" << endl;
+    for (int i = firststep; ; i *= 2) {
+        int mi = 9, mx = 1;
+        double diff;
+        BIG a1, a2, a3;
+        sa = chars[randint(1, 9)];
+        for (int j = 1; j < i * mx; ++j)
+            sa += chars[randint(0, 9)];
+        sb = chars[randint(1, 9)];
+        for (int j = 1; j < i * mx; ++j)
+            sb += chars[randint(0, 9)];
+        a2 = sa.c_str();
+        a3 = sb.c_str();
+        time_point t_beg, t_end;
+        t_beg = get_time();
+        int cnt = 1;
+        for (;; ++cnt) {
+            a1 = a2 * a3;
+            t_end = get_time();
+            if ((diff = get_time_diff(t_beg, t_end)) > timelimit)
+                break;
+        }
+        cout << "    mul " << i << " digits: " << diff / cnt / 1000 << " ms" << endl;
+        if (cnt == 1)
+            break;
+    }
+    for (int i = firststep; ; i *= 2) {
+        int mi = 9, mx = 1;
+        double diff;
+        BIG a1, a2, a3;
+        sa = chars[randint(1, 9)];
+        for (int j = 1; j < i * mx; ++j)
+            sa += chars[randint(0, 9)];
+        sb = chars[randint(1, 9)];
+        for (int j = 1; j < i * mx; ++j)
+            sb += chars[randint(0, 9)];
+        a2 = sa.c_str();
+        a3 = sb.c_str();
+        a1 = a2 * a3;
+        time_point t_beg, t_end;
+        t_beg = get_time();
+        int cnt = 1;
+        for (;; ++cnt) {
+            a3 = a1 / a2;
+            t_end = get_time();
+            if ((diff = get_time_diff(t_beg, t_end)) > timelimit)
+                break;
+        }
+        cout << "    div " << i << " digits: " << diff / cnt / 1000 << " ms" << endl;
+        if (cnt == 1)
+            break;
+    }
+}
+
 int main() {
     //srand((unsigned)time(0));
     bool pass = true;
@@ -889,14 +819,6 @@ int main() {
     if (!pass)
         return -1;
 #ifndef _DEBUG
-    test_factorial();
-    test_bigmul();
-#endif
-    pass = test_bigdiv();
-    if (!pass) {
-        cout << "test_bigdiv FAIL" << endl;
-        return -1;
-    }
     pass = test_bigdivrnd(1 << 17, 1 << 16);
     if (!pass) {
         cout << "test_bigdivrnd FAIL" << endl;
@@ -907,5 +829,11 @@ int main() {
         cout << "test_bigdivrnd FAIL" << endl;
         return -1;
     }
+    test_factorial();
+#endif
+    test_efficiency<BigIntHex>("BigIntHex");
+    test_efficiency<BigIntDec>("BigIntDec");
+    test_efficiency<BigIntMini>("BigIntMini");
+    test_efficiency<BigIntTiny>("BigIntTiny");
     return 0;
 }
