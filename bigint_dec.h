@@ -17,7 +17,7 @@ const int32_t COMPRESS_MOD = 10000;
 const uint32_t COMPRESS_DIGITS = 4;
 #endif
 
-const uint32_t BIGINT_NTT_THRESHOLD = 1500;
+const uint32_t BIGINT_NTT_THRESHOLD = 1800;
 #if BIGINT_X64 || BIGINT_LARGE_BASE
 const uint32_t BIGINT_MUL_THRESHOLD = 300;
 #else
@@ -59,14 +59,9 @@ protected:
     }
     template<typename _Tx, typename Ty>
     static inline void borrow(_Tx& add, Ty& baseval, _Tx newval) {
-        add += newval;
-        if (add >= 0) {
-            baseval = low_digit(add);
-            add = high_digit(add);
-        } else {
-            baseval = low_digit(++add) + COMPRESS_MOD - 1;
-            add = high_digit(add) - 1;
-        }
+        add += newval - COMPRESS_MOD + 1;
+        baseval = (_Tx)low_digit(add) + COMPRESS_MOD - 1;
+        add = high_digit(add);
     }
 
     bool raw_less(const BigInt_t &b) const {

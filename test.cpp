@@ -739,14 +739,13 @@ void test_efficiency(string classname) {
     double timelimit = 4e5;
     cout << classname << ":" << endl;
     for (int i = firststep; ; i *= 2) {
-        int mi = 9, mx = 1;
         double diff;
         BIG a1, a2, a3;
         sa = chars[randint(1, 9)];
-        for (int j = 1; j < i * mx; ++j)
+        for (int j = 1; j < i; ++j)
             sa += chars[randint(0, 9)];
         sb = chars[randint(1, 9)];
-        for (int j = 1; j < i * mx; ++j)
+        for (int j = 1; j < i; ++j)
             sb += chars[randint(0, 9)];
         a2 = sa.c_str();
         a3 = sb.c_str();
@@ -764,14 +763,13 @@ void test_efficiency(string classname) {
             break;
     }
     for (int i = firststep; ; i *= 2) {
-        int mi = 9, mx = 1;
         double diff;
         BIG a1, a2, a3;
         sa = chars[randint(1, 9)];
-        for (int j = 1; j < i * mx; ++j)
+        for (int j = 1; j < i; ++j)
             sa += chars[randint(0, 9)];
         sb = chars[randint(1, 9)];
-        for (int j = 1; j < i * mx; ++j)
+        for (int j = 1; j < i; ++j)
             sb += chars[randint(0, 9)];
         a2 = sa.c_str();
         a3 = sb.c_str();
