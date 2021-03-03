@@ -681,6 +681,7 @@ protected:
 
 public:
     BigIntDec() { set(0); }
+    explicit BigIntDec(int n) { set(n); }
     explicit BigIntDec(intmax_t n) { set(n); }
     explicit BigIntDec(const char *s, int base = 10) { from_str(s, base); }
     explicit BigIntDec(const std::string &s, int base = 10) { from_str(s, base); }
@@ -854,7 +855,7 @@ public:
     }
     BigInt_t operator%(const BigInt_t &b) const {
         if (b.size() == 1 && COMPRESS_MOD % b.v[0] == 0) {
-            return BigInt_t(v[0] % b.v[0] * sign);
+            return BigInt_t((intmax_t)(v[0] % b.v[0]) * sign);
         }
         if (this == &b) {
             return BigInt_t((intmax_t)0);

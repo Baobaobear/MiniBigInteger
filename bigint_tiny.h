@@ -94,9 +94,9 @@ struct BigIntTiny {
         if (absless(b)) return -(b - *this);
         BigIntTiny c;
         for (int i = 0, borrow = 0; i < (int)v.size(); i++) {
-            borrow = v[i] - borrow - b.get_pos(i);
-            c.v.push_back(borrow >= 0 ? borrow : borrow + 10000);
-            borrow = borrow < 0;
+            borrow += v[i] - b.get_pos(i);
+            c.v.push_back(borrow);
+            c.v.back() -= 10000 * (borrow >>= 31);
         }
         return c.setsign(sign, 0);
     }

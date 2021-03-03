@@ -297,6 +297,7 @@ protected:
 
 public:
     BigIntMini() { set(0); }
+    explicit BigIntMini(int n) { set(n); }
     explicit BigIntMini(intmax_t n) { set(n); }
     explicit BigIntMini(const char *s, int base = 10) { from_str(s, base); }
     BigInt_t &set(intmax_t n) {
