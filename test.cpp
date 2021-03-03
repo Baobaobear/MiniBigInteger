@@ -366,11 +366,14 @@ bool test5_div() {
         {"12764250310913255140835516279358765904435124464", "7897879879879797897897979879", "1616161616161161616", 10},
         {"2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397376", "1427247692705959881058285969449495136382746624", "1427247692705959881058285969449495136382746624", 10},
         {"2037035976334486086268445688409378161051468393665936250636140449354381299763336706182397376", "1427247692705959881058285969449495136382746624", "1427247692705959881058285969449495136382746623", 10},
+        {"99999999999999999999999999999999999999999999999999999999", "999999999999999900000000", "100000000000000010000000000000001", 10},
+        {"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", "3FFFFFFFFFFFFFFC0000000", "4000000000000004000000000000004000000", 16},
         {"", "", "", 0}};
     for (int i = 0; in[i].base; ++i) {
         ha1.from_str(in[i].p1, in[i].base);
         ha2.from_str(in[i].p2, in[i].base);
         ha1 /= ha2;
+        string s = ha1.to_str(in[i].base);
         if (ha1.to_str(in[i].base) != in[i].pa) {
             return false;
         }
@@ -379,6 +382,7 @@ bool test5_div() {
         hb1.from_str(in[i].p1, in[i].base);
         hb2.from_str(in[i].p2, in[i].base);
         hb1 /= hb2;
+        string s = hb1.to_str(in[i].base);
         if (hb1.to_str(in[i].base) != in[i].pa) {
             return false;
         }
@@ -597,22 +601,8 @@ BigIntT split_factorial(int n) {
 }
 
 template <typename BigIntT>
-BigIntT product(int start, int n) {
-    int i;
-    if (n < 8) {
-        BigIntT r(start);
-        for (i = start + 1; i < start + n; i++)
-            r = r * BigIntT(i);
-        return r;
-    }
-    i = n / 2;
-    return product<BigIntT>(start, i) * product<BigIntT>(start + i, n - i);
-}
-
-template <typename BigIntT>
 BigIntT calc_factorial(int fac) {
     return split_factorial<BigIntT>(fac);
-    //return product<BigIntT>(1, fac);
 }
 
 bool test_factorial() {
@@ -621,7 +611,7 @@ bool test_factorial() {
     BigIntMini hc;
     BigIntTiny hd;
     string s;
-    int fac = 100000;
+    int fac = 50000;
 
     time_point t_beg, t_end, t_out, t_load;
 
@@ -736,7 +726,7 @@ void test_efficiency(string classname) {
     char chars[] = "0123456789ABCDEF";
     string sa, sb;
     int firststep = 1024;
-    double timelimit = 4e5;
+    double timelimit = 2e5;
     cout << classname << ":" << endl;
     for (int i = firststep; ; i *= 2) {
         double diff;

@@ -42,5 +42,5 @@ typedef int64_t intmax_t;
 #define BIGINT_LARGE_BASE 1
 #endif
 #if !BIGINT_LARGE_BASE && defined(_MSC_VER)
-#define BIGINT_INT64_OPTIMIZE 1
+#define BIGINT_INT64_OPTIMIZE 0
 #endif

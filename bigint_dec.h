@@ -305,8 +305,10 @@ protected:
         size_t offset = b.size();
         double db = b.v.back();
 #if BIGINT_LARGE_BASE
-        if (b.size() > 1) {
-            db += (b.v.back() / COMPRESS_HALF_MOD + b.v[b.size() - 2] + 1) / (double)COMPRESS_MOD;
+        if (b.size() > 2) {
+            db += (b.v.back() / (double)COMPRESS_HALF_MOD + b.v[b.size() - 2] + b.v[b.size() - 3] / (double)COMPRESS_MOD) / COMPRESS_MOD;
+        } else if (b.size() > 1) {
+            db += (b.v.back() / (double)COMPRESS_HALF_MOD + b.v[b.size() - 2]) / COMPRESS_MOD;
         }
 #else
         if (b.size() > 2) {
@@ -318,9 +320,11 @@ protected:
         db = 1 / db;
         for (size_t i = a.size() - offset, j = a.size() - 1; i <= a.size(); --i, --j) {
             carry_t rm = (carry_t)r.v[j + 1] * COMPRESS_MOD + r.v[j], m;
-            m = (carry_t)(rm * db);
-            v[i] = (base_t)m;
+            m = std::max((carry_t)(rm * db), (carry_t)r.v[i + offset]);
+            v[i] += (base_t)m;
             r.raw_muloffsetsub(b, m, i);
+            if (r.v[j + 1])
+                ++i, ++j;
         }
         r.trim();
         carry_t add = 0;

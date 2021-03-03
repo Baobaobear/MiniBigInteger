@@ -161,14 +161,16 @@ protected:
         db = 1 / db;
         for (size_t i = a.size() - offset; i <= a.size(); i--) {
             carry_t rm = (carry_t)r.v[i + offset] * COMPRESS_MOD + r.v[i + offset - 1], m;
-            m = (carry_t)(rm * db);
-            v[i] = (base_t)m;
+            m = std::max((carry_t)(rm * db), (carry_t)r.v[i + offset]);
             if (m) {
+                v[i] += (base_t)m;
                 carry_t add = 0;
                 for (size_t j = 0; j < b.size(); j++)
                     borrow(add, r.v[i + j], (carry_t)r.v[i + j] - (carry_t)b.v[j] * m);
                 for (size_t j = i + b.size(); add && j < r.size(); ++j)
                     borrow(add, r.v[j], (carry_t)r.v[j]);
+                if (r.v[i + offset])
+                    ++i;
             }
         }
         r.trim();

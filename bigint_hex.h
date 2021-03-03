@@ -6,7 +6,7 @@
 #pragma once
 #include "bigint_base.h"
 
-#define BIGINTHEX_DIV_DOUBLE 0
+#define BIGINTHEX_DIV_DOUBLE 1
 
 namespace BigIntHexNS {
 #if BIGINT_LARGE_BASE
@@ -363,11 +363,19 @@ protected:
         size_t offset = b.size();
 #if BIGINTHEX_DIV_DOUBLE
         double db = b.v.back();
+#if BIGINT_LARGE_BASE
+        if (b.size() > 2) {
+            db += (b.v.back() / (double)COMPRESS_HALF_MOD + b.v[b.size() - 2] + b.v[b.size() - 3] / (double)COMPRESS_MOD) / COMPRESS_MOD;
+        } else if (b.size() > 1) {
+            db += (b.v.back() / (double)COMPRESS_HALF_MOD + b.v[b.size() - 2]) / COMPRESS_MOD;
+        }
+#else
         if (b.size() > 2) {
             db += (b.v[b.size() - 2] + (b.v[b.size() - 3] + 1) / (double)COMPRESS_MOD) / COMPRESS_MOD;
         } else if (b.size() > 1) {
             db += b.v[b.size() - 2] / (double)COMPRESS_MOD;
         }
+#endif
         db = 1 / db;
 #else
         ucarry_t db = (ucarry_t)b.v.back() << (COMPRESS_BIT - 1);
@@ -375,10 +383,10 @@ protected:
             db += (b.v[b.size() - 2] >> 1) + 1;
         }
 #endif
-        for (size_t i = a.size() - offset; i <= a.size(); i--) {
+        for (size_t i = a.size() - offset; i <= a.size(); --i) {
 #if BIGINTHEX_DIV_DOUBLE
             carry_t rm = ((carry_t)r.v[i + offset] << (COMPRESS_BIT)) + r.v[i + offset - 1], m;
-            m = (carry_t)(rm * db);
+            m = std::max((carry_t)(rm * db), (carry_t)r.v[i + offset]);
 #else
             ucarry_t rm = ((ucarry_t)r.v[i + offset] << (COMPRESS_BIT)) + r.v[i + offset - 1], m = 0;
             if (rm) {
@@ -405,6 +413,7 @@ protected:
             }
 #endif
 #if BIGINTHEX_DIV_DOUBLE
+            v[i] += (base_t)m;
             r.raw_muloffsetsub(b, m, i);
 #else
             if (m) {
@@ -412,13 +421,19 @@ protected:
                 BigInt_t bm = b;
                 bm.raw_mul_int((base_t)m);
                 r.raw_offsetsub(bm, i);
-                if (r.v[i + offset])
-                    ++i;
-#endif
             }
+#endif
+            if (r.v[i + offset])
+                ++i;
         }
-#if !BIGINTHEX_DIV_DOUBLE
+#if BIGINT_LARGE_BASE
         {
+#if BIGINTHEX_DIV_DOUBLE
+            ucarry_t db = (ucarry_t)b.v.back() << (COMPRESS_BIT - 1);
+            if (b.size() > 1) {
+                db += (b.v[b.size() - 2] >> 1) + 1;
+            }
+#endif
             size_t i = 0;
             ucarry_t rm = r.v[i + offset - 1], m = 0;
             m = (rm << (COMPRESS_BIT - 1)) / db;
