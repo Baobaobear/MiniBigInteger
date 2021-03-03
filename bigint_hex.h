@@ -6,7 +6,7 @@
 #pragma once
 #include "bigint_base.h"
 
-#define BIGINTHEX_DIV_DOUBLE 1
+#define BIGINTHEX_DIV_DOUBLE 0
 
 namespace BigIntHexNS {
 #if BIGINT_LARGE_BASE
@@ -39,15 +39,9 @@ const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
 
 const uint32_t NTT_MAX_SIZE = 1 << 24;
 
-template <typename T>
-inline T high_digit(T digit) {
-    return digit >> COMPRESS_BIT;
-}
+template <typename T> inline T high_digit(T digit) { return digit >> COMPRESS_BIT; }
 
-template <typename T>
-inline uint32_t low_digit(T digit) {
-    return (uint32_t)(digit & COMPRESS_MASK);
-}
+template <typename T> inline uint32_t low_digit(T digit) { return (uint32_t)(digit & COMPRESS_MASK); }
 
 class BigIntHex {
 protected:
@@ -62,38 +56,31 @@ protected:
     int sign;
     std::vector<base_t> v;
     typedef BigIntHex BigInt_t;
-    template<typename _Tx, typename Ty>
-    static inline void carry(_Tx& add, Ty& baseval, _Tx newval) {
+    template <typename _Tx, typename Ty> static inline void carry(_Tx &add, Ty &baseval, _Tx newval) {
         add += newval;
         baseval = low_digit(add);
         add = high_digit(add);
     }
-    template<typename _Tx, typename Ty>
-    static inline void borrow(_Tx& add, Ty& baseval, _Tx newval) {
+    template <typename _Tx, typename Ty> static inline void borrow(_Tx &add, Ty &baseval, _Tx newval) {
         add += newval;
         baseval = low_digit(add);
         add = high_digit(add);
     }
 
     bool raw_less(const BigInt_t &b) const {
-        if (v.size() != b.size())
-            return v.size() < b.size();
+        if (v.size() != b.size()) return v.size() < b.size();
         for (size_t i = v.size() - 1; i < v.size(); i--)
-            if (v[i] != b.v[i])
-                return v[i] < b.v[i];
-        return false; //eq
+            if (v[i] != b.v[i]) return v[i] < b.v[i];
+        return false; // eq
     }
     bool raw_eq(const BigInt_t &b) const {
-        if (v.size() != b.size())
-            return false;
+        if (v.size() != b.size()) return false;
         for (size_t i = 0; i < v.size(); ++i)
-            if (v[i] != b.v[i])
-                return false;
+            if (v[i] != b.v[i]) return false;
         return true;
     }
     BigInt_t &raw_add(const BigInt_t &b) {
-        if (v.size() < b.size())
-            v.resize(b.size());
+        if (v.size() < b.size()) v.resize(b.size());
         ucarry_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++)
             carry(add, v[i], (ucarry_t)v[i] + b.v[i]);
@@ -111,8 +98,7 @@ protected:
         return *this;
     }
     BigInt_t &raw_sub(const BigInt_t &b) {
-        if (v.size() < b.v.size())
-            v.resize(b.v.size());
+        if (v.size() < b.v.size()) v.resize(b.v.size());
         carry_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++)
             borrow(add, v[i], (carry_t)v[i] - (carry_t)b.v[i]);
@@ -136,8 +122,7 @@ protected:
         return *this;
     }
     BigInt_t &raw_muloffsetsub(const BigInt_t &b, base_t mul, size_t offset) {
-        if (mul == 0)
-            return *this;
+        if (mul == 0) return *this;
         carry_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++)
             borrow(add, v[i + offset], (carry_t)v[i + offset] - (carry_t)b.v[i] * (carry_t)mul);
@@ -173,8 +158,7 @@ protected:
         ucarry_t add = 0;
         for (size_t i = 0; i < v.size(); i++)
             carry(add, v[i], v[i] * (ucarry_t)m);
-        if (add)
-            v.push_back((base_t)add);
+        if (add) v.push_back((base_t)add);
 #endif
         return *this;
     }
@@ -365,7 +349,8 @@ protected:
         double db = b.v.back();
 #if BIGINT_LARGE_BASE
         if (b.size() > 2) {
-            db += (b.v.back() / (double)COMPRESS_HALF_MOD + b.v[b.size() - 2] + b.v[b.size() - 3] / (double)COMPRESS_MOD) / COMPRESS_MOD;
+            double t = b.v[b.size() - 2] + b.v[b.size() - 3] / (double)COMPRESS_MOD;
+            db += (b.v.back() / (double)COMPRESS_HALF_MOD + t) / COMPRESS_MOD;
         } else if (b.size() > 1) {
             db += (b.v.back() / (double)COMPRESS_HALF_MOD + b.v[b.size() - 2]) / COMPRESS_MOD;
         }
@@ -383,7 +368,7 @@ protected:
             db += (b.v[b.size() - 2] >> 1) + 1;
         }
 #endif
-        for (size_t i = a.size() - offset; i <= a.size(); --i) {
+        for (size_t i = a.size() - offset; i <= a.size();) {
 #if BIGINTHEX_DIV_DOUBLE
             carry_t rm = ((carry_t)r.v[i + offset] << (COMPRESS_BIT)) + r.v[i + offset - 1], m;
             m = std::max((carry_t)(rm * db), (carry_t)r.v[i + offset]);
@@ -423,8 +408,7 @@ protected:
                 r.raw_offsetsub(bm, i);
             }
 #endif
-            if (r.v[i + offset])
-                ++i;
+            i -= !r.v[i + offset];
         }
 #if BIGINT_LARGE_BASE
         {
@@ -458,8 +442,7 @@ protected:
         return *this;
     }
     BigInt_t &raw_shr(size_t n) {
-        if (n == 0)
-            return *this;
+        if (n == 0) return *this;
         if (n >= size()) {
             set(0);
             return *this;
@@ -469,29 +452,25 @@ protected:
     }
     BigInt_t raw_shr_to(size_t n) const {
         BigInt_t r;
-        if (n >= size())
-            return r;
+        if (n >= size()) return r;
         r.v.assign(v.begin() + n, v.end());
         return BIGINT_STD_MOVE(r);
     }
     BigInt_t raw_lowdigits_to(size_t n) const {
-        if (n >= size())
-            return *this;
+        if (n >= size()) return *this;
         BigInt_t r;
         r.v.assign(v.begin(), v.begin() + n);
         r.trim();
         return BIGINT_STD_MOVE(r);
     }
     BigInt_t &raw_shl(size_t n) {
-        if (n == 0 || is_zero())
-            return *this;
+        if (n == 0 || is_zero()) return *this;
         v.insert(v.begin(), n, 0);
         return *this;
     }
     BigInt_t &keep(size_t n) {
         size_t s = n < v.size() ? v.size() - n : (size_t)0;
-        if (s && v[s - 1] >= COMPRESS_MOD >> 1)
-            ++v[s];
+        if (s && v[s - 1] >= COMPRESS_MOD >> 1) ++v[s];
         return raw_shr(s);
     }
     BigInt_t &raw_fastdiv(const BigInt_t &a, const BigInt_t &b) {
@@ -607,8 +586,7 @@ protected:
 
         e.raw_shl(base);
         raw_dividediv_recursion(ma, mb, r);
-        if (b.size() & 1)
-            r.raw_shr(1);
+        if (b.size() & 1) r.raw_shr(1);
         return *this += e;
     }
     BigInt_t &raw_dividediv_basecase(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
@@ -640,7 +618,9 @@ protected:
             raw_div(a, b, r);
             return *this;
         }
-        carry_t mul = (carry_t)(((uint64_t)COMPRESS_MOD * COMPRESS_MASK + COMPRESS_MASK) / (*(b.v.begin() + b.v.size() - 1) * (uint64_t)COMPRESS_MOD + *(b.v.begin() + b.v.size() - 2) + 1));
+        carry_t mul =
+            (carry_t)(((uint64_t)COMPRESS_MOD * COMPRESS_MASK + COMPRESS_MASK) /
+                      (*(b.v.begin() + b.v.size() - 1) * (uint64_t)COMPRESS_MOD + *(b.v.begin() + b.v.size() - 2) + 1));
         BigInt_t ma = a * mul;
         BigInt_t mb = b * mul;
         while (mb.v.back() < COMPRESS_MOD >> 1) {
@@ -658,9 +638,7 @@ protected:
         while (v.back() == 0 && v.size() > 1)
             v.pop_back();
     }
-    size_t size() const {
-        return v.size();
-    }
+    size_t size() const { return v.size(); }
     BigIntBase transbase(int32_t out_base) const {
         if (size() <= 8) {
             BigIntBase sum(out_base);
@@ -675,7 +653,7 @@ protected:
                 sum.raw_add(mul);
             }
             for (size_t i = 1; i < v.size(); i++) {
-                //base.raw_mul_int(COMPRESS_MOD);
+                // base.raw_mul_int(COMPRESS_MOD);
                 base.raw_mul(ownbase, BigIntBase(base));
                 BigIntBase mul(out_base);
                 mul = base;
@@ -712,8 +690,7 @@ protected:
         }
     }
     std::string out_base2(size_t bits) const {
-        if (is_zero())
-            return "0";
+        if (is_zero()) return "0";
         const char *digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         std::string out;
         carry_t d = 0;
@@ -732,14 +709,11 @@ protected:
         }
         while (out.size() > 1 && *out.rbegin() == '0')
             out.erase(out.begin() + out.size() - 1);
-        if (sign < 0 && !this->is_zero())
-            out.push_back('-');
+        if (sign < 0 && !this->is_zero()) out.push_back('-');
         std::reverse(out.begin(), out.end());
         return out;
     }
-    std::string out_hex() const {
-        return out_base2(4);
-    }
+    std::string out_hex() const { return out_base2(4); }
     std::string out_mul(int32_t out_base = 10, int32_t pack = 0) const {
         BigIntBase sum = transbase(out_base);
         std::string out;
@@ -769,10 +743,8 @@ protected:
                 out.erase(out.begin() + out.size() - 1);
         while ((int32_t)out.size() < pack)
             out.push_back('0');
-        if (out.empty())
-            out.push_back('0');
-        if (sign < 0 && !this->is_zero())
-            out.push_back('-');
+        if (out.empty()) out.push_back('0');
+        if (sign < 0 && !this->is_zero()) out.push_back('-');
         std::reverse(out.begin(), out.end());
         return out;
     }
@@ -835,18 +807,10 @@ protected:
     }
 
 public:
-    BigIntHex() {
-        set(0);
-    }
-    explicit BigIntHex(intmax_t n) {
-        set(n);
-    }
-    explicit BigIntHex(const char *s, int base = 10) {
-        from_str(s, base);
-    }
-    explicit BigIntHex(const std::string &s, int base = 10) {
-        from_str(s, base);
-    }
+    BigIntHex() { set(0); }
+    explicit BigIntHex(intmax_t n) { set(n); }
+    explicit BigIntHex(const char *s, int base = 10) { from_str(s, base); }
+    explicit BigIntHex(const std::string &s, int base = 10) { from_str(s, base); }
     BigInt_t &set(intmax_t n) {
         v.resize(1);
         v[0] = 0;
@@ -888,12 +852,9 @@ public:
         sign = vsign;
         return *this;
     }
-    BigInt_t &from_str(const std::string &s, int base = 10) {
-        return this->from_str(s.c_str(), base);
-    }
+    BigInt_t &from_str(const std::string &s, int base = 10) { return this->from_str(s.c_str(), base); }
     bool is_zero() const {
-        if (v.size() == 1 && v[0] == 0)
-            return true;
+        if (v.size() == 1 && v[0] == 0) return true;
         return false;
     }
     bool operator<(const BigInt_t &b) const {
@@ -909,35 +870,19 @@ public:
                 return true;
         }
     }
-    bool operator>(const BigInt_t &b) const {
-        return b < *this;
-    }
-    bool operator<=(const BigInt_t &b) const {
-        return !(*this > b);
-    }
-    bool operator>=(const BigInt_t &b) const {
-        return !(*this < b);
-    }
+    bool operator>(const BigInt_t &b) const { return b < *this; }
+    bool operator<=(const BigInt_t &b) const { return !(*this > b); }
+    bool operator>=(const BigInt_t &b) const { return !(*this < b); }
     bool operator==(const BigInt_t &b) const {
-        if (is_zero() && b.is_zero())
-            return true;
-        if (sign != b.sign)
-            return false;
+        if (is_zero() && b.is_zero()) return true;
+        if (sign != b.sign) return false;
         return raw_eq(b);
     }
-    bool operator!=(const BigInt_t &b) const {
-        return !(*this == b);
-    }
+    bool operator!=(const BigInt_t &b) const { return !(*this == b); }
 
-    BigInt_t &operator=(intmax_t n) {
-        return set(n);
-    }
-    BigInt_t &operator=(const char *s) {
-        return from_str(s);
-    }
-    BigInt_t &operator=(const std::string s) {
-        return from_str(s);
-    }
+    BigInt_t &operator=(intmax_t n) { return set(n); }
+    BigInt_t &operator=(const char *s) { return from_str(s); }
+    BigInt_t &operator=(const std::string s) { return from_str(s); }
     BigInt_t operator+(const BigInt_t &b) const {
         BigInt_t r = *this;
         if (sign * b.sign > 0) {
@@ -1017,9 +962,7 @@ public:
             return *this = *this * b;
         }
     }
-    BigInt_t operator*(intmax_t b) const {
-        return BIGINT_STD_MOVE(*this * BigInt_t().set(b));
-    }
+    BigInt_t operator*(intmax_t b) const { return BIGINT_STD_MOVE(*this * BigInt_t().set(b)); }
     BigInt_t &operator*=(intmax_t b) {
         if (b < (intmax_t)COMPRESS_MOD && -(intmax_t)COMPRESS_MOD < b) {
             if (b >= 0)
@@ -1036,7 +979,7 @@ public:
     BigInt_t operator/(const BigInt_t &b) const {
         BigInt_t r, d;
         d.raw_fastdiv(*this, b);
-        //d.raw_dividediv(*this, b, r);
+        // d.raw_dividediv(*this, b, r);
         d.sign = sign * b.sign;
         return BIGINT_STD_MOVE(d);
     }
@@ -1073,8 +1016,8 @@ public:
         d.raw_fastdiv(*this, b);
         d.sign = sign * b.sign;
         r = *this - d * b;
-        //d.raw_dividediv(*this, b, r);
-        //d.sign = sign * b.sign;
+        // d.raw_dividediv(*this, b, r);
+        // d.sign = sign * b.sign;
         return BIGINT_STD_MOVE(d);
     }
 

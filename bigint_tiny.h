@@ -45,11 +45,9 @@ struct BigIntTiny {
         return (sign < 0 ? "-" : "") + (s.empty() ? std::string("0") : s);
     }
     bool absless(const BigIntTiny &b) const {
-        if (v.size() != b.v.size())
-            return v.size() < b.v.size();
+        if (v.size() != b.v.size()) return v.size() < b.v.size();
         for (int i = (int)v.size() - 1; i >= 0; i--)
-            if (v[i] != b.v[i])
-                return v[i] < b.v[i];
+            if (v[i] != b.v[i]) return v[i] < b.v[i];
         return false;
     }
     BigIntTiny operator-() const {
@@ -67,11 +65,12 @@ struct BigIntTiny {
         }
         return setsign(s[0] == '-' ? -1 : 1, sign = 1);
     }
-    bool operator<(const BigIntTiny &b) const { return sign != b.sign ? sign < b.sign : (sign == 1 ? absless(b) : !absless(b)); }
+    bool operator<(const BigIntTiny &b) const {
+        return sign != b.sign ? sign < b.sign : (sign == 1 ? absless(b) : !absless(b));
+    }
     bool operator==(const BigIntTiny &b) const { return v == b.v && sign == b.sign; }
     BigIntTiny &operator+=(const BigIntTiny &b) {
-        if (sign != b.sign)
-            return *this = (*this) - -b;
+        if (sign != b.sign) return *this = (*this) - -b;
         v.resize(std::max(v.size(), b.v.size()) + 1);
         for (int i = 0, carry = 0; i < (int)b.v.size() || carry; i++) {
             carry += v[i] + b.get_pos(i);
@@ -91,10 +90,8 @@ struct BigIntTiny {
         }
     }
     BigIntTiny operator-(const BigIntTiny &b) const {
-        if (sign != b.sign)
-            return (*this) + -b;
-        if (absless(b))
-            return -(b - *this);
+        if (sign != b.sign) return (*this) + -b;
+        if (absless(b)) return -(b - *this);
         BigIntTiny c;
         for (int i = 0, borrow = 0; i < (int)v.size(); i++) {
             borrow = v[i] - borrow - b.get_pos(i);
@@ -104,8 +101,7 @@ struct BigIntTiny {
         return c.setsign(sign, 0);
     }
     BigIntTiny operator*(const BigIntTiny &b) const {
-        if (b < *this)
-            return b * *this;
+        if (b < *this) return b * *this;
         BigIntTiny c, d = b;
         for (int i = 0; i < (int)v.size(); i++, d.v.insert(d.v.begin(), 0))
             c.add_mul(d, v[i]);
@@ -114,7 +110,8 @@ struct BigIntTiny {
     BigIntTiny operator/(const BigIntTiny &b) const {
         BigIntTiny c, d;
         d.v.resize(v.size());
-        double db = 1.0 / (b.v.back() + (b.get_pos((unsigned)b.v.size() - 2) / 1e4) + (b.get_pos((unsigned)b.v.size() - 3) + 1) / 1e8);
+        double db = 1.0 / (b.v.back() + (b.get_pos((unsigned)b.v.size() - 2) / 1e4) +
+                           (b.get_pos((unsigned)b.v.size() - 3) + 1) / 1e8);
         for (int i = (int)v.size() - 1; i >= 0; i--) {
             c.v.insert(c.v.begin(), v[i]);
             int m = (int)((c.get_pos((int)b.v.size()) * 10000 + c.get_pos((int)b.v.size() - 1)) * db);

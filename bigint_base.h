@@ -23,16 +23,14 @@ const int32_t NTT_P2_INV = 669690699;
 static std::vector<size_t> ntt_ra[NTT_POW];
 static size_t *ntt_r;
 
-template<int32_t NTT_MOD>
-struct NTT {
+template <int32_t NTT_MOD> struct NTT {
     int32_t ntt_wn[2][NTT_POW];
     std::vector<int64_t> ntt_a, ntt_b;
     int64_t quick_pow_mod(int64_t a, int64_t b) {
         int64_t ans = 1;
         a %= NTT_MOD;
         while (b) {
-            if (b & 1)
-                ans = ans * a % NTT_MOD;
+            if (b & 1) ans = ans * a % NTT_MOD;
             b >>= 1;
             a = a * a % NTT_MOD;
         }
@@ -48,8 +46,7 @@ struct NTT {
     }
     void transform(int64_t a[], size_t len, int on) {
         for (size_t i = 0; i < len; i++) {
-            if (i < ntt_r[i])
-                std::swap(a[i], a[ntt_r[i]]);
+            if (i < ntt_r[i]) std::swap(a[i], a[ntt_r[i]]);
         }
         size_t id = 0;
         for (size_t h = 1; h < len; h <<= 1) {
@@ -94,12 +91,9 @@ void ntt_prepare(size_t size_a, size_t size_b, size_t &len, int flag = 1) {
     while (len < L1 + L2)
         len <<= 1;
     ntt1.ntt_a.resize(len);
-    if (flag & 1)
-        ntt1.ntt_b.resize(len);
-    if (flag & 2)
-        ntt2.ntt_a = ntt1.ntt_a;
-    if (flag & 4)
-        ntt2.ntt_b = ntt1.ntt_b;
+    if (flag & 1) ntt1.ntt_b.resize(len);
+    if (flag & 2) ntt2.ntt_a = ntt1.ntt_a;
+    if (flag & 4) ntt2.ntt_b = ntt1.ntt_b;
     int32_t id = 0;
     while (((uint64_t)1 << id) < len)
         ++id;
@@ -112,10 +106,10 @@ void ntt_prepare(size_t size_a, size_t size_b, size_t &len, int flag = 1) {
     ntt_r = &*ntt_ra[id].begin();
 }
 
-
 static void double_mod_rev(size_t n) {
     for (size_t i = 0; i < n; i++) {
-        // s * p1 + a1 = val = t * p2 + a2 's solution is t = (a1 - a2) / p2 (mod p1)
+        // s * p1 + a1 = val = t * p2 + a2 's solution is
+        // t = (a1 - a2) / p2 (mod p1)
         int64_t t = (ntt1.ntt_a[i] - ntt2.ntt_a[i]) % NTT_P1 + NTT_P1;
         ntt1.ntt_a[i] = t * NTT_P2_INV % NTT_P1 * NTT_P2 + ntt2.ntt_a[i];
     }
@@ -154,14 +148,12 @@ struct BigIntBase {
     int32_t digits;
     std::vector<base_t> v;
     typedef BigIntBase BigInt_t;
-    template<typename _Tx, typename Ty>
-    inline void carry(_Tx& add, Ty& baseval, _Tx newval) {
+    template <typename _Tx, typename Ty> inline void carry(_Tx &add, Ty &baseval, _Tx newval) {
         add += newval;
         baseval = add % (_Tx)base;
         add /= base;
     }
-    template<typename _Tx, typename Ty>
-    inline void borrow(_Tx& add, Ty& baseval, _Tx newval) {
+    template <typename _Tx, typename Ty> inline void borrow(_Tx &add, Ty &baseval, _Tx newval) {
         add += newval;
         if (add >= 0) {
             baseval = add % (_Tx)base;
@@ -197,12 +189,9 @@ struct BigIntBase {
         }
         return *this;
     }
-    size_t size() const {
-        return v.size();
-    }
+    size_t size() const { return v.size(); }
     BigInt_t &raw_add(const BigInt_t &b) {
-        if (v.size() < b.size())
-            v.resize(b.size());
+        if (v.size() < b.size()) v.resize(b.size());
         ucarry_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++)
             carry(add, v[i], (ucarry_t)(v[i] + b.v[i]));
@@ -259,8 +248,7 @@ struct BigIntBase {
         return *this;
     }
     BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
-        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD)
-            return raw_mul(a, b);
+        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) return raw_mul(a, b);
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD)
             ;
         else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
@@ -285,8 +273,7 @@ struct BigIntBase {
         return *this;
     }
     BigInt_t &raw_nttmul(const BigInt_t &a, const BigInt_t &b) {
-        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD)
-            return raw_mul(a, b);
+        if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) return raw_mul(a, b);
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE)
             return raw_fastmul(a, b);
         size_t len, lenmul = 1;
@@ -315,10 +302,8 @@ struct BigIntBase {
         return *this;
     }
     BigInt_t &raw_nttsqr(const BigInt_t &a) {
-        if (a.size() <= BIGINT_MUL_THRESHOLD)
-            return raw_mul(a, a);
-        if (a.size() <= BIGINT_NTT_THRESHOLD || (a.size() + a.size()) > NTT_MAX_SIZE)
-            return raw_fastmul(a, a);
+        if (a.size() <= BIGINT_MUL_THRESHOLD) return raw_mul(a, a);
+        if (a.size() <= BIGINT_NTT_THRESHOLD || (a.size() + a.size()) > NTT_MAX_SIZE) return raw_fastmul(a, a);
         size_t len, lenmul = 1;
         std::vector<int64_t> &ntt_a = NTT_NS::ntt1.ntt_a;
         ntt_a.resize(a.size());
