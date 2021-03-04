@@ -399,7 +399,7 @@ protected:
 #endif
 #if BIGINTHEX_DIV_DOUBLE
             v[i] += (base_t)m;
-            r.raw_muloffsetsub(b, m, i);
+            r.raw_muloffsetsub(b, (base_t)m, i);
 #else
             if (m) {
                 v[i] += (base_t)m;
@@ -871,15 +871,12 @@ public:
                 return true;
         }
     }
-    bool operator>(const BigInt_t &b) const { return b < *this; }
-    bool operator<=(const BigInt_t &b) const { return !(*this > b); }
-    bool operator>=(const BigInt_t &b) const { return !(*this < b); }
     bool operator==(const BigInt_t &b) const {
         if (is_zero() && b.is_zero()) return true;
         if (sign != b.sign) return false;
         return raw_eq(b);
     }
-    bool operator!=(const BigInt_t &b) const { return !(*this == b); }
+    LESS_THAN_AND_EQUAL_COMPARABLE(BigInt_t)
 
     BigInt_t &operator=(intmax_t n) { return set(n); }
     BigInt_t &operator=(const char *s) { return from_str(s); }

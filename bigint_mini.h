@@ -338,6 +338,7 @@ public:
         if (sign != b.sign) return false;
         return raw_eq(b);
     }
+    LESS_THAN_AND_EQUAL_COMPARABLE(BigInt_t)
 
     BigInt_t &operator=(intmax_t n) { return set(n); }
     BigInt_t &operator=(const char *s) { return from_str(s); }

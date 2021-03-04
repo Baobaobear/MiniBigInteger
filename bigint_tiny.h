@@ -122,4 +122,8 @@ struct BigIntTiny {
         return d.setsign(sign * b.sign, 0);
     }
     BigIntTiny operator%(const BigIntTiny &b) const { return *this - *this / b * b; }
+    bool operator>(const BigIntTiny& b) const { return b < *this; }
+    bool operator<=(const BigIntTiny& b) const { return !(b < *this); }
+    bool operator>=(const BigIntTiny& b) const { return !(*this < b); }
+    bool operator!=(const BigIntTiny& b) const { return !(*this == b); }
 };

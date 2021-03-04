@@ -154,14 +154,9 @@ struct BigIntBase {
         add /= base;
     }
     template <typename _Tx, typename Ty> inline void borrow(_Tx &add, Ty &baseval, _Tx newval) {
-        add += newval;
-        if (add >= 0) {
-            baseval = add % (_Tx)base;
-            add /= (_Tx)base;
-        } else {
-            baseval = ++add % (_Tx)base + (_Tx)base - 1;
-            add = add / (_Tx)base - 1;
-        }
+        add += newval - base + 1;
+        baseval = add % (_Tx)base + base - 1;
+        add /= base;
     }
 
     BigIntBase() {}
