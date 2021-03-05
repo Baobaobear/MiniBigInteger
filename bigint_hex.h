@@ -30,18 +30,24 @@ const uint32_t COMPRESS_MASK = COMPRESS_MOD - 1;
 
 const uint32_t BIGINT_NTT_THRESHOLD = 1800;
 #if BIGINT_X64 || BIGINT_LARGE_BASE
-const uint32_t BIGINT_MUL_THRESHOLD = 300;
+const uint32_t BIGINT_MUL_THRESHOLD = 250;
 #else
-const uint32_t BIGINT_MUL_THRESHOLD = 550;
+const uint32_t BIGINT_MUL_THRESHOLD = 500;
 #endif
 const uint32_t BIGINT_DIV_THRESHOLD = 2048;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
-
-const uint32_t NTT_MAX_SIZE = 1 << 24;
+#if BIGINT_X64
+const uint32_t NTT_MAX_SIZE = 1 << (23 + BIGINTHEX_DIV_DOUBLE);
+#else
+const uint32_t NTT_MAX_SIZE = 1 << 21;
+#endif
 
 template <typename T> inline T high_digit(T digit) { return digit >> COMPRESS_BIT; }
-
+#if BIGINTHEX_DIV_DOUBLE || !BIGINT_LARGE_BASE
 template <typename T> inline uint32_t low_digit(T digit) { return (uint32_t)(digit & COMPRESS_MASK); }
+#else
+template <typename T> inline uint32_t low_digit(T digit) { return (uint32_t)digit; }
+#endif
 
 class BigIntHex {
 protected:
@@ -281,7 +287,8 @@ protected:
             return *this;
         }
         size_t len, lenmul = 1;
-        std::vector<int64_t> &ntt_a = NTT_NS::ntt1.ntt_a, &ntt_b = NTT_NS::ntt1.ntt_b;
+        std::vector<NTT_NS::ntt_base_t> &ntt_a = NTT_NS::ntt1.ntt_a, &ntt_b = NTT_NS::ntt1.ntt_b;
+        std::vector<int64_t> &ntt_c = NTT_NS::ntt1.ntt_c;
 #if BIGINT_LARGE_BASE
         ntt_a.resize(a.size() * 2);
         ntt_b.resize(b.size() * 2);
@@ -308,21 +315,21 @@ protected:
 #endif
         NTT_NS::mul_conv2(len);
         len = (a.size() + b.size()) * lenmul;
-        while (len > 0 && ntt_a[--len] == 0)
+        while (len > 0 && ntt_c[--len] == 0)
             ;
         v.clear();
         uint64_t add = 0;
 #if BIGINT_LARGE_BASE
         v.reserve(len / 2 + 3);
         for (size_t i = 0; i <= len; i += 2) {
-            add += ntt_a[i] + (ntt_a[i + 1] << COMPRESS_HALF_BIT);
+            add += ntt_c[i] + (ntt_c[i + 1] << COMPRESS_HALF_BIT);
             v.push_back(low_digit(add));
             add = high_digit(add);
         }
 #else
         v.reserve(len + 3);
         for (size_t i = 0; i <= len; i++) {
-            add += ntt_a[i];
+            add += ntt_c[i];
             v.push_back(low_digit(add));
             add = high_digit(add);
         }
@@ -618,9 +625,17 @@ protected:
             raw_div(a, b, r);
             return *this;
         }
-        carry_t mul =
-            (carry_t)(((uint64_t)COMPRESS_MOD * COMPRESS_MASK + COMPRESS_MASK) /
-                      (*(b.v.begin() + b.v.size() - 1) * (uint64_t)COMPRESS_MOD + *(b.v.begin() + b.v.size() - 2) + 1));
+        if (b.size() * 2 - 2 > a.size()) {
+            BigInt_t ta = a, tb = b;
+            size_t ans_len = a.size() - b.size() + 2;
+            size_t shr = b.size() - ans_len;
+            ta.raw_shr(shr);
+            tb.raw_shr(shr);
+            return raw_dividediv(ta, tb, r);
+        }
+        carry_t mul = (carry_t)(((uint64_t)COMPRESS_MOD * COMPRESS_MASK + COMPRESS_MASK) /  //
+                                (*(b.v.begin() + b.v.size() - 1) * (uint64_t)COMPRESS_MOD + //
+                                 *(b.v.begin() + b.v.size() - 2) + 1));
         BigInt_t ma = a * mul;
         BigInt_t mb = b * mul;
         while (mb.v.back() < COMPRESS_MOD >> 1) {
@@ -728,9 +743,9 @@ protected:
                 ++i;
             }
             if (out_base <= 10 || d % out_base < 10) {
-                out.push_back((d % out_base) + '0');
+                out.push_back(char((d % out_base) + '0'));
             } else {
-                out.push_back((d % out_base) + 'A' - 10);
+                out.push_back(char((d % out_base) + 'A' - 10));
             }
             d /= out_base;
             j -= 1;

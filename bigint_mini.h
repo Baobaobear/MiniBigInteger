@@ -11,7 +11,7 @@ namespace BigIntMiniNS {
 const int32_t COMPRESS_MOD = 10000;
 const uint32_t COMPRESS_DIGITS = 4;
 
-const uint32_t BIGINT_MUL_THRESHOLD = 400;
+const uint32_t BIGINT_MUL_THRESHOLD = 300;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
 
 template <typename T> inline T high_digit(T digit) { return digit / COMPRESS_MOD; }
@@ -299,7 +299,7 @@ public:
     BigIntMini() { set(0); }
     explicit BigIntMini(int n) { set(n); }
     explicit BigIntMini(intmax_t n) { set(n); }
-    explicit BigIntMini(const char *s, int base = 10) { from_str(s, base); }
+    explicit BigIntMini(const char *s) { from_str(s); }
     BigInt_t &set(intmax_t n) {
         v.resize(1);
         v[0] = 0;
@@ -318,7 +318,7 @@ public:
         }
         return *this;
     }
-    BigInt_t &from_str(const char *s, int base = 10) { return from_str_base10(s); }
+    BigInt_t &from_str(const char *s) { return from_str_base10(s); }
     bool is_zero() const { return v.size() == 1 && v[0] == 0; }
     bool operator<(const BigInt_t &b) const {
         if (sign * b.sign > 0) {
@@ -411,7 +411,7 @@ public:
         return out;
     }
 
-    std::string to_str(int32_t out_base = 10) const { return out_dec(); }
+    std::string to_str() const { return out_dec(); }
 };
 } // namespace BigIntMiniNS
 

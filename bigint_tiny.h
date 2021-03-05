@@ -41,7 +41,7 @@ struct BigIntTiny {
         BigIntTiny b = *this;
         std::string s;
         for (int i = (b.zip(1), 0); i < (int)b.v.size(); ++i)
-            s += (*(b.v.rbegin() + i) + '0');
+            s += char(*(b.v.rbegin() + i) + '0');
         return (sign < 0 ? "-" : "") + (s.empty() ? std::string("0") : s);
     }
     bool absless(const BigIntTiny &b) const {
@@ -122,8 +122,8 @@ struct BigIntTiny {
         return d.setsign(sign * b.sign, 0);
     }
     BigIntTiny operator%(const BigIntTiny &b) const { return *this - *this / b * b; }
-    bool operator>(const BigIntTiny& b) const { return b < *this; }
-    bool operator<=(const BigIntTiny& b) const { return !(b < *this); }
-    bool operator>=(const BigIntTiny& b) const { return !(*this < b); }
-    bool operator!=(const BigIntTiny& b) const { return !(*this == b); }
+    bool operator>(const BigIntTiny &b) const { return b < *this; }
+    bool operator<=(const BigIntTiny &b) const { return !(b < *this); }
+    bool operator>=(const BigIntTiny &b) const { return !(*this < b); }
+    bool operator!=(const BigIntTiny &b) const { return !(*this == b); }
 };

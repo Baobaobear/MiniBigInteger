@@ -45,8 +45,8 @@ typedef int64_t intmax_t;
 #define BIGINT_INT64_OPTIMIZE 0
 #endif
 
-#define LESS_THAN_AND_EQUAL_COMPARABLE(T) \
-    bool operator>(const T& b) const { return b < *this; } \
-    bool operator<=(const T& b) const { return !(b < *this); } \
-    bool operator>=(const T& b) const { return !(*this < b); } \
-    bool operator!=(const T& b) const { return !(*this == b); }
+#define LESS_THAN_AND_EQUAL_COMPARABLE(T)                      \
+    bool operator>(const T &b) const { return b < *this; }     \
+    bool operator<=(const T &b) const { return !(b < *this); } \
+    bool operator>=(const T &b) const { return !(*this < b); } \
+    bool operator!=(const T &b) const { return !(*this == b); }
