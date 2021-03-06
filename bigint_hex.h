@@ -24,7 +24,7 @@ const uint32_t BIGINT_NTT_THRESHOLD = 1800;
 #if BIGINT_X64
 const uint32_t BIGINT_MUL_THRESHOLD = 250;
 #else
-const uint32_t BIGINT_MUL_THRESHOLD = 300;
+const uint32_t BIGINT_MUL_THRESHOLD = 350;
 #endif
 const uint32_t BIGINT_DIV_THRESHOLD = 3000;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
@@ -490,8 +490,7 @@ protected:
             r = a - ha;
             return *this;
         }
-        if (a.size() > base * 4)
-            base = a.size() / 2;
+        if (a.size() > base * 4) base = a.size() / 2;
         BigInt_t ha = a.raw_shr_to(base);
         BigInt_t c, d, m;
         raw_dividediv_recursion(ha, b, d);
@@ -518,7 +517,7 @@ protected:
             tb.raw_shr(shr);
             return raw_dividediv(ta, tb, r);
         }
-        carry_t mul = (carry_t)(((uint64_t)(COMPRESS_MOD + 1) * (COMPRESS_MOD - 1)) /  //
+        carry_t mul = (carry_t)(((uint64_t)(COMPRESS_MOD + 1) * (COMPRESS_MOD - 1)) /       //
                                 (*(b.v.begin() + b.v.size() - 1) * (uint64_t)COMPRESS_MOD + //
                                  *(b.v.begin() + b.v.size() - 2) + 1));
         BigInt_t ma = a * mul, mb = b * mul;

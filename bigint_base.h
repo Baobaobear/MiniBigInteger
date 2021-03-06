@@ -34,9 +34,7 @@ template <int32_t NTT_MOD> struct NTT {
     std::vector<int64_t> ntt_c;
 
 #if BIGINT_X64
-    inline ntt_base_t mul_mod(int64_t a, int64_t b) {
-        return a * b % NTT_MOD;
-    }
+    inline ntt_base_t mul_mod(int64_t a, int64_t b) { return a * b % NTT_MOD; }
 #else
     inline ntt_base_t mul_mod(int32_t a, int32_t b) {
         int32_t c = (int32_t)((double)a * b / NTT_MOD);

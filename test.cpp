@@ -1,5 +1,4 @@
 #define _CRT_SECURE_NO_WARNINGS
-#define NTT_MODE 0
 
 #include "bigint_mini.h"
 #include "bigint_tiny.h"
@@ -15,13 +14,25 @@ typedef double time_point;
 
 #ifdef _WIN32
 #include <time.h>
+#include <windows.h>
+#undef min
+#undef max
+static LARGE_INTEGER freq, beg;
+struct init_timer {
+    init_timer() {
+        ::QueryPerformanceFrequency(&freq);
+        ::QueryPerformanceCounter(&beg);
+    }
+}_;
 #else
 #include <sys/time.h>
 #endif
 
 time_point get_time() {
 #ifdef _WIN32
-    return clock() * 1000;
+    LARGE_INTEGER cur;
+    ::QueryPerformanceCounter(&cur);
+    return (double)(cur.QuadPart - beg.QuadPart) / freq.QuadPart * 1000000;
 #else
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -748,7 +759,7 @@ void test_efficiency(string classname) {
             if ((diff = get_time_diff(t_beg, t_end)) > timelimit)
                 break;
         }
-        cout << "    mul " << i << " digits: " << diff / cnt / 1000 << " ms" << endl;
+        cout << "    mul " << i << " digits: " << diff / cnt / sa.size() << " us/digits" << endl;
         if (cnt <= 4)
             break;
     }
@@ -774,7 +785,7 @@ void test_efficiency(string classname) {
             if ((diff = get_time_diff(t_beg, t_end)) > timelimit)
                 break;
         }
-        cout << "    div " << i << " digits: " << diff / cnt / 1000 << " ms" << endl;
+        cout << "    div " << i << " digits: " << diff / cnt / sa.size() << " us/digits" << endl;
         if (cnt <= 4)
             break;
     }
