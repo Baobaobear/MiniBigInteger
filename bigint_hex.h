@@ -475,7 +475,7 @@ protected:
         } else if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) {
             return raw_div(a, b, r);
         }
-        int32_t base = (int32_t)((b.size() + 1) / 2);
+        size_t base = (b.size() + 1) / 2;
         if ((int32_t)a.size() <= base * 3) {
             base = (int32_t)(b.size() / 2);
             BigInt_t ma = a, mb = b, e;
