@@ -531,7 +531,7 @@ protected:
         BigInt_t d;
         ma.sign = mb.sign = 1;
         raw_dividediv_recursion(ma, mb, d);
-        r.raw_div(d, BigInt_t(mul), ma);
+        r.raw_div(d, BigInt_t((int)mul), ma);
         return *this;
     }
     void trim() {
