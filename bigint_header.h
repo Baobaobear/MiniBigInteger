@@ -39,10 +39,7 @@ typedef int64_t intmax_t;
 #define BIGINT_X64 1
 #endif
 #if !defined(BIGINT_LARGE_BASE) && BIGINT_X64
-#define BIGINT_LARGE_BASE 1
-#endif
-#if !BIGINT_LARGE_BASE && defined(_MSC_VER)
-#define BIGINT_INT64_OPTIMIZE 0
+#define BIGINT_LARGE_BASE 1 // only work with BigIntBase & BigIntDec
 #endif
 
 #define LESS_THAN_AND_EQUAL_COMPARABLE(T)                      \

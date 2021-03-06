@@ -192,54 +192,35 @@ protected:
         if (a < b) {
             r = a;
             return set(0);
+        } else if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) {
+            return raw_div(a, b, r);
         }
-        if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) return raw_div(a, b, r);
-        BigInt_t ma = a, mb = b, e;
-        if (b.size() & 1) {
-            ma.raw_shl(1);
-            mb.raw_shl(1);
-        }
-        int32_t base = (int32_t)(mb.size() / 2);
-        BigInt_t ha = ma.raw_shr_to(base);
-        if ((int32_t)ma.size() <= base * 3) {
+        int32_t base = (int32_t)((b.size() + 1) / 2);
+        if ((int32_t)a.size() <= base * 3) {
+            base = (int32_t)(b.size() / 2);
+            BigInt_t ma = a, mb = b, e;
+            BigInt_t ha = ma.raw_shr_to(base);
             BigInt_t hb = mb.raw_shr_to(base);
-            raw_dividediv_basecase(ha, hb, r);
+            raw_dividediv_recursion(ha, hb, r);
             ha = *this * b;
             while (a < ha) {
                 ha.raw_sub(b);
-                *this = *this - BigInt_t(1);
+                raw_sub(BigInt_t(1));
             }
             r = a - ha;
             return *this;
         }
-        e.raw_dividediv_basecase(ha, mb, r);
-        ma.v.resize(base + r.size());
-        for (size_t i = 0; i < r.size(); ++i)
-            ma.v[base + i] = r.v[i];
-        ma.trim();
-
-        e.raw_shl(base);
-        raw_dividediv_recursion(ma, mb, r);
-        if (b.size() & 1) r.raw_shr(1);
-        return *this = *this + e;
-    }
-    BigInt_t &raw_dividediv_basecase(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
-        if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) {
-            raw_div(a, b, r);
-            return *this;
-        }
-        BigInt_t ha = a.raw_shr_to(b.size());
+        if ((int32_t)a.size() > base * 4)
+            base = a.size() / 2;
+        BigInt_t ha = a.raw_shr_to(base);
         BigInt_t c, d, m;
-        if (ha.size() > b.size() * 2)
-            raw_dividediv_basecase(ha, b, d);
-        else
-            raw_dividediv_recursion(ha, b, d);
-        raw_shl(b.size());
-        m.v.resize(b.size() + d.size());
-        for (size_t i = 0; i < b.size(); ++i)
+        raw_dividediv_recursion(ha, b, d);
+        raw_shl(base);
+        m.v.resize(base + d.size());
+        for (size_t i = 0; i < base; ++i)
             m.v[i] = a.v[i];
         for (size_t i = 0; i < d.size(); ++i)
-            m.v[b.size() + i] = d.v[i];
+            m.v[base + i] = d.v[i];
         c.raw_dividediv_recursion(m, b, r);
         raw_add(c);
         return *this;
@@ -249,19 +230,27 @@ protected:
             raw_div(a, b, r);
             return *this;
         }
-        carry_t mul =
-            (carry_t)(((int64_t)COMPRESS_MOD * COMPRESS_MOD - 1) /
-                      (*(b.v.begin() + b.v.size() - 1) * (int64_t)COMPRESS_MOD + *(b.v.begin() + b.v.size() - 2) + 1));
-        BigInt_t ma = a * BigInt_t(mul);
-        BigInt_t mb = b * BigInt_t(mul);
+        if (b.size() * 2 - 2 > a.size()) {
+            BigInt_t ta = a, tb = b;
+            size_t ans_len = a.size() - b.size() + 2;
+            size_t shr = b.size() - ans_len;
+            ta.raw_shr(shr);
+            tb.raw_shr(shr);
+            return raw_dividediv(ta, tb, r);
+        }
+        carry_t mul = (carry_t)(((uint64_t)COMPRESS_MOD * COMPRESS_MOD - 1) /  //
+            (*(b.v.begin() + b.v.size() - 1) * (uint64_t)COMPRESS_MOD + //
+                *(b.v.begin() + b.v.size() - 2) + 1));
+        BigInt_t ma = a * BigInt_t(mul), mb = b * BigInt_t(mul);
         while (mb.v.back() < COMPRESS_MOD >> 1) {
             int32_t m = 2;
-            ma = ma * BigInt_t(m);
-            mb = mb * BigInt_t(m);
+            ma.raw_mul(ma, BigInt_t(m));
+            mb.raw_mul(mb, BigInt_t(m));
             mul *= m;
         }
         BigInt_t d;
-        raw_dividediv_basecase(ma, mb, d);
+        ma.sign = mb.sign = 1;
+        raw_dividediv_recursion(ma, mb, d);
         r.raw_div(d, BigInt_t(mul), ma);
         return *this;
     }

@@ -23,7 +23,7 @@ const uint32_t BIGINT_MUL_THRESHOLD = 200;
 #else
 const uint32_t BIGINT_MUL_THRESHOLD = 300;
 #endif
-const uint32_t BIGINT_DIV_THRESHOLD = 2048;
+const uint32_t BIGINT_DIV_THRESHOLD = 2000;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
 #if BIGINT_X64
 const uint32_t NTT_MAX_SIZE = 1 << 24;
@@ -455,7 +455,6 @@ protected:
                 sum.raw_add(mul);
             }
             for (size_t i = 1; i < v.size(); i++) {
-                // base.raw_mul_int(COMPRESS_MOD);
                 base.raw_mul(ownbase, BigIntBase(base));
                 BigIntBase mul(out_base);
                 mul = base;

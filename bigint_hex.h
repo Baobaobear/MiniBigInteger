@@ -9,18 +9,10 @@
 #define BIGINTHEX_DIV_DOUBLE 0
 
 namespace BigIntHexNS {
-#if BIGINT_LARGE_BASE
 #if BIGINTHEX_DIV_DOUBLE
 const uint32_t COMPRESS_BIT = 30;
 #else
 const uint32_t COMPRESS_BIT = 32;
-#endif
-#else
-#if BIGINTHEX_DIV_DOUBLE
-const uint32_t COMPRESS_BIT = 15;
-#else
-const uint32_t COMPRESS_BIT = 16;
-#endif
 #endif
 const uint32_t COMPRESS_HALF_BIT = COMPRESS_BIT / 2;
 const uint32_t COMPRESS_HALF_MOD = 1 << COMPRESS_HALF_BIT;
@@ -29,12 +21,12 @@ const uint64_t COMPRESS_MOD = (uint64_t)1 << COMPRESS_BIT;
 const uint32_t COMPRESS_MASK = COMPRESS_MOD - 1;
 
 const uint32_t BIGINT_NTT_THRESHOLD = 1800;
-#if BIGINT_X64 || BIGINT_LARGE_BASE
+#if BIGINT_X64
 const uint32_t BIGINT_MUL_THRESHOLD = 250;
 #else
-const uint32_t BIGINT_MUL_THRESHOLD = 500;
+const uint32_t BIGINT_MUL_THRESHOLD = 300;
 #endif
-const uint32_t BIGINT_DIV_THRESHOLD = 2048;
+const uint32_t BIGINT_DIV_THRESHOLD = 3000;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
 #if BIGINT_X64
 const uint32_t NTT_MAX_SIZE = 1 << (23 + BIGINTHEX_DIV_DOUBLE);
@@ -43,7 +35,7 @@ const uint32_t NTT_MAX_SIZE = 1 << 21;
 #endif
 
 template <typename T> inline T high_digit(T digit) { return digit >> COMPRESS_BIT; }
-#if BIGINTHEX_DIV_DOUBLE || !BIGINT_LARGE_BASE
+#if BIGINTHEX_DIV_DOUBLE
 template <typename T> inline uint32_t low_digit(T digit) { return (uint32_t)(digit & COMPRESS_MASK); }
 #else
 template <typename T> inline uint32_t low_digit(T digit) { return (uint32_t)digit; }
@@ -52,13 +44,8 @@ template <typename T> inline uint32_t low_digit(T digit) { return (uint32_t)digi
 class BigIntHex {
 protected:
     typedef uint32_t base_t;
-#if BIGINT_LARGE_BASE
     typedef int64_t carry_t;
     typedef uint64_t ucarry_t;
-#else
-    typedef int32_t carry_t;
-    typedef uint32_t ucarry_t;
-#endif
     int sign;
     std::vector<base_t> v;
     typedef BigIntHex BigInt_t;
@@ -142,30 +129,10 @@ protected:
             return *this;
         } else if (m == 1)
             return *this;
-#if BIGINT_INT64_OPTIMIZE
-        int64_t add = 0;
-        size_t i = 0, s = v.size() & ~1;
-        for (; i < s; i += 2) {
-            add += (int64_t)((v[i + 1] << COMPRESS_BIT) | v[i]) * m;
-            v[i] = low_digit(add);
-            v[i + 1] = low_digit(high_digit(add));
-            add = high_digit(high_digit(add));
-        }
-        for (; i < v.size(); i++) {
-            add += v[i] * (carry_t)m;
-            v[i] = low_digit(add);
-            add = high_digit(add);
-        }
-        while (add) {
-            v.push_back(low_digit(add));
-            add = high_digit(add);
-        }
-#else
         ucarry_t add = 0;
         for (size_t i = 0; i < v.size(); i++)
             carry(add, v[i], v[i] * (ucarry_t)m);
         if (add) v.push_back((base_t)add);
-#endif
         return *this;
     }
     BigInt_t &raw_mul(const BigInt_t &a, const BigInt_t &b) {
@@ -182,27 +149,6 @@ protected:
         }
         v.clear();
         v.resize(a.size() + b.size());
-#if BIGINT_INT64_OPTIMIZE
-        size_t i = 0, as = a.size() & ~1;
-        for (; i < a.size(); i += 1) {
-            uint64_t add = 0;
-            uint64_t av = a.v[i];
-            size_t j = 0, bs = b.size() & ~1;
-            for (; j < bs; j += 2) {
-                add += v[i + j] + av * (uint64_t)((b.v[j + 1] << COMPRESS_BIT) | b.v[j]);
-                v[i + j] = low_digit(add);
-                add = high_digit((uint64_t)add) + v[i + j + 1];
-                v[i + j + 1] = low_digit(add);
-                add = high_digit((uint64_t)add);
-            }
-            for (; j < b.size(); j++) {
-                add += av * b.v[j];
-                v[i + j] += low_digit(add);
-                add = high_digit((uint64_t)add);
-            }
-            v[i + b.size()] += (base_t)add;
-        }
-#else
         for (size_t i = 0; i < a.size(); i++) {
             ucarry_t add = 0, av = a.v[i];
             for (size_t j = 0; j < b.size(); j++)
@@ -214,7 +160,6 @@ protected:
                 carry(add, v[j], (ucarry_t)v[j]);
 #endif
         }
-#endif
         trim();
         return *this;
     }
@@ -289,7 +234,6 @@ protected:
         size_t len, lenmul = 1;
         std::vector<NTT_NS::ntt_base_t> &ntt_a = NTT_NS::ntt1.ntt_a, &ntt_b = NTT_NS::ntt1.ntt_b;
         std::vector<int64_t> &ntt_c = NTT_NS::ntt1.ntt_c;
-#if BIGINT_LARGE_BASE
         ntt_a.resize(a.size() * 2);
         ntt_b.resize(b.size() * 2);
         for (size_t i = 0, j = 0; i < a.size(); ++i, ++j) {
@@ -302,38 +246,18 @@ protected:
         }
         NTT_NS::ntt_prepare(a.size() * 2, b.size() * 2, len, 7);
         lenmul = 2;
-#else
-        ntt_a.resize(a.size());
-        ntt_b.resize(b.size());
-        for (size_t i = 0; i < a.size(); ++i) {
-            ntt_a[i] = a.v[i];
-        }
-        for (size_t i = 0; i < b.size(); ++i) {
-            ntt_b[i] = b.v[i];
-        }
-        NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
-#endif
         NTT_NS::mul_conv2(len);
         len = (a.size() + b.size()) * lenmul;
         while (len > 0 && ntt_c[--len] == 0)
             ;
         v.clear();
         uint64_t add = 0;
-#if BIGINT_LARGE_BASE
         v.reserve(len / 2 + 3);
         for (size_t i = 0; i <= len; i += 2) {
             add += ntt_c[i] + (ntt_c[i + 1] << COMPRESS_HALF_BIT);
             v.push_back(low_digit(add));
             add = high_digit(add);
         }
-#else
-        v.reserve(len + 3);
-        for (size_t i = 0; i <= len; i++) {
-            add += ntt_c[i];
-            v.push_back(low_digit(add));
-            add = high_digit(add);
-        }
-#endif
         for (; add; add = high_digit(add))
             v.push_back(low_digit(add));
         trim();
@@ -354,20 +278,12 @@ protected:
         size_t offset = b.size();
 #if BIGINTHEX_DIV_DOUBLE
         double db = b.v.back();
-#if BIGINT_LARGE_BASE
         if (b.size() > 2) {
             double t = b.v[b.size() - 2] + b.v[b.size() - 3] / (double)COMPRESS_MOD;
             db += (b.v.back() / (double)COMPRESS_HALF_MOD + t) / COMPRESS_MOD;
         } else if (b.size() > 1) {
             db += (b.v.back() / (double)COMPRESS_HALF_MOD + b.v[b.size() - 2]) / COMPRESS_MOD;
         }
-#else
-        if (b.size() > 2) {
-            db += (b.v[b.size() - 2] + (b.v[b.size() - 3] + 1) / (double)COMPRESS_MOD) / COMPRESS_MOD;
-        } else if (b.size() > 1) {
-            db += b.v[b.size() - 2] / (double)COMPRESS_MOD;
-        }
-#endif
         db = 1 / db;
 #else
         ucarry_t db = (ucarry_t)b.v.back() << (COMPRESS_BIT - 1);
@@ -386,7 +302,6 @@ protected:
                     m = (rm >> 1) / db;
                     ++i;
                 } else {
-#if BIGINT_LARGE_BASE
                     if (rm > 0xffffffff)
                         if (rm > (((ucarry_t)0xffff << 32) | 0xffffffff))
                             m = rm / ((db >> (COMPRESS_BIT - 1)) + 1);
@@ -394,9 +309,6 @@ protected:
                             m = (rm << COMPRESS_HALF_BIT) / ((db >> (COMPRESS_HALF_BIT - 1)) + 1);
                     else
                         m = (rm << (COMPRESS_BIT - 1)) / db;
-#else
-                    m = ((uint64_t)rm << (COMPRESS_BIT - 1)) / db;
-#endif
                     if (m >= COMPRESS_MOD) {
                         m >>= COMPRESS_BIT;
                         ++i;
@@ -417,7 +329,6 @@ protected:
 #endif
             i -= !r.v[i + offset];
         }
-#if BIGINT_LARGE_BASE
         {
 #if BIGINTHEX_DIV_DOUBLE
             ucarry_t db = (ucarry_t)b.v.back() << (COMPRESS_BIT - 1);
@@ -435,7 +346,6 @@ protected:
                 r.raw_offsetsub(bm, i);
             }
         }
-#endif
         r.trim();
         carry_t add = 0;
         while (!r.raw_less(b)) {
@@ -562,60 +472,35 @@ protected:
         if (a < b) {
             r = a;
             return set(0);
-        }
-        if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) {
+        } else if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) {
             return raw_div(a, b, r);
         }
-        BigInt_t ma = a, mb = b, e;
-        if (b.size() & 1) {
-            ma.raw_shl(1);
-            mb.raw_shl(1);
-        }
-        int32_t base = (int32_t)(mb.size() / 2);
-        BigInt_t ha = ma.raw_shr_to(base);
-        if ((int32_t)ma.size() <= base * 3) {
+        int32_t base = (int32_t)((b.size() + 1) / 2);
+        if ((int32_t)a.size() <= base * 3) {
+            base = (int32_t)(b.size() / 2);
+            BigInt_t ma = a, mb = b, e;
+            BigInt_t ha = ma.raw_shr_to(base);
             BigInt_t hb = mb.raw_shr_to(base);
-            raw_dividediv_basecase(ha, hb, r);
+            raw_dividediv_recursion(ha, hb, r);
             ha = *this * b;
             while (a < ha) {
                 ha.raw_sub(b);
-                *this -= BigInt_t(1);
+                raw_sub(BigInt_t(1));
             }
             r = a - ha;
             return *this;
         }
-        e.raw_dividediv_basecase(ha, mb, r);
-        ma.v.resize(base + r.size());
-        for (size_t i = 0; i < r.size(); ++i) {
-            ma.v[base + i] = r.v[i];
-        }
-        ma.trim();
-
-        e.raw_shl(base);
-        raw_dividediv_recursion(ma, mb, r);
-        if (b.size() & 1) r.raw_shr(1);
-        return *this += e;
-    }
-    BigInt_t &raw_dividediv_basecase(const BigInt_t &a, const BigInt_t &b, BigInt_t &r) {
-        if (b.size() <= BIGINT_DIVIDEDIV_THRESHOLD) {
-            raw_div(a, b, r);
-            return *this;
-        }
-        BigInt_t ha = a.raw_shr_to(b.size());
+        if ((int32_t)a.size() > base * 4)
+            base = a.size() / 2;
+        BigInt_t ha = a.raw_shr_to(base);
         BigInt_t c, d, m;
-        if (ha.size() > b.size() * 2) {
-            raw_dividediv_basecase(ha, b, d);
-        } else {
-            raw_dividediv_recursion(ha, b, d);
-        }
-        raw_shl(b.size());
-        m.v.resize(b.size() + d.size());
-        for (size_t i = 0; i < b.size(); ++i) {
+        raw_dividediv_recursion(ha, b, d);
+        raw_shl(base);
+        m.v.resize(base + d.size());
+        for (size_t i = 0; i < base; ++i)
             m.v[i] = a.v[i];
-        }
-        for (size_t i = 0; i < d.size(); ++i) {
-            m.v[b.size() + i] = d.v[i];
-        }
+        for (size_t i = 0; i < d.size(); ++i)
+            m.v[base + i] = d.v[i];
         c.raw_dividediv_recursion(m, b, r);
         raw_add(c);
         return *this;
@@ -633,19 +518,19 @@ protected:
             tb.raw_shr(shr);
             return raw_dividediv(ta, tb, r);
         }
-        carry_t mul = (carry_t)(((uint64_t)COMPRESS_MOD * COMPRESS_MASK + COMPRESS_MASK) /  //
+        carry_t mul = (carry_t)(((uint64_t)(COMPRESS_MOD + 1) * (COMPRESS_MOD - 1)) /  //
                                 (*(b.v.begin() + b.v.size() - 1) * (uint64_t)COMPRESS_MOD + //
                                  *(b.v.begin() + b.v.size() - 2) + 1));
-        BigInt_t ma = a * mul;
-        BigInt_t mb = b * mul;
+        BigInt_t ma = a * mul, mb = b * mul;
         while (mb.v.back() < COMPRESS_MOD >> 1) {
             int32_t m = 2;
-            ma *= m;
-            mb *= m;
+            ma.raw_mul_int(m);
+            mb.raw_mul_int(m);
             mul *= m;
         }
         BigInt_t d;
-        raw_dividediv_basecase(ma, mb, d);
+        ma.sign = mb.sign = 1;
+        raw_dividediv_recursion(ma, mb, d);
         r.raw_div(d, BigInt_t(mul), ma);
         return *this;
     }
@@ -660,19 +545,15 @@ protected:
             BigIntBase base(out_base);
             BigIntBase ownbase(out_base);
             ownbase.set(COMPRESS_MOD);
-            {
-                base.set(1);
-                BigIntBase mul(out_base);
-                mul = base;
-                mul.raw_mul_int(v[0]);
-                sum.raw_add(mul);
-            }
+            BigIntBase mul(out_base), t(out_base);
+            base.set(1);
+            t.set(v[0]);
+            mul.raw_mul(base, t);
+            sum.raw_add(mul);
             for (size_t i = 1; i < v.size(); i++) {
-                // base.raw_mul_int(COMPRESS_MOD);
                 base.raw_mul(ownbase, BigIntBase(base));
-                BigIntBase mul(out_base);
-                mul = base;
-                mul.raw_mul_int(v[i]);
+                t.set(v[i]);
+                mul.raw_mul(base, t);
                 sum.raw_add(mul);
             }
             return BIGINT_STD_MOVE(sum);
@@ -991,8 +872,10 @@ public:
 
     BigInt_t operator/(const BigInt_t &b) const {
         BigInt_t r, d;
-        d.raw_fastdiv(*this, b);
-        // d.raw_dividediv(*this, b, r);
+        if (b.size() > BIGINT_DIV_THRESHOLD)
+            d.raw_fastdiv(*this, b);
+        else
+            d.raw_dividediv(*this, b, r);
         d.sign = sign * b.sign;
         return BIGINT_STD_MOVE(d);
     }

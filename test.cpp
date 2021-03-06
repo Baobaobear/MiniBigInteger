@@ -725,10 +725,10 @@ template<class BIG>
 void test_efficiency(string classname) {
     char chars[] = "0123456789ABCDEF";
     string sa, sb;
-    int firststep = 1024;
+    int firststep = 256, step = firststep / 2;
     double timelimit = 2e5;
     cout << classname << ":" << endl;
-    for (int i = firststep; ; i *= 2) {
+    for (int i = firststep; ; i += step, (i&(i - 1)) == 0 ? step *= 2 : 0) {
         double diff;
         BIG a1, a2, a3;
         sa = chars[randint(1, 9)];
@@ -749,10 +749,11 @@ void test_efficiency(string classname) {
                 break;
         }
         cout << "    mul " << i << " digits: " << diff / cnt / 1000 << " ms" << endl;
-        if (cnt == 1)
+        if (cnt <= 4)
             break;
     }
-    for (int i = firststep; ; i *= 2) {
+    step = firststep / 2;
+    for (int i = firststep; ; i += step, (i&(i - 1)) == 0 ? step *= 2 : 0) {
         double diff;
         BIG a1, a2, a3;
         sa = chars[randint(1, 9)];
@@ -774,13 +775,12 @@ void test_efficiency(string classname) {
                 break;
         }
         cout << "    div " << i << " digits: " << diff / cnt / 1000 << " ms" << endl;
-        if (cnt == 1)
+        if (cnt <= 4)
             break;
     }
 }
 
 int main() {
-    //srand((unsigned)time(0));
     bool pass = true;
     cout << "test1_parse : " << ((pass = test1_parse()) ? "pass" : "FAIL") << endl;
     if (!pass)
