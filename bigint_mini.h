@@ -196,8 +196,8 @@ protected:
             return raw_div(a, b, r);
         }
         size_t base = (b.size() + 1) / 2;
-        if ((int32_t)a.size() <= base * 3) {
-            base = (int32_t)(b.size() / 2);
+        if (a.size() <= base * 3) {
+            base = b.size() / 2;
             BigInt_t ma = a, mb = b, e;
             BigInt_t ha = ma.raw_shr_to(base);
             BigInt_t hb = mb.raw_shr_to(base);
@@ -210,7 +210,7 @@ protected:
             r = a - ha;
             return *this;
         }
-        if ((int32_t)a.size() > base * 4)
+        if (a.size() > base * 4)
             base = a.size() / 2;
         BigInt_t ha = a.raw_shr_to(base);
         BigInt_t c, d, m;
