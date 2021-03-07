@@ -744,19 +744,6 @@ public:
             return *this = *this * b;
         }
     }
-    BigInt_t operator*(intmax_t b) const { return BIGINT_STD_MOVE(*this * BigInt_t().set(b)); }
-    BigInt_t &operator*=(intmax_t b) {
-        if (b < (intmax_t)COMPRESS_MOD && -(intmax_t)COMPRESS_MOD < b) {
-            if (b >= 0)
-                raw_mul_int((uint32_t)b);
-            else {
-                raw_mul_int((uint32_t)-b);
-                sign = -sign;
-            }
-            return *this;
-        }
-        return *this *= BigInt_t().set(b);
-    }
 
     BigInt_t operator/(const BigInt_t &b) const {
         BigInt_t r, d;

@@ -544,7 +544,7 @@ protected:
         carry_t mul = (carry_t)(((uint64_t)(COMPRESS_MOD + 1) * (COMPRESS_MOD - 1)) /       //
                                 (*(b.v.begin() + b.v.size() - 1) * (uint64_t)COMPRESS_MOD + //
                                  *(b.v.begin() + b.v.size() - 2) + 1));
-        BigInt_t ma = a * mul, mb = b * mul;
+        BigInt_t ma = a * BigInt_t(mul), mb = b * BigInt_t(mul);
         while (mb.v.back() < COMPRESS_MOD >> 1) {
             int32_t m = 2;
             ma.raw_mul_int(m);
@@ -878,19 +878,6 @@ public:
         } else {
             return *this = *this * b;
         }
-    }
-    BigInt_t operator*(intmax_t b) const { return BIGINT_STD_MOVE(*this * BigInt_t().set(b)); }
-    BigInt_t &operator*=(intmax_t b) {
-        if (b < (intmax_t)COMPRESS_MOD && -(intmax_t)COMPRESS_MOD < b) {
-            if (b >= 0)
-                raw_mul_int((uint32_t)b);
-            else {
-                raw_mul_int((uint32_t)-b);
-                sign = -sign;
-            }
-            return *this;
-        }
-        return *this *= BigInt_t().set(b);
     }
 
     BigInt_t operator/(const BigInt_t &b) const {
