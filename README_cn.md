@@ -141,24 +141,13 @@ a /= b;
 ### 关系运算
 
 ```c++
-BigIntHex a, b; // or BigIntDec
+BigIntHex a, b;
 a < b;
 a <= b;
 a >= b;
 a > b;
 a == b;
 a != b;
-```
-
-```c++
-BigIntMini a, b; // or BigIntTiny
-a < b;
-a == b;
-//not support the belows
-//a <= b;
-//a >= b;
-//a > b;
-//a != b;
 ```
 
 ### 输出

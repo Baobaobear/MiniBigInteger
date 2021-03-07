@@ -9,7 +9,7 @@
 
 namespace NTT_NS {
 
-const int32_t NTT_POW = 32;
+const int32_t NTT_POW = 24;
 const int32_t NTT_G = 3;
 #if BIGINT_X64
 typedef int64_t ntt_base_t;
@@ -37,6 +37,7 @@ template <int32_t NTT_MOD> struct NTT {
     inline ntt_base_t mul_mod(int64_t a, int64_t b) { return a * b % NTT_MOD; }
 #else
     inline ntt_base_t mul_mod(int32_t a, int32_t b) {
+        //return ntt_base_t((int64_t)a * b % NTT_MOD);
         int32_t c = (int32_t)((double)a * b / NTT_MOD);
         return a * b - c * NTT_MOD;
     }
@@ -147,8 +148,8 @@ void sqr_conv2(size_t n) {
 namespace BigIntBaseNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;
 
-const uint32_t BIGINT_NTT_THRESHOLD = 1024;
-const uint32_t BIGINT_MUL_THRESHOLD = 300;
+const uint32_t BIGINT_NTT_THRESHOLD = 1000;
+const uint32_t BIGINT_MUL_THRESHOLD = 70;
 const uint32_t NTT_MAX_SIZE = 1 << 21;
 
 struct BigIntBase {

@@ -18,10 +18,10 @@ const uint32_t COMPRESS_DIGITS = 4;
 #endif
 
 const uint32_t BIGINT_NTT_THRESHOLD = 1800;
-#if BIGINT_X64 || BIGINT_LARGE_BASE
-const uint32_t BIGINT_MUL_THRESHOLD = 200;
+#if BIGINT_X64
+const uint32_t BIGINT_MUL_THRESHOLD = 80;
 #else
-const uint32_t BIGINT_MUL_THRESHOLD = 300;
+const uint32_t BIGINT_MUL_THRESHOLD = 60;
 #endif
 const uint32_t BIGINT_DIV_THRESHOLD = 2000;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
@@ -75,7 +75,7 @@ protected:
         if (v.size() < b.size()) v.resize(b.size());
         ucarry_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++)
-            carry(add, v[i], (ucarry_t)v[i] + b.v[i]);
+            carry(add, v[i], (ucarry_t)(v[i] + b.v[i]));
         for (size_t i = b.v.size(); add && i < v.size(); i++)
             carry(add, v[i], (ucarry_t)v[i]);
         add ? v.push_back((base_t)add) : trim();
@@ -84,7 +84,7 @@ protected:
     BigInt_t &raw_offset_add(const BigInt_t &b, size_t offset) {
         ucarry_t add = 0;
         for (size_t i = 0; i < b.size(); ++i)
-            carry(add, v[i + offset], (ucarry_t)v[i + offset] + b.v[i]);
+            carry(add, v[i + offset], (ucarry_t)(v[i + offset] + b.v[i]));
         for (size_t i = b.size() + offset; add; ++i)
             carry(add, v[i], (ucarry_t)v[i]);
         return *this;
@@ -105,7 +105,7 @@ protected:
         trim();
         return *this;
     }
-    BigInt_t &raw_offsetsub(const BigInt_t &b, size_t offset) {
+    BigInt_t &raw_offset_sub(const BigInt_t &b, size_t offset) {
         carry_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++)
             borrow(add, v[i + offset], (carry_t)v[i + offset] - (carry_t)b.v[i]);
@@ -113,7 +113,7 @@ protected:
             borrow(add, v[i], (carry_t)v[i]);
         return *this;
     }
-    BigInt_t &raw_muloffsetsub(const BigInt_t &b, base_t mul, size_t offset) {
+    BigInt_t &raw_offset_mulsub(const BigInt_t &b, base_t mul, size_t offset) {
         if (mul == 0) return *this;
         carry_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++)
@@ -158,7 +158,7 @@ protected:
         return *this;
     }
     // Karatsuba algorithm
-    BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
+    BigInt_t &raw_mul_karatsuba(const BigInt_t &a, const BigInt_t &b) {
         if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) {
             return raw_mul(a, b);
         }
@@ -166,15 +166,15 @@ protected:
             BigInt_t t;
             if (a.size() * 2 < b.size()) {
                 size_t split = b.size() / 2;
-                t.raw_fastmul(a, b.raw_shr_to(split));
+                t.raw_mul_karatsuba(a, b.raw_shr_to(split));
                 t.raw_shl(split);
-                raw_fastmul(a, b.raw_lowdigits_to(split));
+                raw_mul_karatsuba(a, b.raw_lowdigits_to(split));
                 raw_add(t);
             } else {
                 size_t split = a.size() / 2;
-                t.raw_fastmul(b, a.raw_shr_to(split));
+                t.raw_mul_karatsuba(b, a.raw_shr_to(split));
                 t.raw_shl(split);
-                raw_fastmul(b, a.raw_lowdigits_to(split));
+                raw_mul_karatsuba(b, a.raw_lowdigits_to(split));
                 raw_add(t);
             }
             return *this;
@@ -190,10 +190,11 @@ protected:
         bl.v.assign(b.v.begin(), b.v.begin() + split);
         bh.v.assign(b.v.begin() + split, b.v.end());
 
-        raw_fastmul(al, bl);
-        h.raw_fastmul(ah, bh);
-        m.raw_fastmul(al + ah, bl + bh);
-        m.raw_sub(*this + h);
+        raw_mul_karatsuba(al, bl);
+        h.raw_mul_karatsuba(ah, bh);
+        m.raw_mul_karatsuba(al + ah, bl + bh);
+        m.raw_sub(*this);
+        m.raw_sub(h);
         v.resize(a.size() + b.size());
 
         raw_offset_add(m, split);
@@ -206,7 +207,7 @@ protected:
             return raw_mul(a, b);
         }
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE) {
-            return raw_fastmul(a, b);
+            return raw_mul_karatsuba(a, b);
         }
         if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
             BigInt_t t;
@@ -259,8 +260,8 @@ protected:
         v.clear();
         uint64_t add = 0;
 #if BIGINT_LARGE_BASE
-        v.reserve(len / 2 + 3);
-        for (size_t i = 0; i <= len; i += 2) {
+        v.reserve(++len / 2 + 2);
+        for (size_t i = 0; i < len; i += 2) {
             add += ntt_c[i] + (ntt_c[i + 1] * COMPRESS_HALF_MOD);
             v.push_back(low_digit(add));
             add = high_digit(add);
@@ -311,7 +312,7 @@ protected:
             carry_t rm = (carry_t)r.v[j + 1] * COMPRESS_MOD + r.v[j], m;
             m = std::max((carry_t)(rm * db), (carry_t)r.v[i + offset]);
             v[i] += (base_t)m;
-            r.raw_muloffsetsub(b, (base_t)m, i);
+            r.raw_offset_mulsub(b, (base_t)m, i);
             if (!r.v[j + 1]) --i, --j;
         }
         r.trim();

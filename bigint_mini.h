@@ -11,17 +11,18 @@ namespace BigIntMiniNS {
 const int32_t COMPRESS_MOD = 10000;
 const uint32_t COMPRESS_DIGITS = 4;
 
-const uint32_t BIGINT_MUL_THRESHOLD = 300;
+const uint32_t BIGINT_MUL_THRESHOLD = 60;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
 
-template <typename T> inline T high_digit(T digit) { return digit / COMPRESS_MOD; }
+template <typename T> inline T high_digit(T digit) { return digit / (T)COMPRESS_MOD; }
 
-template <typename T> inline uint32_t low_digit(T digit) { return (uint32_t)(digit % COMPRESS_MOD); }
+template <typename T> inline uint32_t low_digit(T digit) { return (uint32_t)(digit % (T)COMPRESS_MOD); }
 
 class BigIntMini {
 protected:
     typedef uint32_t base_t;
     typedef int32_t carry_t;
+    typedef uint32_t ucarry_t;
     int sign;
     std::vector<base_t> v;
     typedef BigIntMini BigInt_t;
@@ -50,20 +51,20 @@ protected:
     }
     BigInt_t &raw_add(const BigInt_t &b) {
         if (v.size() < b.size()) v.resize(b.size());
-        carry_t add = 0;
+        ucarry_t add = 0;
         for (size_t i = 0; i < b.v.size(); i++)
-            carry(add, v[i], (carry_t)(v[i] + b.v[i]));
+            carry(add, v[i], (ucarry_t)(v[i] + b.v[i]));
         for (size_t i = b.v.size(); add && i < v.size(); i++)
-            carry(add, v[i], (carry_t)v[i]);
+            carry(add, v[i], (ucarry_t)v[i]);
         add ? v.push_back((base_t)add) : trim();
         return *this;
     }
     BigInt_t &raw_offset_add(const BigInt_t &b, size_t offset) {
-        carry_t add = 0;
+        ucarry_t add = 0;
         for (size_t i = 0; i < b.size(); ++i)
-            carry(add, v[i + offset], (carry_t)(v[i + offset] + b.v[i]));
+            carry(add, v[i + offset], (ucarry_t)(v[i + offset] + b.v[i]));
         for (size_t i = b.size() + offset; add; ++i)
-            carry(add, v[i], (carry_t)v[i]);
+            carry(add, v[i], (ucarry_t)v[i]);
         return *this;
     }
     BigInt_t &raw_sub(const BigInt_t &b) {
@@ -88,9 +89,9 @@ protected:
             return *this;
         } else if (m == 1)
             return *this;
-        carry_t add = 0;
+        ucarry_t add = 0;
         for (size_t i = 0; i < v.size(); i++)
-            carry(add, v[i], (carry_t)v[i] * (carry_t)m);
+            carry(add, v[i], v[i] * (ucarry_t)m);
         if (add) v.push_back((base_t)add);
         return *this;
     }
@@ -98,16 +99,16 @@ protected:
         v.clear();
         v.resize(a.size() + b.size());
         for (size_t i = 0; i < a.size(); i++) {
-            carry_t add = 0, av = a.v[i];
+            ucarry_t add = 0, av = a.v[i];
             for (size_t j = 0; j < b.size(); j++)
-                carry(add, v[i + j], (carry_t)(v[i + j] + av * b.v[j]));
+                carry(add, v[i + j], v[i + j] + av * b.v[j]);
             v[i + b.size()] += (base_t)add;
         }
         trim();
         return *this;
     }
     // Karatsuba algorithm
-    BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
+    BigInt_t &raw_mul_karatsuba(const BigInt_t &a, const BigInt_t &b) {
         if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) return raw_mul(a, b);
         BigInt_t ah, al, bh, bl, h, m;
         size_t split = std::max(std::min((a.size() + 1) / 2, b.size() - 1), std::min(a.size() - 1, (b.size() + 1) / 2));
@@ -116,9 +117,9 @@ protected:
         bl.v.assign(b.v.begin(), b.v.begin() + split);
         bh.v.assign(b.v.begin() + split, b.v.end());
 
-        raw_fastmul(al, bl);
-        h.raw_fastmul(ah, bh);
-        m.raw_fastmul(al + ah, bl + bh);
+        raw_mul_karatsuba(al, bl);
+        h.raw_mul_karatsuba(ah, bh);
+        m.raw_mul_karatsuba(al + ah, bl + bh);
         m.raw_sub(*this);
         m.raw_sub(h);
         v.resize(a.size() + b.size());
@@ -353,7 +354,7 @@ public:
     }
     BigInt_t operator*(const BigInt_t &b) const {
         BigInt_t r;
-        r.raw_fastmul(*this, b);
+        r.raw_mul_karatsuba(*this, b);
         r.sign = sign * b.sign;
         return BIGINT_STD_MOVE(r);
     }
