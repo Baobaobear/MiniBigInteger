@@ -149,7 +149,7 @@ namespace BigIntBaseNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;
 
 const uint32_t BIGINT_NTT_THRESHOLD = 1000;
-const uint32_t BIGINT_MUL_THRESHOLD = 70;
+const uint32_t BIGINT_MUL_THRESHOLD = 60;
 const uint32_t NTT_MAX_SIZE = 1 << 21;
 
 struct BigIntBase {
@@ -168,16 +168,17 @@ struct BigIntBase {
     template <typename _Tx, typename Ty> inline void carry(_Tx &add, Ty &baseval, _Tx newval) {
         add += newval;
         baseval = add % (_Tx)base;
-        add /= base;
+        add /= (_Tx)base;
     }
     template <typename _Tx, typename Ty> inline void borrow(_Tx &add, Ty &baseval, _Tx newval) {
-        add += newval - base + 1;
-        baseval = add % (_Tx)base + base - 1;
-        add /= base;
+        add += newval - (_Tx)base + 1;
+        baseval = add % (_Tx)base + (_Tx)base - 1;
+        add /= (_Tx)base;
     }
 
     BigIntBase() {}
     BigIntBase(int b) { setbase(b); }
+    BigIntBase(int b, int d) { base = b, digits = d; }
     void setbase(int b) { // b > 1
         base = b;
         for (digits = 1; base <= BIGINT_MAXBASE; base *= b, ++digits)
@@ -229,18 +230,13 @@ struct BigIntBase {
             borrow(add, v[i], (carry_t)v[i] - (carry_t)b.v[i]);
         for (size_t i = b.v.size(); add && i < v.size(); i++)
             borrow(add, v[i], (carry_t)v[i]);
-        if (add) {
-            add = 1;
-            for (size_t i = 0; i < v.size(); i++)
-                carry(add, v[i], (carry_t)(base - v[i] - 1));
-        }
         trim();
         return *this;
     }
     BigInt_t &raw_mul_int(uint32_t m) {
         ucarry_t add = 0;
         for (size_t i = 0; i < v.size(); i++)
-            carry(add, v[i], v[i] * (ucarry_t)m);
+            carry(add, v[i], (ucarry_t)v[i] * m);
         while (add) {
             v.push_back((base_t)(add % base));
             add /= base;
@@ -259,22 +255,22 @@ struct BigIntBase {
         trim();
         return *this;
     }
-    BigInt_t &raw_fastmul(const BigInt_t &a, const BigInt_t &b) {
+    BigInt_t &raw_mul_karatsuba(const BigInt_t &a, const BigInt_t &b) {
         if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) return raw_mul(a, b);
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD)
             ;
         else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
             return raw_nttmul(a, b);
-        BigInt_t ah(base), al(base), bh(base), bl(base), h(base), m(base);
+        BigInt_t ah(base, digits), al(base, digits), bh(base, digits), bl(base, digits), h(base, digits), m(base, digits);
         size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2));
         al.v.assign(a.v.begin(), a.v.begin() + split);
         ah.v.assign(a.v.begin() + split, a.v.end());
         bl.v.assign(b.v.begin(), b.v.begin() + split);
         bh.v.assign(b.v.begin() + split, b.v.end());
 
-        raw_fastmul(al, bl);
-        h.raw_fastmul(ah, bh);
-        m.raw_fastmul(al.raw_add(ah), bl.raw_add(bh));
+        raw_mul_karatsuba(al, bl);
+        h.raw_mul_karatsuba(ah, bh);
+        m.raw_mul_karatsuba(al.raw_add(ah), bl.raw_add(bh));
         m.raw_sub(*this);
         m.raw_sub(h);
         v.resize(a.size() + b.size());
@@ -287,7 +283,7 @@ struct BigIntBase {
     BigInt_t &raw_nttmul(const BigInt_t &a, const BigInt_t &b) {
         if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) return raw_mul(a, b);
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE)
-            return raw_fastmul(a, b);
+            return raw_mul_karatsuba(a, b);
         size_t len, lenmul = 1;
         std::vector<NTT_NS::ntt_base_t> &ntt_a = NTT_NS::ntt1.ntt_a, &ntt_b = NTT_NS::ntt1.ntt_b;
         std::vector<int64_t> &ntt_c = NTT_NS::ntt1.ntt_c;
@@ -316,7 +312,7 @@ struct BigIntBase {
     }
     BigInt_t &raw_nttsqr(const BigInt_t &a) {
         if (a.size() <= BIGINT_MUL_THRESHOLD) return raw_mul(a, a);
-        if (a.size() <= BIGINT_NTT_THRESHOLD || (a.size() + a.size()) > NTT_MAX_SIZE) return raw_fastmul(a, a);
+        if (a.size() <= BIGINT_NTT_THRESHOLD || (a.size() + a.size()) > NTT_MAX_SIZE) return raw_mul_karatsuba(a, a);
         size_t len, lenmul = 1;
         std::vector<NTT_NS::ntt_base_t> &ntt_a = NTT_NS::ntt1.ntt_a;
         std::vector<int64_t> &ntt_c = NTT_NS::ntt1.ntt_c;
