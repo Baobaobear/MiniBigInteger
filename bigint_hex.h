@@ -544,7 +544,7 @@ protected:
         carry_t mul = (carry_t)(((uint64_t)(COMPRESS_MOD + 1) * (COMPRESS_MOD - 1)) /       //
                                 (*(b.v.begin() + b.v.size() - 1) * (uint64_t)COMPRESS_MOD + //
                                  *(b.v.begin() + b.v.size() - 2) + 1));
-        BigInt_t ma = a * BigInt_t(mul), mb = b * BigInt_t(mul);
+        BigInt_t ma = a * BigInt_t((intmax_t)mul), mb = b * BigInt_t((intmax_t)mul);
         while (mb.v.back() < COMPRESS_MOD >> 1) {
             int32_t m = 2;
             ma.raw_mul_int(m);
