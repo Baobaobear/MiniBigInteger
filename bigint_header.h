@@ -37,6 +37,8 @@ typedef int64_t intmax_t;
 
 #if defined(_WIN64) || defined(_M_X64)
 #define BIGINT_X64 1
+#else
+#define BIGINT_X64 0
 #endif
 #if !defined(BIGINT_LARGE_BASE) && BIGINT_X64
 #define BIGINT_LARGE_BASE 1 // only work with BigIntBase & BigIntDec

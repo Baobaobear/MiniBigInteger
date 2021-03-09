@@ -149,7 +149,7 @@ namespace BigIntBaseNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;
 
 const uint32_t BIGINT_NTT_THRESHOLD = 1000;
-const uint32_t BIGINT_MUL_THRESHOLD = 60;
+const uint32_t BIGINT_MUL_THRESHOLD = 80;
 const uint32_t NTT_MAX_SIZE = 1 << 21;
 
 struct BigIntBase {
@@ -255,8 +255,43 @@ struct BigIntBase {
         trim();
         return *this;
     }
+    BigInt_t raw_shr_to(size_t n) const {
+        BigInt_t r;
+        if (n >= size()) return r;
+        r.v.assign(v.begin() + n, v.end());
+        return BIGINT_STD_MOVE(r);
+    }
+    BigInt_t raw_lowdigits_to(size_t n) const {
+        if (n >= size()) return *this;
+        BigInt_t r;
+        r.v.assign(v.begin(), v.begin() + n);
+        r.trim();
+        return BIGINT_STD_MOVE(r);
+    }
+    BigInt_t &raw_shl(size_t n) {
+        if (n == 0 || (size() == 1 && v[0] == 0)) return *this;
+        v.insert(v.begin(), n, 0);
+        return *this;
+    }
     BigInt_t &raw_mul_karatsuba(const BigInt_t &a, const BigInt_t &b) {
         if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) return raw_mul(a, b);
+        if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
+            BigInt_t t;
+            if (a.size() * 2 < b.size()) {
+                size_t split = b.size() / 2;
+                t.raw_mul_karatsuba(a, b.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_mul_karatsuba(a, b.raw_lowdigits_to(split));
+                raw_add(t);
+            } else {
+                size_t split = a.size() / 2;
+                t.raw_mul_karatsuba(b, a.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_mul_karatsuba(b, a.raw_lowdigits_to(split));
+                raw_add(t);
+            }
+            return *this;
+        }
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD)
             ;
         else if ((a.size() + b.size()) <= NTT_MAX_SIZE)

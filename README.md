@@ -175,7 +175,7 @@ This project is licensed under the MIT License.
 [Appveyor status]:  https://ci.appveyor.com/api/projects/status/yeu4tqao2ri3bc07?svg=true
 [Appveyor]:         https://ci.appveyor.com/project/Baobaobear/minibiginteger
 [Language]:         https://img.shields.io/badge/language-C++-blue.svg
-[Standard]:         https://img.shields.io/badge/C++-11-orange.svg
+[Standard]:         https://img.shields.io/badge/C++-03-orange.svg
 [Standard Cpp]:     https://en.wikipedia.org/wiki/C%2B%2B#Standardization
 [License]:          https://img.shields.io/badge/license-MIT-blue.svg
 [MIT]:              https://opensource.org/licenses/MIT
