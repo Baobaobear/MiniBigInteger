@@ -460,19 +460,20 @@ protected:
             }
             return BIGINT_STD_MOVE(sum);
         } else {
-            static BigIntBase pow_list[32];
+            static std::vector<BigIntBase> pow_list;
             static int32_t last_base = 0, pow_list_cnt;
             BigIntBase base(out_base);
             if (out_base != last_base) {
-                pow_list[0] = base.set(COMPRESS_MOD);
+                pow_list.clear();
+                pow_list.push_back(base.set(COMPRESS_MOD));
                 pow_list_cnt = 0;
                 last_base = out_base;
             }
             size_t s = 1, id = 0;
             for (; s < size() / 3; s *= 2, ++id) {
                 if (s >= (size_t)1 << pow_list_cnt) {
-                    pow_list[pow_list_cnt + 1].setbase(out_base);
-                    pow_list[pow_list_cnt + 1].raw_nttsqr(pow_list[pow_list_cnt]);
+                    pow_list.push_back(BigIntBase(out_base));
+                    pow_list.back().raw_nttsqr(pow_list[pow_list_cnt]);
                     ++pow_list_cnt;
                 }
             }

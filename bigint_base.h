@@ -176,9 +176,8 @@ struct BigIntBase {
         add /= (_Tx)base;
     }
 
-    BigIntBase() {}
-    BigIntBase(int b) { setbase(b); }
-    BigIntBase(int b, int d) { base = b, digits = d; }
+    explicit BigIntBase(int b) { setbase(b); }
+    explicit BigIntBase(int b, int d) { base = b, digits = d; }
     void setbase(int b) { // b > 1
         base = b;
         for (digits = 1; base <= BIGINT_MAXBASE; base *= b, ++digits)
@@ -256,14 +255,14 @@ struct BigIntBase {
         return *this;
     }
     BigInt_t raw_shr_to(size_t n) const {
-        BigInt_t r;
+        BigInt_t r(base, digits);
         if (n >= size()) return r;
         r.v.assign(v.begin() + n, v.end());
         return BIGINT_STD_MOVE(r);
     }
     BigInt_t raw_lowdigits_to(size_t n) const {
         if (n >= size()) return *this;
-        BigInt_t r;
+        BigInt_t r(base, digits);
         r.v.assign(v.begin(), v.begin() + n);
         r.trim();
         return BIGINT_STD_MOVE(r);
@@ -276,7 +275,7 @@ struct BigIntBase {
     BigInt_t &raw_mul_karatsuba(const BigInt_t &a, const BigInt_t &b) {
         if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) return raw_mul(a, b);
         if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
-            BigInt_t t;
+            BigInt_t t(base, digits);
             if (a.size() * 2 < b.size()) {
                 size_t split = b.size() / 2;
                 t.raw_mul_karatsuba(a, b.raw_shr_to(split));
