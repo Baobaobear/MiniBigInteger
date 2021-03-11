@@ -83,14 +83,36 @@ template <int32_t NTT_MOD> struct NTT {
                 a[i] = mul_mod(a[i], inv);
         }
     }
-    void mul_conv(size_t n) {
-        transform(&*ntt_a.begin(), n, 1);
-        transform(&*ntt_b.begin(), n, 1);
-        for (size_t i = 0; i < n; i++)
-            ntt_a[i] = mul_mod(ntt_a[i], ntt_b[i]);
-        transform(&*ntt_a.begin(), n, 0);
+    void mul_conv() {
+        size_t n = ntt_b.size();
+        if (ntt_a.size() == n) {
+            transform(&*ntt_a.begin(), n, 1);
+            transform(&*ntt_b.begin(), n, 1);
+            for (size_t i = 0; i < n; i++)
+                ntt_a[i] = mul_mod(ntt_a[i], ntt_b[i]);
+            transform(&*ntt_a.begin(), n, 0);
+        } else {
+            size_t t = n / 2;
+            ntt_a.resize(ntt_a.size() / 2);
+            std::vector<ntt_base_t> ntt_o = ntt_a;
+            ntt_a.clear();
+            ntt_a.resize(t + ntt_o.size());
+            transform(&*ntt_b.begin(), n, 1);
+            for (size_t i = 0; i < ntt_o.size(); i += t) {
+                std::vector<ntt_base_t> a(ntt_o.begin() + i, ntt_o.begin() + i + t);
+                a.resize(n);
+                transform(&a[0], n, 1);
+                for (size_t i = 0; i < n; i++)
+                    a[i] = mul_mod(a[i], ntt_b[i]);
+                transform(&a[0], n, 0);
+                for (size_t j = 0; j < n; ++j) {
+                    ntt_a[i + j] = (ntt_a[i + j] + a[j]) % NTT_MOD;
+                }
+            }
+        }
     }
-    void sqr_conv(size_t n) {
+    void sqr_conv() {
+        size_t n = ntt_a.size();
         transform(&*ntt_a.begin(), n, 1);
         for (size_t i = 0; i < n; i++)
             ntt_a[i] = mul_mod(ntt_a[i], ntt_a[i]);
@@ -104,26 +126,34 @@ static NTT<NTT_P2> ntt2;
 void ntt_prepare(size_t size_a, size_t size_b, size_t &len, int flag = 1) {
     len = 1;
     size_t L1 = size_a, L2 = size_b;
-    while (len < L1 + L2)
-        len <<= 1;
-    ntt1.ntt_a.resize(len);
-    if (flag & 1) ntt1.ntt_b.resize(len);
+    while (L1 & (L1 - 1)) L1 += L1 ^ (L1 & (L1 - 1));
+    while (L2 & (L2 - 1)) L2 += L2 ^ (L2 & (L2 - 1));
+    len = L1 + L2;
+    ntt1.ntt_a.resize(L1 * 2);
+    if (flag & 1) {
+        ntt1.ntt_b.resize(L2 * 2);
+        if (L1 < L2) {
+            std::swap(ntt1.ntt_a, ntt1.ntt_b);
+            std::swap(L1, L2);
+        }
+    }
     if (flag & 2) ntt2.ntt_a = ntt1.ntt_a;
     if (flag & 4) ntt2.ntt_b = ntt1.ntt_b;
     int32_t id = 0;
-    while (((uint64_t)1 << id) < len)
+    L2 *= 2;
+    while (((uint64_t)1 << id) < L2)
         ++id;
     if (ntt_ra[id].empty()) {
         std::vector<size_t> &r = ntt_ra[id];
-        r.resize(len);
-        for (size_t i = 0; i < len; i++)
-            r[i] = (r[i >> 1] >> 1) | ((i & 1) * (len >> 1));
+        r.resize(L2);
+        for (size_t i = 0; i < L2; i++)
+            r[i] = (r[i >> 1] >> 1) | ((i & 1) * (L2 >> 1));
     }
     ntt_r = &*ntt_ra[id].begin();
 }
 
 static void double_mod_rev(size_t n) {
-    ntt1.ntt_c.resize(ntt1.ntt_a.size());
+    ntt1.ntt_c.resize(n);
     for (size_t i = 0; i < n; i++) {
         // z = x * p1 + c1 = y * p2 + c2 's solution is
         // y = (c1 - c2) * inv(p2) (mod p1)
@@ -132,16 +162,16 @@ static void double_mod_rev(size_t n) {
     }
 }
 
-void mul_conv2(size_t n) {
-    ntt1.mul_conv(n);
-    ntt2.mul_conv(n);
-    double_mod_rev(n);
+void mul_conv2() {
+    ntt1.mul_conv();
+    ntt2.mul_conv();
+    double_mod_rev(ntt1.ntt_a.size());
 }
 
-void sqr_conv2(size_t n) {
-    ntt1.sqr_conv(n);
-    ntt2.sqr_conv(n);
-    double_mod_rev(n);
+void sqr_conv2() {
+    ntt1.sqr_conv();
+    ntt2.sqr_conv();
+    double_mod_rev(ntt1.ntt_a.size());
 }
 } // namespace NTT_NS
 
@@ -328,7 +358,7 @@ struct BigIntBase {
         for (size_t i = 0; i < b.size(); ++i)
             ntt_b[i] = b.v[i];
         NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
-        NTT_NS::mul_conv2(len);
+        NTT_NS::mul_conv2();
         len = (a.size() + b.size()) * lenmul;
         while (len > 0 && ntt_c[--len] == 0)
             ;
@@ -353,8 +383,8 @@ struct BigIntBase {
         ntt_a.resize(a.size());
         for (size_t i = 0; i < a.size(); ++i)
             ntt_a[i] = a.v[i];
-        NTT_NS::ntt_prepare(a.size() * 2, 0, len, 2);
-        NTT_NS::sqr_conv2(len);
+        NTT_NS::ntt_prepare(a.size(), a.size(), len, 2);
+        NTT_NS::sqr_conv2();
         len = (a.size() + a.size()) * lenmul;
         while (len > 0 && ntt_c[--len] == 0)
             ;

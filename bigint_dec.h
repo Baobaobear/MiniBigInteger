@@ -19,7 +19,7 @@ const uint32_t COMPRESS_DIGITS = 4;
 
 const uint32_t BIGINT_NTT_THRESHOLD = 4400 - BIGINT_X64 * 1600;
 const uint32_t BIGINT_MUL_THRESHOLD = 90;
-const uint32_t BIGINT_DIV_THRESHOLD = 2000;
+const uint32_t BIGINT_DIV_THRESHOLD = 2500;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
 #if BIGINT_X64
 const uint32_t NTT_MAX_SIZE = 1 << 24;
@@ -44,12 +44,12 @@ protected:
     int sign;
     std::vector<base_t> v;
     typedef BigIntDec BigInt_t;
-    template <typename _Tx, typename Ty> static inline void carry(_Tx &add, Ty &baseval, _Tx newval) {
+    template <typename _Tx, typename _Ty> static inline void carry(_Tx &add, _Ty &baseval, _Tx newval) {
         add += newval;
         baseval = low_digit(add);
         add = high_digit(add);
     }
-    template <typename _Tx, typename Ty> static inline void borrow(_Tx &add, Ty &baseval, _Tx newval) {
+    template <typename _Tx, typename _Ty> static inline void borrow(_Tx &add, _Ty &baseval, _Tx newval) {
         add += newval - COMPRESS_MOD + 1;
         baseval = (_Tx)low_digit(add) + COMPRESS_MOD - 1;
         add = high_digit(add);
@@ -99,14 +99,6 @@ protected:
                 carry(add, v[i], (carry_t)(COMPRESS_MOD - v[i] - 1));
         }
         trim();
-        return *this;
-    }
-    BigInt_t &raw_offset_sub(const BigInt_t &b, size_t offset) {
-        carry_t add = 0;
-        for (size_t i = 0; i < b.v.size(); i++)
-            borrow(add, v[i + offset], (carry_t)v[i + offset] - (carry_t)b.v[i]);
-        for (size_t i = offset + b.v.size(); add && i < v.size(); i++)
-            borrow(add, v[i], (carry_t)v[i]);
         return *this;
     }
     BigInt_t &raw_offset_mulsub(const BigInt_t &b, base_t mul, size_t offset) {
@@ -205,23 +197,6 @@ protected:
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE) {
             return raw_mul_karatsuba(a, b);
         }
-        if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
-            BigInt_t t;
-            if (a.size() * 2 < b.size()) {
-                size_t split = b.size() / 2;
-                t.raw_nttmul(a, b.raw_shr_to(split));
-                t.raw_shl(split);
-                raw_nttmul(a, b.raw_lowdigits_to(split));
-                raw_add(t);
-            } else {
-                size_t split = a.size() / 2;
-                t.raw_nttmul(b, a.raw_shr_to(split));
-                t.raw_shl(split);
-                raw_nttmul(b, a.raw_lowdigits_to(split));
-                raw_add(t);
-            }
-            return *this;
-        }
         size_t len, lenmul = 1;
         std::vector<NTT_NS::ntt_base_t> &ntt_a = NTT_NS::ntt1.ntt_a, &ntt_b = NTT_NS::ntt1.ntt_b;
         std::vector<int64_t> &ntt_c = NTT_NS::ntt1.ntt_c;
@@ -249,7 +224,7 @@ protected:
         }
         NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
 #endif
-        NTT_NS::mul_conv2(len);
+        NTT_NS::mul_conv2();
         len = (a.size() + b.size()) * lenmul;
         while (len > 0 && ntt_c[--len] == 0)
             ;

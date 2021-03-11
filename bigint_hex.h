@@ -22,7 +22,7 @@ const uint32_t COMPRESS_MASK = COMPRESS_MOD - 1;
 
 const uint32_t BIGINT_NTT_THRESHOLD = 7600 + BIGINT_X64 * 400;
 const uint32_t BIGINT_MUL_THRESHOLD = 100 + BIGINT_X64 * 10;
-const uint32_t BIGINT_DIV_THRESHOLD = 2000;
+const uint32_t BIGINT_DIV_THRESHOLD = 6000;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
 #if BIGINT_X64
 const uint32_t NTT_MAX_SIZE = 1 << (23 + BIGINTHEX_DIV_DOUBLE);
@@ -45,12 +45,12 @@ protected:
     int sign;
     std::vector<base_t> v;
     typedef BigIntHex BigInt_t;
-    template <typename _Tx, typename Ty> static inline void carry(_Tx &add, Ty &baseval, _Tx newval) {
+    template <typename _Tx, typename _Ty> static inline void carry(_Tx &add, _Ty &baseval, _Tx newval) {
         add += newval;
         baseval = low_digit(add);
         add = high_digit(add);
     }
-    template <typename _Tx, typename Ty> static inline void borrow(_Tx &add, Ty &baseval, _Tx newval) {
+    template <typename _Tx, typename _Ty> static inline void borrow(_Tx &add, _Ty &baseval, _Tx newval) {
         add += newval;
         baseval = low_digit(add);
         add = high_digit(add);
@@ -146,18 +146,31 @@ protected:
         if (a.is_zero() || b.is_zero()) {
             return set(0);
         }
-        if (a.size() == 2 && a.v[1] == 1 && a.v[0] == 0) {
+        if (a.size() == 1 && a.v[0] == 1) {
             *this = b;
-            return raw_shl(1);
+            sign *= a.sign;
+            return *this;
+        }
+        if (b.size() == 1 && b.v[0] == 1) {
+            *this = a;
+            sign *= b.sign;
+            return *this;
+        }
+        if (a.size() == 2 && a.v[1] == 1 && a.v[0] == 0) {
+            *this = b.raw_shr_to(1);
+            return *this;
         }
         if (b.size() == 2 && b.v[1] == 1 && b.v[0] == 0) {
-            *this = a;
-            return raw_shl(1);
+            *this = a.raw_shr_to(1);
+            return *this;
         }
         v.clear();
         v.resize(a.size() + b.size());
         for (size_t i = 0; i < a.size(); i++) {
             ucarry_t add = 0, av = a.v[i];
+#if !BIGINTHEX_DIV_DOUBLE
+            if (av == 0) continue;
+#endif
             size_t j = 0;
             for (; j + 4 <= b.size(); j += 4) {
                 carry(add, v[i + j], v[i + j] + av * b.v[j]);
@@ -234,24 +247,7 @@ protected:
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE) {
             return raw_mul_karatsuba(a, b);
         }
-        if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
-            BigInt_t t;
-            if (a.size() * 2 < b.size()) {
-                size_t split = b.size() / 2;
-                t.raw_nttmul(a, b.raw_shr_to(split));
-                t.raw_shl(split);
-                raw_nttmul(a, b.raw_lowdigits_to(split));
-                raw_add(t);
-            } else {
-                size_t split = a.size() / 2;
-                t.raw_nttmul(b, a.raw_shr_to(split));
-                t.raw_shl(split);
-                raw_nttmul(b, a.raw_lowdigits_to(split));
-                raw_add(t);
-            }
-            return *this;
-        }
-        size_t len, lenmul = 1;
+        size_t len, lenmul = 2;
         std::vector<NTT_NS::ntt_base_t> &ntt_a = NTT_NS::ntt1.ntt_a, &ntt_b = NTT_NS::ntt1.ntt_b;
         std::vector<int64_t> &ntt_c = NTT_NS::ntt1.ntt_c;
         ntt_a.resize(a.size() * 2);
@@ -265,8 +261,7 @@ protected:
             ntt_b[++j] = b.v[i] >> COMPRESS_HALF_BIT;
         }
         NTT_NS::ntt_prepare(a.size() * 2, b.size() * 2, len, 7);
-        lenmul = 2;
-        NTT_NS::mul_conv2(len);
+        NTT_NS::mul_conv2();
         len = (a.size() + b.size()) * lenmul;
         while (len > 0 && ntt_c[--len] == 0)
             ;

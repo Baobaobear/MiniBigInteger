@@ -26,12 +26,12 @@ protected:
     int sign;
     std::vector<base_t> v;
     typedef BigIntMini BigInt_t;
-    template <typename _Tx, typename Ty> static inline void carry(_Tx &add, Ty &baseval, _Tx newval) {
+    template <typename _Tx, typename _Ty> static inline void carry(_Tx &add, _Ty &baseval, _Tx newval) {
         add += newval;
         baseval = low_digit(add);
         add = high_digit(add);
     }
-    template <typename _Tx, typename Ty> static inline void borrow(_Tx &add, Ty &baseval, _Tx newval) {
+    template <typename _Tx, typename _Ty> static inline void borrow(_Tx &add, _Ty &baseval, _Tx newval) {
         add += newval - COMPRESS_MOD + 1;
         baseval = (_Tx)low_digit(add) + COMPRESS_MOD - 1;
         add = high_digit(add);
