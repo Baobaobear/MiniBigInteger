@@ -114,9 +114,9 @@ uint32_t log2(uint32_t n) {
 void ntt_prepare(size_t size_a, size_t size_b, size_t &len, int flag = 1) {
     len = 1;
     size_t L1 = size_a, L2 = size_b;
-    int32_t id = log2(L1 + L2);
-    if (L1 + L2 > 1 << id) ++id;
-    len = 1 << id;
+    int32_t id = log2(uint32_t(L1 + L2));
+    if (uint32_t(L1 + L2) > 1u << id) ++id;
+    len = size_t(1) << id;
     ntt1.ntt_a.resize(len);
     if (flag & 1) ntt1.ntt_b.resize(len);
     if (flag & 2) ntt2.ntt_a = ntt1.ntt_a;

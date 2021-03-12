@@ -249,6 +249,7 @@ protected:
                 ntt_b[++j] = b.v[i] / COMPRESS_HALF_MOD;
             }
             NTT_NS::ntt_prepare(a.size() * 2, b.size() * 2, len, 7);
+            NTT_NS::mul_conv2();
             len = (a.size() + b.size()) * 2;
         }
 #else
