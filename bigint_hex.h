@@ -158,10 +158,12 @@ protected:
         }
         if (a.size() == 2 && a.v[1] == 1 && a.v[0] == 0) {
             *this = b.raw_shr_to(1);
+            sign *= a.sign;
             return *this;
         }
         if (b.size() == 2 && b.v[1] == 1 && b.v[0] == 0) {
             *this = a.raw_shr_to(1);
+            sign *= b.sign;
             return *this;
         }
         v.clear();
@@ -246,6 +248,23 @@ protected:
         }
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE) {
             return raw_mul_karatsuba(a, b);
+        }
+        if (a.size() * 3 < b.size() || b.size() * 3 < a.size()) { // split
+            BigInt_t t;
+            if (a.size() * 2 < b.size()) {
+                size_t split = b.size() / 2;
+                t.raw_nttmul(a, b.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_nttmul(a, b.raw_lowdigits_to(split));
+                raw_add(t);
+            } else {
+                size_t split = a.size() / 2;
+                t.raw_nttmul(b, a.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_nttmul(b, a.raw_lowdigits_to(split));
+                raw_add(t);
+            }
+            return *this;
         }
         size_t len, lenmul = 2;
         std::vector<NTT_NS::ntt_base_t> &ntt_a = NTT_NS::ntt1.ntt_a, &ntt_b = NTT_NS::ntt1.ntt_b;

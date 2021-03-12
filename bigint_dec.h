@@ -17,9 +17,9 @@ const int32_t COMPRESS_MOD = 10000;
 const uint32_t COMPRESS_DIGITS = 4;
 #endif
 
-const uint32_t BIGINT_NTT_THRESHOLD = BIGINT_X64 ? 3300 : 2500;
+const uint32_t BIGINT_NTT_THRESHOLD = BIGINT_X64 ? 3300 : 2600;
 const uint32_t BIGINT_MUL_THRESHOLD = 90;
-const uint32_t BIGINT_DIV_THRESHOLD = 2000;
+const uint32_t BIGINT_DIV_THRESHOLD = 1000;
 const uint32_t BIGINT_DIVIDEDIV_THRESHOLD = BIGINT_MUL_THRESHOLD * 3;
 #if BIGINT_X64
 const uint32_t NTT_MAX_SIZE = 1 << 24;
@@ -126,13 +126,25 @@ protected:
         if (a.is_zero() || b.is_zero()) {
             return set(0);
         }
-        if (a.size() == 2 && a.v[1] == 1 && a.v[0] == 0) {
+        if (a.size() == 1 && a.v[0] == 1) {
             *this = b;
-            return raw_shl(1);
+            sign *= a.sign;
+            return *this;
+        }
+        if (b.size() == 1 && b.v[0] == 1) {
+            *this = a;
+            sign *= b.sign;
+            return *this;
+        }
+        if (a.size() == 2 && a.v[1] == 1 && a.v[0] == 0) {
+            *this = b.raw_shr_to(1);
+            sign *= a.sign;
+            return *this;
         }
         if (b.size() == 2 && b.v[1] == 1 && b.v[0] == 0) {
-            *this = a;
-            return raw_shl(1);
+            *this = a.raw_shr_to(1);
+            sign *= b.sign;
+            return *this;
         }
         v.clear();
         v.resize(a.size() + b.size());
@@ -196,6 +208,23 @@ protected:
         }
         if (std::min(a.size(), b.size()) <= BIGINT_NTT_THRESHOLD || (a.size() + b.size()) > NTT_MAX_SIZE) {
             return raw_mul_karatsuba(a, b);
+        }
+        if (a.size() * 3 < b.size() || b.size() * 3 < a.size()) { // split
+            BigInt_t t;
+            if (a.size() * 2 < b.size()) {
+                size_t split = b.size() / 2;
+                t.raw_nttmul(a, b.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_nttmul(a, b.raw_lowdigits_to(split));
+                raw_add(t);
+            } else {
+                size_t split = a.size() / 2;
+                t.raw_nttmul(b, a.raw_shr_to(split));
+                t.raw_shl(split);
+                raw_nttmul(b, a.raw_lowdigits_to(split));
+                raw_add(t);
+            }
+            return *this;
         }
         size_t len, lenmul = 1;
         std::vector<NTT_NS::ntt_base_t> &ntt_a = NTT_NS::ntt1.ntt_a, &ntt_b = NTT_NS::ntt1.ntt_b;
