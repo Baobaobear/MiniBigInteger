@@ -7,8 +7,7 @@
 
 #include "bigint_header.h"
 
-namespace NTT_NS
-{
+namespace NTT_NS {
 
 const int32_t NTT_POW = 24;
 const int32_t NTT_G = 3;
@@ -35,12 +34,10 @@ template <int32_t NTT_MOD> struct NTT {
     std::vector<int64_t> ntt_c;
 
 #if BIGINT_X64
-    inline ntt_base_t mul_mod(int64_t a, int64_t b) {
-        return a * b % NTT_MOD;
-    }
+    inline ntt_base_t mul_mod(int64_t a, int64_t b) { return a * b % NTT_MOD; }
 #else
     inline ntt_base_t mul_mod(int32_t a, int32_t b) {
-        //return ntt_base_t((int64_t)a * b % NTT_MOD);
+        // return ntt_base_t((int64_t)a * b % NTT_MOD);
         int32_t c = (int32_t)((double)a * b / NTT_MOD);
         return a * b - c * NTT_MOD;
     }
@@ -150,8 +147,7 @@ void sqr_conv2() {
 }
 } // namespace NTT_NS
 
-namespace BigIntBaseNS
-{
+namespace BigIntBaseNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;
 
 const uint32_t BIGINT_NTT_THRESHOLD = 1000;
@@ -182,12 +178,8 @@ struct BigIntBase {
         add /= (_Tx)base;
     }
 
-    explicit BigIntBase(int b) {
-        setbase(b);
-    }
-    explicit BigIntBase(int b, int d) {
-        base = b, digits = d;
-    }
+    explicit BigIntBase(int b) { setbase(b); }
+    explicit BigIntBase(int b, int d) { base = b, digits = d; }
     void setbase(int b) { // b > 1
         base = b;
         for (digits = 1; base <= BIGINT_MAXBASE; base *= b, ++digits)
@@ -211,9 +203,7 @@ struct BigIntBase {
         }
         return *this;
     }
-    size_t size() const {
-        return v.size();
-    }
+    size_t size() const { return v.size(); }
     BigInt_t &raw_add(const BigInt_t &b) {
         if (v.size() < b.size()) v.resize(b.size());
         ucarry_t add = 0;

@@ -157,12 +157,14 @@ protected:
             return *this;
         }
         if (a.size() == 2 && a.v[1] == 1 && a.v[0] == 0) {
-            *this = b.raw_shr_to(1);
+            *this = b;
+            raw_shl(1);
             sign *= a.sign;
             return *this;
         }
         if (b.size() == 2 && b.v[1] == 1 && b.v[0] == 0) {
-            *this = a.raw_shr_to(1);
+            *this = a;
+            raw_shl(1);
             sign *= b.sign;
             return *this;
         }
@@ -204,7 +206,7 @@ protected:
         }
         if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
             BigInt_t t;
-            if (a.size() * 2 < b.size()) {
+            if (a.size() < b.size()) {
                 size_t split = b.size() / 2;
                 t.raw_mul_karatsuba(a, b.raw_shr_to(split));
                 t.raw_shl(split);
@@ -251,7 +253,7 @@ protected:
         }
         if (a.size() * 3 < b.size() || b.size() * 3 < a.size()) { // split
             BigInt_t t;
-            if (a.size() * 2 < b.size()) {
+            if (a.size() < b.size()) {
                 size_t split = b.size() / 2;
                 t.raw_nttmul(a, b.raw_shr_to(split));
                 t.raw_shl(split);
