@@ -101,18 +101,26 @@ template <int32_t NTT_MOD> struct NTT {
 static NTT<NTT_P1> ntt1;
 static NTT<NTT_P2> ntt2;
 
+uint32_t log2(uint32_t n) {
+    uint32_t r = 0;
+    if (n >= 0x10000) r += 16, n >>= 16;
+    if (n >= 0x100) r += 8, n >>= 8;
+    if (n >= 0x10) r += 4, n >>= 4;
+    if (n >= 0x4) r += 2, n >>= 2;
+    if (n >= 0x2) r += 1, n >>= 1;
+    return r;
+}
+
 void ntt_prepare(size_t size_a, size_t size_b, size_t &len, int flag = 1) {
     len = 1;
     size_t L1 = size_a, L2 = size_b;
-    while (len < L1 + L2)
-        len <<= 1;
+    int32_t id = log2(L1 + L2);
+    if (L1 + L2 > 1 << id) ++id;
+    len = 1 << id;
     ntt1.ntt_a.resize(len);
     if (flag & 1) ntt1.ntt_b.resize(len);
     if (flag & 2) ntt2.ntt_a = ntt1.ntt_a;
     if (flag & 4) ntt2.ntt_b = ntt1.ntt_b;
-    int32_t id = 0;
-    while (((uint64_t)1 << id) < len)
-        ++id;
     if (ntt_ra[id].empty()) {
         std::vector<size_t> &r = ntt_ra[id];
         r.resize(len);
@@ -278,7 +286,7 @@ struct BigIntBase {
         if (std::min(a.size(), b.size()) <= BIGINT_MUL_THRESHOLD) return raw_mul(a, b);
         if (a.size() * 2 < b.size() || b.size() * 2 < a.size()) { // split
             BigInt_t t(base, digits);
-            if (a.size() * 2 < b.size()) {
+            if (a.size() < b.size()) {
                 size_t split = b.size() / 2;
                 t.raw_mul_karatsuba(a, b.raw_shr_to(split));
                 t.raw_shl(split);
@@ -297,7 +305,8 @@ struct BigIntBase {
             ;
         else if ((a.size() + b.size()) <= NTT_MAX_SIZE)
             return raw_nttmul(a, b);
-        BigInt_t ah(base, digits), al(base, digits), bh(base, digits), bl(base, digits), h(base, digits), m(base, digits);
+        BigInt_t ah(base, digits), al(base, digits), bh(base, digits), bl(base, digits);
+        BigInt_t h(base, digits), m(base, digits);
         size_t split = std::max(std::min(a.size() / 2, b.size() - 1), std::min(a.size() - 1, b.size() / 2));
         al.v.assign(a.v.begin(), a.v.begin() + split);
         ah.v.assign(a.v.begin() + split, a.v.end());

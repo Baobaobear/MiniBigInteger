@@ -62,6 +62,7 @@ protected:
         return false; // eq
     }
     bool raw_eq(const BigInt_t &b) const {
+        if (this == &b) return true;
         if (v.size() != b.size()) return false;
         for (size_t i = 0; i < v.size(); ++i)
             if (v[i] != b.v[i]) return false;
@@ -228,7 +229,7 @@ protected:
             }
             return *this;
         }
-        size_t len, lenmul = 1;
+        size_t len;
         std::vector<NTT_NS::ntt_base_t> &ntt_a = NTT_NS::ntt1.ntt_a, &ntt_b = NTT_NS::ntt1.ntt_b;
         std::vector<int64_t> &ntt_c = NTT_NS::ntt1.ntt_c;
 #if BIGINT_LARGE_BASE
@@ -238,25 +239,37 @@ protected:
             ntt_a[j] = a.v[i] % COMPRESS_HALF_MOD;
             ntt_a[++j] = a.v[i] / COMPRESS_HALF_MOD;
         }
-        for (size_t i = 0, j = 0; i < b.size(); ++i, ++j) {
-            ntt_b[j] = b.v[i] % COMPRESS_HALF_MOD;
-            ntt_b[++j] = b.v[i] / COMPRESS_HALF_MOD;
+        if (a == b) {
+            NTT_NS::ntt_prepare(a.size() * 2, a.size() * 2, len, 7);
+            NTT_NS::sqr_conv2();
+            len = a.size() * 4;
+        } else {
+            for (size_t i = 0, j = 0; i < b.size(); ++i, ++j) {
+                ntt_b[j] = b.v[i] % COMPRESS_HALF_MOD;
+                ntt_b[++j] = b.v[i] / COMPRESS_HALF_MOD;
+            }
+            NTT_NS::ntt_prepare(a.size() * 2, b.size() * 2, len, 7);
+            len = (a.size() + b.size()) * 2;
         }
-        NTT_NS::ntt_prepare(a.size() * 2, b.size() * 2, len, 7);
-        lenmul = 2;
 #else
         ntt_a.resize(a.size());
         ntt_b.resize(b.size());
         for (size_t i = 0; i < a.size(); ++i) {
             ntt_a[i] = a.v[i];
         }
-        for (size_t i = 0; i < b.size(); ++i) {
-            ntt_b[i] = b.v[i];
+        if (a == b) {
+            NTT_NS::ntt_prepare(a.size(), a.size(), len, 7);
+            NTT_NS::sqr_conv2();
+            len = a.size() * 2;
+        } else {
+            for (size_t i = 0; i < b.size(); ++i) {
+                ntt_b[i] = b.v[i];
+            }
+            NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
+            NTT_NS::mul_conv2();
+            len = a.size() + b.size();
         }
-        NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
 #endif
-        NTT_NS::mul_conv2();
-        len = (a.size() + b.size()) * lenmul;
         while (len > 0 && ntt_c[--len] == 0)
             ;
         v.clear();

@@ -63,6 +63,7 @@ protected:
         return false; // eq
     }
     bool raw_eq(const BigInt_t &b) const {
+        if (this == &b) return true;
         if (v.size() != b.size()) return false;
         for (size_t i = 0; i < v.size(); ++i)
             if (v[i] != b.v[i]) return false;
@@ -277,13 +278,19 @@ protected:
             ntt_a[j] = a.v[i] & COMPRESS_HALF_MASK;
             ntt_a[++j] = a.v[i] >> COMPRESS_HALF_BIT;
         }
-        for (size_t i = 0, j = 0; i < b.size(); ++i, ++j) {
-            ntt_b[j] = b.v[i] & COMPRESS_HALF_MASK;
-            ntt_b[++j] = b.v[i] >> COMPRESS_HALF_BIT;
+        if (a == b) {
+            NTT_NS::ntt_prepare(a.size() * 2, a.size() * 2, len, 7);
+            NTT_NS::sqr_conv2();
+            len = a.size() * 2 * lenmul;
+        } else {
+            for (size_t i = 0, j = 0; i < b.size(); ++i, ++j) {
+                ntt_b[j] = b.v[i] & COMPRESS_HALF_MASK;
+                ntt_b[++j] = b.v[i] >> COMPRESS_HALF_BIT;
+            }
+            NTT_NS::ntt_prepare(a.size() * 2, b.size() * 2, len, 7);
+            NTT_NS::mul_conv2();
+            len = (a.size() + b.size()) * lenmul;
         }
-        NTT_NS::ntt_prepare(a.size() * 2, b.size() * 2, len, 7);
-        NTT_NS::mul_conv2();
-        len = (a.size() + b.size()) * lenmul;
         while (len > 0 && ntt_c[--len] == 0)
             ;
         v.clear();
