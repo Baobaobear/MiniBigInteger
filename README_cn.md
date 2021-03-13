@@ -24,7 +24,7 @@ int main() {
     BigIntHex s; // the same as BigIntDec
     s = 1;
     for (int i = 1; i <= 100; ++i) {
-        s *= 2;
+        s *= BigIntHex(2);
     }
     cout << s.to_str() << endl;
     return 0;
@@ -42,7 +42,7 @@ int main() {
     BigIntMini s;
     s = 1;
     for (int i = 1; i <= 100; ++i) {
-        s = s * 2; // no operator*= overloading
+        s = s * BigIntMini(2); // no operator*= overloading
     }
     cout << s.to_str() << endl;
     return 0;
@@ -60,7 +60,7 @@ int main() {
     BigIntTiny s;
     s = 1;
     for (int i = 1; i <= 100; ++i) {
-        s = s * 2; // no operator*= overloading
+        s = s * BigIntTiny(2); // no operator*= overloading
     }
     cout << s.to_str() << endl;
     return 0;
