@@ -451,7 +451,7 @@ protected:
             return raw_div(a, b, r);
         }
         size_t extand_digs = 2;
-        size_t ans_len = a.size() - b.size() + extand_digs + 1, s_len = ans_len + ans_len / 8;
+        size_t ans_len = a.size() - b.size() + extand_digs + 1, s_len = ans_len + 32;
         std::vector<size_t> len_seq;
         BigInt_t b2, x0, x1, t;
         x1.v.resize(1);
@@ -466,7 +466,7 @@ protected:
             // x1 = x0(2 - x0 * b)
             x0 = x1;
             b2 = b;
-            size_t tsize = std::min(keep_size + keep_size, ans_len);
+            size_t tsize = std::min(keep_size * 2, ans_len);
             b2.keep(tsize);
             t = x0 * b2;
             t.keep(tsize);
@@ -487,7 +487,7 @@ protected:
             // x1 = x0(2 - x0 * b)
             x0 = x1;
             b2 = b;
-            size_t tsize = std::min(keep_size + keep_size, ans_len);
+            size_t tsize = std::min(keep_size * 2, ans_len);
             b2.keep(tsize);
             t = x0 * b2;
             t.keep(tsize);
@@ -500,6 +500,10 @@ protected:
                 t.v.pop_back();
                 t.trim();
             }
+            ucarry_t add = 1;
+            for (size_t i = 0; add && i < t.v.size(); i++)
+                carry(add, t.v[i], (ucarry_t)t.v[i]);
+            if (add) t.v.push_back((base_t)add);
             x1 *= t;
             keep_size = len_seq.back();
             x1.keep(keep_size);
@@ -762,7 +766,7 @@ public:
             sign = 1;
             s = n;
         }
-        for (int i = 0; s; i++) {
+        for (size_t i = 0; s; i++) {
             v.resize(i + 1);
             v[i] = low_digit(s);
             s = high_digit(s);

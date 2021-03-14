@@ -621,7 +621,7 @@ bool test_factorial() {
     BigIntDec hb;
     BigIntMini hc;
     BigIntTiny hd;
-    string s;
+    string s, sa, sb;
     int fac = 50000;
 
     time_point t_beg, t_end, t_out, t_load;
@@ -629,9 +629,9 @@ bool test_factorial() {
     t_beg = get_time();
     ha = calc_factorial<BigIntHex>(fac);
     t_end = get_time();
-    s = ha.to_str();
+    sa = ha.to_str();
     t_out = get_time();
-    ha.from_str(s);
+    ha.from_str(sa);
     t_load = get_time();
     cout << "calc " << fac << "!" << endl;
     cout << "    by hex: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
@@ -643,9 +643,9 @@ bool test_factorial() {
     t_beg = get_time();
     hb = calc_factorial<BigIntDec>(fac);
     t_end = get_time();
-    s = hb.to_str(16);
+    sb = hb.to_str(16);
     t_out = get_time();
-    hb.from_str(s, 16);
+    hb.from_str(sb, 16);
     t_load = get_time();
     //cout << "calc " << fac << "!" << endl;
     cout << "    by dec: " << (int32_t)(get_time_diff(t_beg, t_end) / 1000) << " ms" << endl;
@@ -653,6 +653,10 @@ bool test_factorial() {
     cout << "        read from hex: " << (int32_t)(get_time_diff(t_out, t_load) / 1000) << " ms" << endl;
     cout << "        total " << s.size() << " hex digits" << endl;
     cout << "        total " << hb.to_str().size() << " dec digits" << endl;
+
+    if (ha.to_str(16) != sb || hb.to_str() != sa) {
+        return false;
+    }
 
     fac = 20000;
     t_beg = get_time();
@@ -817,6 +821,16 @@ int main() {
     cout << "test8_rnddiv: " << ((pass = test8_rnd_div(10, 256)) ? "pass" : "FAIL") << endl;
     if (!pass)
         return -1;
+    pass = test_bigdivrnd(1 << 14, 1 << 11);
+    if (!pass) {
+        cout << "test_bigdivrnd FAIL" << endl;
+        return -1;
+    }
+    pass = test_bigdivrnd(1 << 11, 1 << 14);
+    if (!pass) {
+        cout << "test_bigdivrnd FAIL" << endl;
+        return -1;
+    }
 #ifndef _DEBUG
     pass = test_bigdivrnd(1 << 17, 1 << 16);
     if (!pass) {
@@ -828,7 +842,11 @@ int main() {
         cout << "test_bigdivrnd FAIL" << endl;
         return -1;
     }
-    test_factorial();
+    pass = test_factorial();
+    if (!pass) {
+        cout << "test_factorial FAIL" << endl;
+        return -1;
+    }
 #endif
     test_efficiency<BigIntHex>("BigIntHex");
     test_efficiency<BigIntDec>("BigIntDec");

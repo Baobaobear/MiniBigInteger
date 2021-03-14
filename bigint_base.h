@@ -53,11 +53,9 @@ template <int32_t NTT_MOD> struct NTT {
         return (ntt_base_t)ans;
     }
     NTT() {
-        if (ntt_wn[1][0] == 0) {
-            for (int i = 0; i < NTT_POW; i++) {
-                ntt_wn[1][i] = pow_mod(NTT_G, (NTT_MOD - 1) / ((int64_t)1 << i));
-                ntt_wn[0][i] = pow_mod(ntt_wn[1][i], NTT_MOD - 2);
-            }
+        for (int i = 0; i < NTT_POW; i++) {
+            ntt_wn[1][i] = pow_mod(NTT_G, (NTT_MOD - 1) / ((int64_t)1 << i));
+            ntt_wn[0][i] = pow_mod(ntt_wn[1][i], NTT_MOD - 2);
         }
     }
     void transform(ntt_base_t a[], size_t len, int on) {
@@ -204,7 +202,7 @@ struct BigIntBase {
             s = -n;
         else
             s = n;
-        for (int i = 0; s; i++) {
+        for (size_t i = 0; s; i++) {
             v.resize(i + 1);
             v[i] = s % base;
             s /= base;
