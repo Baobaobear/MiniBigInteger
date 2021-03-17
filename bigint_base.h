@@ -7,6 +7,7 @@
 
 #include "bigint_header.h"
 
+//{hex_b}{hexm_b}{dec_b}{decm_b}
 namespace NTT_NS {
 
 const int32_t NTT_POW = 24;
@@ -152,6 +153,7 @@ void sqr_conv2() {
     double_mod_rev(n);
 }
 } // namespace NTT_NS
+//{hexm_e}{decm_e}
 
 namespace BigIntBaseNS {
 const int32_t BIGINT_MAXBASE = 1 << 15;

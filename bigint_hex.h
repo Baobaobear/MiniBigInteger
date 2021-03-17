@@ -6,6 +6,7 @@
 #pragma once
 #include "bigint_base.h"
 
+//{hex_b}{hexm_b}
 #define BIGINTHEX_DIV_DOUBLE 0
 
 namespace BigIntHexNS {
@@ -133,10 +134,10 @@ protected:
             carry(add, v[i + 1], v[i + 1] * (ucarry_t)m);
             carry(add, v[i + 2], v[i + 2] * (ucarry_t)m);
             carry(add, v[i + 3], v[i + 3] * (ucarry_t)m);
-            //carry(add, v[i + 4], v[i + 4] * (ucarry_t)m);
-            //carry(add, v[i + 5], v[i + 5] * (ucarry_t)m);
-            //carry(add, v[i + 6], v[i + 6] * (ucarry_t)m);
-            //carry(add, v[i + 7], v[i + 7] * (ucarry_t)m);
+            // carry(add, v[i + 4], v[i + 4] * (ucarry_t)m);
+            // carry(add, v[i + 5], v[i + 5] * (ucarry_t)m);
+            // carry(add, v[i + 6], v[i + 6] * (ucarry_t)m);
+            // carry(add, v[i + 7], v[i + 7] * (ucarry_t)m);
         }
         for (; i < v.size(); i++)
             carry(add, v[i], v[i] * (ucarry_t)m);
@@ -182,10 +183,10 @@ protected:
                 carry(add, v[i + j + 1], v[i + j + 1] + av * b.v[j + 1]);
                 carry(add, v[i + j + 2], v[i + j + 2] + av * b.v[j + 2]);
                 carry(add, v[i + j + 3], v[i + j + 3] + av * b.v[j + 3]);
-                //carry(add, v[i + j + 4], v[i + j + 4] + av * b.v[j + 4]);
-                //carry(add, v[i + j + 5], v[i + j + 5] + av * b.v[j + 5]);
-                //carry(add, v[i + j + 6], v[i + j + 6] + av * b.v[j + 6]);
-                //carry(add, v[i + j + 7], v[i + j + 7] + av * b.v[j + 7]);
+                // carry(add, v[i + j + 4], v[i + j + 4] + av * b.v[j + 4]);
+                // carry(add, v[i + j + 5], v[i + j + 5] + av * b.v[j + 5]);
+                // carry(add, v[i + j + 6], v[i + j + 6] + av * b.v[j + 6]);
+                // carry(add, v[i + j + 7], v[i + j + 7] + av * b.v[j + 7]);
             }
             for (; j < b.size(); ++j) {
                 carry(add, v[i + j], v[i + j] + av * b.v[j]);
@@ -585,6 +586,7 @@ protected:
             v.pop_back();
     }
     size_t size() const { return v.size(); }
+    //{hexm_e}
     BigIntBase transbase(int32_t out_base) const {
         if (size() <= 8) {
             BigIntBase sum(out_base);
@@ -632,31 +634,6 @@ protected:
             return BIGINT_STD_MOVE(sum);
         }
     }
-    std::string out_base2(size_t bits) const {
-        if (is_zero()) return "0";
-        const char *digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        std::string out;
-        carry_t d = 0;
-        for (size_t i = 0, j = 0;;) {
-            if (j < bits) {
-                if (i < v.size())
-                    d += v[i] << j;
-                else if (d == 0)
-                    break;
-                j += COMPRESS_BIT;
-                ++i;
-            }
-            out.push_back(digits[d & ((1 << bits) - 1)]);
-            d >>= bits;
-            j -= bits;
-        }
-        while (out.size() > 1 && *out.rbegin() == '0')
-            out.erase(out.begin() + out.size() - 1);
-        if (sign < 0 && !this->is_zero()) out.push_back('-');
-        std::reverse(out.begin(), out.end());
-        return out;
-    }
-    std::string out_hex() const { return out_base2(4); }
     std::string out_mul(int32_t out_base = 10, int32_t pack = 0) const {
         BigIntBase sum = transbase(out_base);
         std::string out;
@@ -691,6 +668,32 @@ protected:
         std::reverse(out.begin(), out.end());
         return out;
     }
+    //{hexm_b}
+    std::string out_base2(size_t bits) const {
+        if (is_zero()) return "0";
+        const char *digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        std::string out;
+        carry_t d = 0;
+        for (size_t i = 0, j = 0;;) {
+            if (j < bits) {
+                if (i < v.size())
+                    d += v[i] << j;
+                else if (d == 0)
+                    break;
+                j += COMPRESS_BIT;
+                ++i;
+            }
+            out.push_back(digits[d & ((1 << bits) - 1)]);
+            d >>= bits;
+            j -= bits;
+        }
+        while (out.size() > 1 && *out.rbegin() == '0')
+            out.erase(out.begin() + out.size() - 1);
+        if (sign < 0 && !this->is_zero()) out.push_back('-');
+        std::reverse(out.begin(), out.end());
+        return out;
+    }
+    std::string out_hex() const { return out_base2(4); }
     BigInt_t &from_str_base2(const char *s, int bits) {
         v.clear();
         int32_t sign = 1;
@@ -723,6 +726,7 @@ protected:
         this->sign = sign;
         return *this;
     }
+    //{hexm_e}
     BigInt_t &_from_str(const std::string &s, int base) {
         if (s.size() <= 12) {
             int64_t v = 0;
@@ -748,7 +752,7 @@ protected:
         *this += m * h;
         return *this;
     }
-
+    //{hexm_b}
 public:
     BigIntHex() { set(0); }
     explicit BigIntHex(int n) { set(n); }
@@ -774,7 +778,9 @@ public:
         return *this;
     }
     BigInt_t &from_str(const char *s, int base = 10) {
+        //{hexm_e}
         if ((base & (base - 1)) == 0) {
+            //{hexm_b}
             if (base == 16) {
                 return from_str_base2(s, 4);
             } else if (base == 8) {
@@ -783,9 +789,10 @@ public:
                 return from_str_base2(s, 2);
             } else if (base == 2) {
                 return from_str_base2(s, 1);
-            } else if (base == 32) {
+            } else {
                 return from_str_base2(s, 5);
             }
+            //{hexm_e}
         }
         int vsign = 1, i = 0;
         while (s[i] == '-') {
@@ -795,6 +802,7 @@ public:
         _from_str(std::string(s + i), base);
         sign = vsign;
         return *this;
+        //{hexm_b}
     }
     BigInt_t &from_str(const std::string &s, int base = 10) { return this->from_str(s.c_str(), base); }
     bool is_zero() const {
@@ -952,7 +960,9 @@ public:
     }
 
     std::string to_str(int32_t out_base = 10, int32_t pack = 0) const {
+        //{hexm_e}
         if ((out_base & (out_base - 1)) == 0) {
+            //{hexm_b}
             if (out_base == 16) {
                 return out_hex();
             } else if (out_base == 8) {
@@ -961,11 +971,13 @@ public:
                 return out_base2(2);
             } else if (out_base == 2) {
                 return out_base2(1);
-            } else if (out_base == 32) {
+            } else {
                 return out_base2(5);
             }
+            //{hexm_e}
         }
         return out_mul(out_base, pack);
+        //{hexm_b}
     }
 };
 } // namespace BigIntHexNS

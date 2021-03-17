@@ -1,6 +1,9 @@
 # Dir
 Debug
 Release
+UnitTest
+TestResults
+.vs
 
 # Prerequisites
 *.d

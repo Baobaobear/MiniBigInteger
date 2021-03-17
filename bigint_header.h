@@ -5,15 +5,19 @@
 // https://github.com/Baobaobear/MiniBigInteger
 #pragma once
 
+//{hex_b}{hexm_b}{dec_b}{decm_b}{mini_b}
 #include <algorithm>
 #include <cstring>
 #include <string>
 #include <vector>
+//{hex_e}{hexm_e}{dec_e}{decm_e}{mini_e}
 
 #if __cplusplus >= 201103L || _MSC_VER >= 1600
+//{hex_b}{hexm_b}{dec_b}{decm_b}{mini_b}
 #include <cstdint>
 #include <utility>
 #define BIGINT_STD_MOVE std::move
+//{hex_e}{hexm_e}{dec_e}{decm_e}{mini_e}
 #else
 #ifdef _MSC_VER
 typedef unsigned __int64 uint64_t;
@@ -35,6 +39,7 @@ typedef int64_t intmax_t;
 #define BIGINT_STD_MOVE
 #endif
 
+//{hex_b}{hexm_b}{dec_b}{decm_b}{mini_b}
 #if defined(_WIN64) || defined(_M_X64)
 #define BIGINT_X64 1
 #else

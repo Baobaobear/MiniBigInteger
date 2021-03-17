@@ -6,6 +6,7 @@
 #pragma once
 #include "bigint_base.h"
 
+//{dec_b}{decm_b}
 namespace BigIntDecNS {
 #if BIGINT_LARGE_BASE
 const int32_t COMPRESS_MOD = 100000000;
@@ -118,7 +119,18 @@ protected:
         } else if (m == 1)
             return *this;
         ucarry_t add = 0;
-        for (size_t i = 0; i < v.size(); i++)
+        size_t i = 0;
+        for (; i + 4 <= v.size(); i += 4) {
+            carry(add, v[i], v[i] * (ucarry_t)m);
+            carry(add, v[i + 1], v[i + 1] * (ucarry_t)m);
+            carry(add, v[i + 2], v[i + 2] * (ucarry_t)m);
+            carry(add, v[i + 3], v[i + 3] * (ucarry_t)m);
+            // carry(add, v[i + 4], v[i + 4] * (ucarry_t)m);
+            // carry(add, v[i + 5], v[i + 5] * (ucarry_t)m);
+            // carry(add, v[i + 6], v[i + 6] * (ucarry_t)m);
+            // carry(add, v[i + 7], v[i + 7] * (ucarry_t)m);
+        }
+        for (; i < v.size(); i++)
             carry(add, v[i], v[i] * (ucarry_t)m);
         if (add) v.push_back((base_t)add);
         return *this;
@@ -153,8 +165,20 @@ protected:
         v.resize(a.size() + b.size());
         for (size_t i = 0; i < a.size(); i++) {
             ucarry_t add = 0, av = a.v[i];
-            for (size_t j = 0; j < b.size(); j++)
+            size_t j = 0;
+            for (; j + 4 <= b.size(); j += 4) {
                 carry(add, v[i + j], v[i + j] + av * b.v[j]);
+                carry(add, v[i + j + 1], v[i + j + 1] + av * b.v[j + 1]);
+                carry(add, v[i + j + 2], v[i + j + 2] + av * b.v[j + 2]);
+                carry(add, v[i + j + 3], v[i + j + 3] + av * b.v[j + 3]);
+                // carry(add, v[i + j + 4], v[i + j + 4] + av * b.v[j + 4]);
+                // carry(add, v[i + j + 5], v[i + j + 5] + av * b.v[j + 5]);
+                // carry(add, v[i + j + 6], v[i + j + 6] + av * b.v[j + 6]);
+                // carry(add, v[i + j + 7], v[i + j + 7] + av * b.v[j + 7]);
+            }
+            for (; j < b.size(); ++j) {
+                carry(add, v[i + j], v[i + j] + av * b.v[j]);
+            }
             v[i + b.size()] += (base_t)add;
         }
         trim();
@@ -527,6 +551,7 @@ protected:
             v.pop_back();
     }
     size_t size() const { return v.size(); }
+    //{decm_e}
     BigIntBase transbase(int32_t out_base) const {
         if (size() <= 8) {
             BigIntBase sum(out_base);
@@ -577,29 +602,6 @@ protected:
             return BIGINT_STD_MOVE(sum);
         }
     }
-    std::string out_dec() const {
-        if (is_zero()) return "0";
-        std::string out;
-        int32_t d = 0;
-        for (size_t i = 0, j = 0;;) {
-            if (j < 1) {
-                if (i < size())
-                    d += v[i];
-                else if (d == 0)
-                    break;
-                j += COMPRESS_DIGITS;
-                ++i;
-            }
-            out.push_back((d % 10) + '0');
-            d /= 10;
-            j -= 1;
-        }
-        while (out.size() > 1 && *out.rbegin() == '0')
-            out.erase(out.begin() + out.size() - 1);
-        if (sign < 0 && !this->is_zero()) out.push_back('-');
-        std::reverse(out.begin(), out.end());
-        return out;
-    }
     std::string out_mul(int32_t out_base = 10, int32_t pack = 0) const {
         BigIntBase sum = transbase(out_base);
         std::string out;
@@ -634,6 +636,30 @@ protected:
         std::reverse(out.begin(), out.end());
         return out;
     }
+    //{decm_b}
+    std::string out_dec() const {
+        if (is_zero()) return "0";
+        std::string out;
+        int32_t d = 0;
+        for (size_t i = 0, j = 0;;) {
+            if (j < 1) {
+                if (i < size())
+                    d += v[i];
+                else if (d == 0)
+                    break;
+                j += COMPRESS_DIGITS;
+                ++i;
+            }
+            out.push_back((d % 10) + '0');
+            d /= 10;
+            j -= 1;
+        }
+        while (out.size() > 1 && *out.rbegin() == '0')
+            out.erase(out.begin() + out.size() - 1);
+        if (sign < 0 && !this->is_zero()) out.push_back('-');
+        std::reverse(out.begin(), out.end());
+        return out;
+    }
     BigInt_t &from_str_base10(const char *s) {
         v.clear();
         int32_t base = 10, sign = 1, digits = COMPRESS_DIGITS;
@@ -660,6 +686,7 @@ protected:
         this->sign = sign;
         return *this;
     }
+    //{decm_e}
     BigInt_t &_from_str(const std::string &s, int base) {
         if (s.size() <= 12) {
             int64_t v = 0;
@@ -685,7 +712,7 @@ protected:
         *this += m * h;
         return *this;
     }
-
+    //{decm_b}
 public:
     BigIntDec() { set(0); }
     explicit BigIntDec(int n) { set(n); }
@@ -711,8 +738,11 @@ public:
         return *this;
     }
     BigInt_t &from_str(const char *s, int base = 10) {
+        //{decm_e}
         if (base == 10) {
+            //{decm_b}
             return from_str_base10(s);
+            //{decm_e}
         }
         int vsign = 1, i = 0;
         while (s[i] == '-') {
@@ -722,6 +752,7 @@ public:
         _from_str(std::string(s + i), base);
         sign = vsign;
         return *this;
+        //{decm_b}
     }
     BigInt_t &from_str(const std::string &s, int base = 10) { return this->from_str(s.c_str(), base); }
     bool is_zero() const {
@@ -879,10 +910,14 @@ public:
     }
 
     std::string to_str(int32_t out_base = 10, int32_t pack = 0) const {
+        //{decm_e}
         if (out_base == 10) {
+            //{decm_b}
             return out_dec();
+            //{decm_e}
         }
         return out_mul(out_base, pack);
+        //{decm_b}
     }
 };
 } // namespace BigIntDecNS

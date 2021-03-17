@@ -6,7 +6,7 @@
 #pragma once
 
 #include "bigint_header.h"
-
+//{mini_b}
 namespace BigIntMiniNS {
 const int32_t COMPRESS_MOD = 10000;
 const uint32_t COMPRESS_DIGITS = 4;
@@ -404,4 +404,4 @@ public:
 };
 } // namespace BigIntMiniNS
 
-typedef BigIntMiniNS::BigIntMini BigIntMini;
+using BigIntMiniNS::BigIntMini;
