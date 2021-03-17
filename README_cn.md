@@ -73,10 +73,9 @@ int main() {
 
 ### 线上比赛用法
 
-- BigIntTiny: 直接把bigint_tiny.h整个文件内容复制到源文件的前面即可使用
-- BigIntMini: 直接把bigint_mini.h整个文件内容复制到源文件的前面，再补充所需的头文件(也可直接复制bigint_header.h)
-- BigIntDec: 要用这个则麻烦一些，需要把bigint_dec.h整个文件复制到源文件前面，再复制bigint_base.h到前面，再接着补充头文件，最后视需要删除不要的部分，比如说比赛一般只用到10进制，那么可以把BigIntBaseNS名字空间整个去掉，再在BigIntDec中把编译不通过的函数删除（就是与输出相关的部分）。再然后部分OJ还可能因代码长度限制提交不上去时，把缩进切换为tab。
-- BigIntHex: 通过不建议在线上比赛用这个，虽然运算速度最快，但代码最长，且需要输入输出的场合下做进制转换不够快反而可能超时。用法与BigIntDec几乎一样
+运行`build_singlefile.py`生成独立头文件，然后把你需要用到的类的相应头文件复制进源文件前面即可使用。
+
+对于`single_bigint_hexm.h`和`single_bigint_decm.h`，它们精简了进制转换的输入输出，因为线上比赛很少需要做这步，就添加了这个不含进制转换的版本。
 
 ### 非线上比赛用法
 

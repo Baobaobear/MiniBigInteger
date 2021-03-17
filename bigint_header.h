@@ -45,10 +45,11 @@ typedef int64_t intmax_t;
 #else
 #define BIGINT_X64 0
 #endif
+//{hex_e}{hexm_e}{mini_e}
 #if !defined(BIGINT_LARGE_BASE) && BIGINT_X64
 #define BIGINT_LARGE_BASE 1 // only work with BigIntBase & BigIntDec
 #endif
-
+//{hex_b}{hexm_b}{mini_b}
 #define LESS_THAN_AND_EQUAL_COMPARABLE(T)                      \
     bool operator>(const T &b) const { return b < *this; }     \
     bool operator<=(const T &b) const { return !(b < *this); } \

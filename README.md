@@ -71,7 +71,7 @@ The output is `1267650600228229401496703205376`
 
 ## Usage
 
-Copy all files to your project's path then include them.
+Copy all files to your project's path then include them. Or run the 'build_singlefile.py' script to generate the single header file.
 
 ## Operators
 
