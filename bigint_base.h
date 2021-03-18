@@ -108,7 +108,7 @@ template <int32_t NTT_MOD> struct NTT {
         size_t id = 0;
         uint32_t lg2 = log2(len);
         if (ntt_wa[on][lg2].empty()) {
-            vector<ntt_base_t> &wn = ntt_wa[on][lg2];
+            std::vector<ntt_base_t> &wn = ntt_wa[on][lg2];
             ntt_base_t root = pow_mod(NTT_G, (NTT_MOD - 1) / len);
             if (on == 0) root = pow_mod(root, NTT_MOD - 2);
             wn.push_back(1);
