@@ -137,17 +137,17 @@ template <int32_t NTT_MOD> struct NTT {
     }
 #endif
     void mul_conv(size_t n) {
-        transform(&*ntt_a.begin(), n, 1);
-        transform(&*ntt_b.begin(), n, 1);
+        transform(&ntt_a.front(), n, 1);
+        transform(&ntt_b.front(), n, 1);
         for (size_t i = 0; i < n; i++)
             ntt_a[i] = mul_mod(ntt_a[i], ntt_b[i]);
-        transform(&*ntt_a.begin(), n, 0);
+        transform(&ntt_a.front(), n, 0);
     }
     void sqr_conv(size_t n) {
-        transform(&*ntt_a.begin(), n, 1);
+        transform(&ntt_a.front(), n, 1);
         for (size_t i = 0; i < n; i++)
             ntt_a[i] = mul_mod(ntt_a[i], ntt_a[i]);
-        transform(&*ntt_a.begin(), n, 0);
+        transform(&ntt_a.front(), n, 0);
     }
 };
 
@@ -170,7 +170,7 @@ void ntt_prepare(size_t size_a, size_t size_b, size_t &len, int flag = 1) {
         for (size_t i = 0; i < len; i++)
             r[i] = (r[i >> 1] >> 1) | ((i & 1) * (len >> 1));
     }
-    ntt_r = &*ntt_ra[id].begin();
+    ntt_r = &ntt_ra[id].front();
 }
 
 static void double_mod_rev(size_t n) {

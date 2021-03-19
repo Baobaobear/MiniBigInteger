@@ -4,9 +4,9 @@
 
 [中文版本](README_cn.md)
 
-This is a C++03 port of large integer library. It allows you parsing of numbers as strings in any bases between 2 and 36 and converting them back to string.
+This is a C++03 port of arbitrary-precision arithmetic of integer library. It allows you input and output large integers from strings in any bases between 2 and 36.
 
-The BigIntMini & BigIntTiny is designed for online contest that enought for most of case.
+The BigIntMini & BigIntTiny is designed for online contest that enought to use in most of cases although they are not the fastest.
 
 ## Code Example
 
@@ -71,7 +71,15 @@ The output is `1267650600228229401496703205376`
 
 ## Usage
 
-Copy all files to your project's path then include them. Or run the 'build_singlefile.py' script to generate the single header file.
+### Online contest
+
+Run `build_singlefile.py` to generate the standalone header file, then copy the header file of the class which you need into the front of the source file.
+
+For `single_bigint_hexm.h` and `single_bigint_decm.h`, they streamline the input and output of the base conversion, and since online competitions rarely need to do this step.
+
+### Other cases
+
+Copy all header files to your project's directory then include them.
 
 ## Operators
 
