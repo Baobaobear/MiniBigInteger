@@ -265,7 +265,7 @@ protected:
         }
         if (a == b) {
             NTT_NS::ntt_prepare(a.size() * 2, a.size() * 2, len, 7);
-            NTT_NS::sqr_conv2();
+            NTT_NS::sqr_conv();
             len = a.size() * 4;
         } else {
             for (size_t i = 0, j = 0; i < b.size(); ++i, ++j) {
@@ -273,7 +273,7 @@ protected:
                 ntt_b[++j] = b.v[i] / COMPRESS_HALF_MOD;
             }
             NTT_NS::ntt_prepare(a.size() * 2, b.size() * 2, len, 7);
-            NTT_NS::mul_conv2();
+            NTT_NS::mul_conv();
             len = (a.size() + b.size()) * 2;
         }
 #else
@@ -284,14 +284,14 @@ protected:
         }
         if (a == b) {
             NTT_NS::ntt_prepare(a.size(), a.size(), len, 7);
-            NTT_NS::sqr_conv2();
+            NTT_NS::sqr_conv();
             len = a.size() * 2;
         } else {
             for (size_t i = 0; i < b.size(); ++i) {
                 ntt_b[i] = b.v[i];
             }
             NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
-            NTT_NS::mul_conv2();
+            NTT_NS::mul_conv();
             len = a.size() + b.size();
         }
 #endif

@@ -183,14 +183,14 @@ static void double_mod_rev(size_t n) {
     }
 }
 
-void mul_conv2() {
+void mul_conv() {
     size_t n = ntt1.ntt_a.size();
     ntt1.mul_conv(n);
     ntt2.mul_conv(n);
     double_mod_rev(n);
 }
 
-void sqr_conv2() {
+void sqr_conv() {
     size_t n = ntt1.ntt_a.size();
     ntt1.sqr_conv(n);
     ntt2.sqr_conv(n);
@@ -383,7 +383,7 @@ struct BigIntBase {
         for (size_t i = 0; i < b.size(); ++i)
             ntt_b[i] = b.v[i];
         NTT_NS::ntt_prepare(a.size(), b.size(), len, 7);
-        NTT_NS::mul_conv2();
+        NTT_NS::mul_conv();
         len = (a.size() + b.size()) * lenmul;
         while (len > 0 && ntt_c[--len] == 0)
             ;
@@ -409,7 +409,7 @@ struct BigIntBase {
         for (size_t i = 0; i < a.size(); ++i)
             ntt_a[i] = a.v[i];
         NTT_NS::ntt_prepare(a.size() * 2, 0, len, 2);
-        NTT_NS::sqr_conv2();
+        NTT_NS::sqr_conv();
         len = (a.size() + a.size()) * lenmul;
         while (len > 0 && ntt_c[--len] == 0)
             ;

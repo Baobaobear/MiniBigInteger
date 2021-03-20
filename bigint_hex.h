@@ -281,7 +281,7 @@ protected:
         }
         if (a == b) {
             NTT_NS::ntt_prepare(a.size() * 2, a.size() * 2, len, 7);
-            NTT_NS::sqr_conv2();
+            NTT_NS::sqr_conv();
             len = a.size() * 2 * lenmul;
         } else {
             for (size_t i = 0, j = 0; i < b.size(); ++i, ++j) {
@@ -289,7 +289,7 @@ protected:
                 ntt_b[++j] = b.v[i] >> COMPRESS_HALF_BIT;
             }
             NTT_NS::ntt_prepare(a.size() * 2, b.size() * 2, len, 7);
-            NTT_NS::mul_conv2();
+            NTT_NS::mul_conv();
             len = (a.size() + b.size()) * lenmul;
         }
         while (len > 0 && ntt_c[--len] == 0)
