@@ -783,52 +783,52 @@ public:
     BigInt_t &operator=(const char *s) { return from_str(s); }
     BigInt_t &operator=(const std::string s) { return from_str(s); }
     BigInt_t operator+(const BigInt_t &b) const {
-        BigInt_t r = *this;
-        if (sign * b.sign > 0) {
-            r.raw_add(b);
-        } else {
-            r.raw_sub(b);
-        }
-        return BIGINT_STD_MOVE(r);
+        if (sign * b.sign > 0)
+            return BIGINT_STD_MOVE(BigInt_t(*this).raw_add(b));
+        else if (raw_less(b))
+            return BIGINT_STD_MOVE(BigInt_t(b).raw_sub(*this).inv());
+        else
+            return BIGINT_STD_MOVE(BigInt_t(*this).raw_sub(b));
     }
     BigInt_t &operator+=(const BigInt_t &b) {
-        if (this == &b) {
-            BigInt_t c = b;
-            return *this += c;
-        }
-        if (sign * b.sign > 0) {
+        if (this == &b)
+            return *this += BigInt_t(b);
+        if (sign * b.sign > 0)
             raw_add(b);
-        } else {
+        else if (raw_less(b))
+            *this = BIGINT_STD_MOVE(BigInt_t(b).raw_sub(*this).inv());
+        else
             raw_sub(b);
-        }
         return *this;
     }
 
     BigInt_t operator-(const BigInt_t &b) const {
-        BigInt_t r = *this;
-        if (sign * b.sign < 0) {
-            r.raw_add(b);
-        } else {
-            r.raw_sub(b);
-        }
-        return BIGINT_STD_MOVE(r);
+        if (sign * b.sign < 0)
+            return BIGINT_STD_MOVE(BigInt_t(*this).raw_add(b));
+        else if (raw_less(b))
+            return BIGINT_STD_MOVE(BigInt_t(b).raw_sub(*this).inv());
+        else
+            return BIGINT_STD_MOVE(BigInt_t(*this).raw_sub(b));
     }
     BigInt_t &operator-=(const BigInt_t &b) {
         if (this == &b) {
             set(0);
             return *this;
         }
-        if (sign * b.sign < 0) {
+        if (sign * b.sign < 0)
             raw_add(b);
-        } else {
+        else if (raw_less(b))
+            *this = BIGINT_STD_MOVE(BigInt_t(b).raw_sub(*this).inv());
+        else
             raw_sub(b);
-        }
+        return *this;
+    }
+    BigInt_t& inv() {
+        sign = -sign;
         return *this;
     }
     BigInt_t operator-() const {
-        BigInt_t r = *this;
-        r.sign = -r.sign;
-        return BIGINT_STD_MOVE(r);
+        return BIGINT_STD_MOVE(BigInt_t(*this).inv());
     }
 
     BigInt_t operator*(const BigInt_t &b) const {
