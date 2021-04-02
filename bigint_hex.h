@@ -835,7 +835,7 @@ public:
     BigInt_t operator+(const BigInt_t &b) const {
         if (sign * b.sign > 0)
             return BIGINT_STD_MOVE(BigInt_t(*this).raw_add(b));
-        else if (raw_less(b))
+        else if (size() < b.size())
             return BIGINT_STD_MOVE(BigInt_t(b).raw_sub(*this).inv());
         else
             return BIGINT_STD_MOVE(BigInt_t(*this).raw_sub(b));
@@ -845,7 +845,7 @@ public:
             return *this += BigInt_t(b);
         if (sign * b.sign > 0)
             raw_add(b);
-        else if (raw_less(b))
+        else if (size() < b.size())
             *this = BIGINT_STD_MOVE(BigInt_t(b).raw_sub(*this).inv());
         else
             raw_sub(b);
@@ -855,7 +855,7 @@ public:
     BigInt_t operator-(const BigInt_t &b) const {
         if (sign * b.sign < 0)
             return BIGINT_STD_MOVE(BigInt_t(*this).raw_add(b));
-        else if (raw_less(b))
+        else if (size() < b.size())
             return BIGINT_STD_MOVE(BigInt_t(b).raw_sub(*this).inv());
         else
             return BIGINT_STD_MOVE(BigInt_t(*this).raw_sub(b));
@@ -867,7 +867,7 @@ public:
         }
         if (sign * b.sign < 0)
             raw_add(b);
-        else if (raw_less(b))
+        else if (size() < b.size())
             *this = BIGINT_STD_MOVE(BigInt_t(b).raw_sub(*this).inv());
         else
             raw_sub(b);
