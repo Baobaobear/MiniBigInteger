@@ -66,7 +66,7 @@ struct BigIntTiny {
         return setsign(s[0] == '-' ? -1 : 1, sign = 1);
     }
     bool operator<(const BigIntTiny &b) const {
-        return sign != b.sign ? sign < b.sign : (sign == 1 ? absless(b) : !absless(b));
+        return sign != b.sign ? sign < b.sign : (sign == 1 ? absless(b) : b.absless(*this));
     }
     bool operator==(const BigIntTiny &b) const { return v == b.v && sign == b.sign; }
     BigIntTiny &operator+=(const BigIntTiny &b) {
