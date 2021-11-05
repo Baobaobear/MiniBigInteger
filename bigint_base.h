@@ -42,12 +42,8 @@ uint32_t log2(uint32_t n) {
 template <int32_t NTT_MOD> struct NTT {
     std::vector<ntt_base_t> ntt_a, ntt_b;
     std::vector<int64_t> ntt_c;
-#if BIGINT_X64
-    ntt_base_t ntt_wn[2][NTT_POW];
-#else
     std::vector<ntt_base_t> ntt_wa[2][NTT_POW];
     ntt_base_t *ntt_w;
-#endif
 
 #if BIGINT_X64
     inline ntt_base_t mul_mod(int64_t a, int64_t b) { return a * b % NTT_MOD; }
@@ -69,38 +65,7 @@ template <int32_t NTT_MOD> struct NTT {
         return (ntt_base_t)ans;
     }
     NTT() {
-#if BIGINT_X64
-        for (int i = 0; i < NTT_POW; i++) {
-            ntt_wn[1][i] = pow_mod(NTT_G, (NTT_MOD - 1) / ((int64_t)1 << i));
-            ntt_wn[0][i] = pow_mod(ntt_wn[1][i], NTT_MOD - 2);
-        }
-#endif
     }
-#if BIGINT_X64
-    void transform(ntt_base_t a[], size_t len, int on) {
-        for (size_t i = 0; i < len; i++) {
-            if (i < ntt_r[i]) std::swap(a[i], a[ntt_r[i]]);
-        }
-        size_t id = 0;
-        for (size_t h = 1; h < len; h <<= 1) {
-            ntt_base_t wn = ntt_wn[on][++id];
-            for (size_t j = 0; j < len; j += h << 1) {
-                ntt_base_t w = 1;
-                size_t e = j + h;
-                for (size_t k = j; k < e; k++, w = mul_mod(w, wn)) {
-                    ntt_base_t t = mul_mod(w, a[k + h]);
-                    a[k + h] = (a[k] - t + NTT_MOD) % NTT_MOD;
-                    a[k] = (a[k] + t) % NTT_MOD;
-                }
-            }
-        }
-        if (on == 0) {
-            ntt_base_t inv = pow_mod(len, NTT_MOD - 2);
-            for (size_t i = 0; i < len; i++)
-                a[i] = mul_mod(a[i], inv);
-        }
-    }
-#else
     void transform(ntt_base_t a[], size_t len, int on) {
         for (size_t i = 0; i < len; i++) {
             if (i < ntt_r[i]) std::swap(a[i], a[ntt_r[i]]);
@@ -124,10 +89,13 @@ template <int32_t NTT_MOD> struct NTT {
                 size_t e = j + h;
                 for (size_t k = j; k < e; k++) {
                     ntt_base_t t = mul_mod(ntt_w[(k - j) * qs], a[k + h]);
-                    a[k + h] = (a[k] - t + NTT_MOD) % NTT_MOD;
-                    a[k] = (a[k] + t) % NTT_MOD;
+                    a[k + h] = (a[k] - t + NTT_MOD); // % NTT_MOD;
+                    a[k] = (a[k] + t); // % NTT_MOD;
                 }
             }
+        }
+        for (size_t j = 0; j < len; ++j) {
+            a[j] %= NTT_MOD;
         }
         if (on == 0) {
             ntt_base_t inv = pow_mod(len, NTT_MOD - 2);
@@ -135,7 +103,6 @@ template <int32_t NTT_MOD> struct NTT {
                 a[i] = mul_mod(a[i], inv);
         }
     }
-#endif
     void mul_conv(size_t n) {
         transform(&ntt_a.front(), n, 1);
         transform(&ntt_b.front(), n, 1);
