@@ -42,8 +42,7 @@ uint32_t log2(uint32_t n) {
 template <int32_t NTT_MOD> struct NTT {
     std::vector<ntt_base_t> ntt_a, ntt_b;
     std::vector<int64_t> ntt_c;
-    std::vector<ntt_base_t> ntt_wa[2][NTT_POW];
-    ntt_base_t *ntt_w;
+    std::vector<std::vector<ntt_base_t>> ntt_wa[2][NTT_POW];
 
 #if BIGINT_X64
     inline ntt_base_t mul_mod(int64_t a, int64_t b) { return a * b % NTT_MOD; }
@@ -64,39 +63,44 @@ template <int32_t NTT_MOD> struct NTT {
         }
         return (ntt_base_t)ans;
     }
-    NTT() {
-    }
     void transform(ntt_base_t a[], size_t len, int on) {
         for (size_t i = 0; i < len; i++) {
             if (i < ntt_r[i]) std::swap(a[i], a[ntt_r[i]]);
         }
-        size_t id = 0;
         uint32_t lg2 = log2(len);
-        if (ntt_wa[on][lg2].empty()) {
-            std::vector<ntt_base_t> &wn = ntt_wa[on][lg2];
+        std::vector<std::vector<ntt_base_t>> &ntt = ntt_wa[on][lg2];
+        if (ntt.empty()) {
+            ntt.reserve(lg2);
+            ntt.push_back(std::vector<ntt_base_t>());
+            std::vector<ntt_base_t> &wn = ntt[0];
             ntt_base_t root = pow_mod(NTT_G, (NTT_MOD - 1) / len);
             if (on == 0) root = pow_mod(root, NTT_MOD - 2);
             wn.push_back(1);
-            for (size_t i = 0; i < len; ++i) {
+            for (size_t i = 0; i < len; ++i)
                 wn.push_back(mul_mod(wn.back(), root));
-            }
-        }
-        ntt_w = &ntt_wa[on][lg2].front();
-        uint32_t qs = len;
-        for (size_t h = 1; h < len; h <<= 1) {
-            qs >>= 1;
-            for (size_t j = 0; j < len; j += h << 1) {
-                size_t e = j + h;
-                for (size_t k = j; k < e; k++) {
-                    ntt_base_t t = mul_mod(ntt_w[(k - j) * qs], a[k + h]);
-                    a[k + h] = (a[k] - t + NTT_MOD); // % NTT_MOD;
-                    a[k] = (a[k] + t); // % NTT_MOD;
+            size_t h = len;
+            for (uint32_t mul = 1, s = 2; mul < lg2; ++mul, s *= 2) {
+                ntt.push_back(std::vector<ntt_base_t>());
+                std::vector<ntt_base_t> &wns = ntt[mul];
+                wns.reserve(h /= 2);
+                for (uint32_t i = 0; i < h; ++i) {
+                    wns.push_back(wn[i * s]);
                 }
             }
         }
-        for (size_t j = 0; j < len; ++j) {
-            a[j] %= NTT_MOD;
+        for (size_t h = 1, pos = lg2 - 1; h < len; h <<= 1, --pos) {
+            ntt_base_t *ntt_w = &ntt[pos].front();
+            for (size_t j = 0; j < len; j += h << 1) {
+                size_t e = j + h;
+                for (size_t k = j; k < e; k++) {
+                    ntt_base_t t = mul_mod(ntt_w[k - j], a[k + h]);
+                    a[k + h] = a[k] - t + NTT_MOD;
+                    a[k] += t;
+                }
+            }
         }
+        for (size_t j = 0; j < len; ++j)
+            a[j] %= NTT_MOD;
         if (on == 0) {
             ntt_base_t inv = pow_mod(len, NTT_MOD - 2);
             for (size_t i = 0; i < len; i++)
