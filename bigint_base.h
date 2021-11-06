@@ -40,9 +40,10 @@ uint32_t log2(uint32_t n) {
 }
 
 template <int32_t NTT_MOD> struct NTT {
-    std::vector<ntt_base_t> ntt_a, ntt_b;
+    typedef typename std::vector<ntt_base_t> ntt_vector_t;
+    ntt_vector_t ntt_a, ntt_b;
     std::vector<int64_t> ntt_c;
-    std::vector<std::vector<ntt_base_t>> ntt_wa[2][NTT_POW];
+    std::vector<ntt_vector_t> ntt_wa[2][NTT_POW];
 
 #if BIGINT_X64
     inline ntt_base_t mul_mod(int64_t a, int64_t b) { return a * b % NTT_MOD; }
@@ -68,11 +69,11 @@ template <int32_t NTT_MOD> struct NTT {
             if (i < ntt_r[i]) std::swap(a[i], a[ntt_r[i]]);
         }
         uint32_t lg2 = log2(len);
-        std::vector<std::vector<ntt_base_t>> &ntt = ntt_wa[on][lg2];
+        std::vector<ntt_vector_t> &ntt = ntt_wa[on][lg2];
         if (ntt.empty()) {
             ntt.reserve(lg2);
-            ntt.push_back(std::vector<ntt_base_t>());
-            std::vector<ntt_base_t> &wn = ntt[0];
+            ntt.push_back(ntt_vector_t());
+            ntt_vector_t &wn = ntt[0];
             ntt_base_t root = pow_mod(NTT_G, (NTT_MOD - 1) / len);
             if (on == 0) root = pow_mod(root, NTT_MOD - 2);
             wn.push_back(1);
@@ -80,8 +81,8 @@ template <int32_t NTT_MOD> struct NTT {
                 wn.push_back(mul_mod(wn.back(), root));
             size_t h = len;
             for (uint32_t mul = 1, s = 2; mul < lg2; ++mul, s *= 2) {
-                ntt.push_back(std::vector<ntt_base_t>());
-                std::vector<ntt_base_t> &wns = ntt[mul];
+                ntt.push_back(ntt_vector_t());
+                ntt_vector_t &wns = ntt[mul];
                 wns.reserve(h /= 2);
                 for (uint32_t i = 0; i < h; ++i) {
                     wns.push_back(wn[i * s]);
