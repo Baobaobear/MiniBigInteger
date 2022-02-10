@@ -90,6 +90,7 @@ struct BigIntTiny {
         }
     }
     BigIntTiny operator-(const BigIntTiny &b) const {
+        if (b.v.empty() || b.v.size() == 1 && b.v[0] == 0) return *this;
         if (sign != b.sign) return (*this) + -b;
         if (absless(b)) return -(b - *this);
         BigIntTiny c;
