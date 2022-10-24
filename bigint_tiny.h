@@ -116,7 +116,7 @@ struct BigIntTiny {
         for (int i = (int)v.size() - 1; i >= 0; i--) {
             c.v.insert(c.v.begin(), v[i]);
             int m = (int)((c.get_pos((int)b.v.size()) * 10000 + c.get_pos((int)b.v.size() - 1)) * db);
-            c = c - b * m, d.v[i] += m;
+            c = c - b * m, c.setsign(c.sign, 0), d.v[i] += m;
             while (!(c < b))
                 c = c - b, d.v[i] += 1;
         }
