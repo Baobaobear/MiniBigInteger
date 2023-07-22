@@ -110,15 +110,18 @@ struct BigIntTiny {
     }
     BigIntTiny operator/(const BigIntTiny &b) const {
         BigIntTiny c, d;
+        BigIntTiny e=b;
+        e.sign=1;
+
         d.v.resize(v.size());
         double db = 1.0 / (b.v.back() + (b.get_pos((unsigned)b.v.size() - 2) / 1e4) +
                            (b.get_pos((unsigned)b.v.size() - 3) + 1) / 1e8);
         for (int i = (int)v.size() - 1; i >= 0; i--) {
             c.v.insert(c.v.begin(), v[i]);
-            int m = (int)((c.get_pos((int)b.v.size()) * 10000 + c.get_pos((int)b.v.size() - 1)) * db);
-            c = c - b * m, c.setsign(c.sign, 0), d.v[i] += m;
-            while (!(c < b))
-                c = c - b, d.v[i] += 1;
+            int m = (int)((c.get_pos((int)e.v.size()) * 10000 + c.get_pos((int)e.v.size() - 1)) * db);
+            c = c - e * m, c.setsign(c.sign, 0), d.v[i] += m;
+            while (!(c < e))
+                c = c - e, d.v[i] += 1;
         }
         return d.setsign(sign * b.sign, 0);
     }
